@@ -16,8 +16,7 @@
 #include "crn_texture_conversion.h"
 #include "crn_radix_sort.h"
 
-#define CRND_HEADER_FILE_ONLY
-#include "crn_decomp.h"
+#include "crn_defs.h"
 
 namespace crnlib {
 struct block {

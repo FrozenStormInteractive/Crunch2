@@ -8,8 +8,7 @@
 #include "crn_texture_comp.h"
 #include "crn_ktx_texture.h"
 
-#define CRND_HEADER_FILE_ONLY
-#include "../inc/crn_decomp.h"
+#include "../inc/crn_defs.h"
 
 namespace crnlib {
 const vec2I g_vertical_cross_image_offsets[6] = {vec2I(2, 1), vec2I(0, 1), vec2I(1, 0), vec2I(1, 2), vec2I(1, 1), vec2I(1, 3)};

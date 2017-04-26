@@ -224,6 +224,7 @@
 		<Unit filename="lzma_Threads.h" />
 		<Unit filename="lzma_Types.h" />
 		<Unit filename="../inc/crn_decomp.h" />
+		<Unit filename="../inc/crn_defs.h" />
 		<Unit filename="../inc/crnlib.h" />
 		<Unit filename="../inc/dds_defs.h" />
 		<Extensions>

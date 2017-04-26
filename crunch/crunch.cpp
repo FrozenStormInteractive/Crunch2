@@ -20,8 +20,7 @@
 #include "crn_cfile_stream.h"
 #include "crn_texture_conversion.h"
 
-#define CRND_HEADER_FILE_ONLY
-#include "crn_decomp.h"
+#include "crn_defs.h"
 
 #include "corpus_gen.h"
 #include "corpus_test.h"

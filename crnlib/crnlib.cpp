@@ -9,8 +9,7 @@
 #include "crn_ryg_dxt.hpp"
 #include "crn_etc.h"
 
-#define CRND_HEADER_FILE_ONLY
-#include "../inc/crn_decomp.h"
+#include "../inc/crn_defs.h"
 
 #include "crn_rg_etc1.h"
 

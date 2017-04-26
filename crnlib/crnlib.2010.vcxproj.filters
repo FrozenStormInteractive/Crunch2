@@ -576,6 +576,9 @@
     <ClInclude Include="..\inc\crn_decomp.h">
       <Filter>Source Files\inc</Filter>
     </ClInclude>
+    <ClInclude Include="..\inc\crn_defs.h">
+      <Filter>Source Files\inc</Filter>
+    </ClInclude>
     <ClInclude Include="..\inc\crnlib.h">
       <Filter>Source Files\inc</Filter>
     </ClInclude>

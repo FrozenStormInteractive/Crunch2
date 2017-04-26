@@ -2,9 +2,7 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
-#define CRND_HEADER_FILE_ONLY
-#include "../inc/crn_decomp.h"
-#undef CRND_HEADER_FILE_ONLY
+#include "../inc/crn_defs.h"
 
 #include "../inc/crnlib.h"
 #include "crn_symbol_codec.h"

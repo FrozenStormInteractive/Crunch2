@@ -544,6 +544,7 @@
     <ClInclude Include="crn_texture_conversion.h" />
     <ClInclude Include="crn_texture_file_types.h" />
     <ClInclude Include="..\inc\crn_decomp.h" />
+    <ClInclude Include="..\inc\crn_defs.h" />
     <ClInclude Include="..\inc\crnlib.h" />
     <ClInclude Include="..\inc\dds_defs.h" />
     <ClInclude Include="crn_file_utils.h" />
