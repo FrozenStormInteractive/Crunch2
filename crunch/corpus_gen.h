@@ -4,17 +4,15 @@
 #include "crn_command_line_params.h"
 #include "crn_image.h"
 
-namespace crnlib
-{
-   class corpus_gen
-   {
-   public:
-      corpus_gen();
+namespace crnlib {
+class corpus_gen {
+ public:
+  corpus_gen();
 
-      bool generate(const char* pCmd_line);
+  bool generate(const char* pCmd_line);
 
-   private:
-      void sort_blocks(image_u8& img);
-   };
+ private:
+  void sort_blocks(image_u8& img);
+};
 
-} // namespace crnlib
+}  // namespace crnlib

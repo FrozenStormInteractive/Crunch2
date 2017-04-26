@@ -20,54 +20,54 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
-#define PLATFORM_NACL // This disables use of 64 bit integers, among other things.
+#define PLATFORM_NACL  // This disables use of 64 bit integers, among other things.
 
-#include <stddef.h> // For NULL, size_t
-#include <cstring> // for malloc etc
+#include <stddef.h>  // For NULL, size_t
+#include <cstring>   // for malloc etc
 
 #include "crn_decomp.h"
 
 extern "C" {
-  unsigned int crn_get_width(void *src, unsigned int src_size);
-  unsigned int crn_get_height(void *src, unsigned int src_size);
-  unsigned int crn_get_levels(void *src, unsigned int src_size);
-  unsigned int crn_get_dxt_format(void *src, unsigned int src_size);
-  unsigned int crn_get_bytes_per_block(void *src, unsigned int src_size);
-  unsigned int crn_get_uncompressed_size(void *p, unsigned int size, unsigned int level);
-  void crn_decompress(void *src, unsigned int src_size, void *dst, unsigned int dst_size, unsigned int firstLevel, unsigned int levelCount);
+unsigned int crn_get_width(void* src, unsigned int src_size);
+unsigned int crn_get_height(void* src, unsigned int src_size);
+unsigned int crn_get_levels(void* src, unsigned int src_size);
+unsigned int crn_get_dxt_format(void* src, unsigned int src_size);
+unsigned int crn_get_bytes_per_block(void* src, unsigned int src_size);
+unsigned int crn_get_uncompressed_size(void* p, unsigned int size, unsigned int level);
+void crn_decompress(void* src, unsigned int src_size, void* dst, unsigned int dst_size, unsigned int firstLevel, unsigned int levelCount);
 }
 
-unsigned int crn_get_width(void *src, unsigned int src_size) {
+unsigned int crn_get_width(void* src, unsigned int src_size) {
   crnd::crn_texture_info tex_info;
   crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
   return tex_info.m_width;
 }
 
-unsigned int crn_get_height(void *src, unsigned int src_size) {
+unsigned int crn_get_height(void* src, unsigned int src_size) {
   crnd::crn_texture_info tex_info;
   crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
   return tex_info.m_height;
 }
 
-unsigned int crn_get_levels(void *src, unsigned int src_size) {
+unsigned int crn_get_levels(void* src, unsigned int src_size) {
   crnd::crn_texture_info tex_info;
   crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
   return tex_info.m_levels;
 }
 
-unsigned int crn_get_dxt_format(void *src, unsigned int src_size) {
+unsigned int crn_get_dxt_format(void* src, unsigned int src_size) {
   crnd::crn_texture_info tex_info;
   crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
   return tex_info.m_format;
 }
 
-unsigned int crn_get_bytes_per_block(void *src, unsigned int src_size) {
+unsigned int crn_get_bytes_per_block(void* src, unsigned int src_size) {
   crnd::crn_texture_info tex_info;
   crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
   return crnd::crnd_get_bytes_per_dxt_block(tex_info.m_format);
 }
 
-unsigned int crn_get_uncompressed_size(void *src, unsigned int src_size, unsigned int level) {
+unsigned int crn_get_uncompressed_size(void* src, unsigned int src_size, unsigned int level) {
   crnd::crn_texture_info tex_info;
   crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
   const crn_uint32 width = tex_info.m_width >> level;
@@ -79,7 +79,7 @@ unsigned int crn_get_uncompressed_size(void *src, unsigned int src_size, unsigne
   return total_face_size;
 }
 
-void crn_decompress(void *src, unsigned int src_size, void *dst, unsigned int dst_size, unsigned int firstLevel, unsigned int levelCount) {
+void crn_decompress(void* src, unsigned int src_size, void* dst, unsigned int dst_size, unsigned int firstLevel, unsigned int levelCount) {
   crnd::crn_texture_info tex_info;
   crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
 
@@ -87,7 +87,7 @@ void crn_decompress(void *src, unsigned int src_size, void *dst, unsigned int ds
   crn_uint32 height = tex_info.m_height >> firstLevel;
   crn_uint32 bytes_per_block = crnd::crnd_get_bytes_per_dxt_block(tex_info.m_format);
 
-  void *pDecomp_images[1];
+  void* pDecomp_images[1];
   pDecomp_images[0] = dst;
 
   crnd::crnd_unpack_context pContext =
