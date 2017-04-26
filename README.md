@@ -141,9 +141,9 @@ be reliably read by other tools.
 This release contains the source code and projects for three simple
 example projects:
 
-crn_examples.2008.sln is a Visual Studio 2008 (VC9) solution file
+crn_examples.2010.sln is a Visual Studio 2010 (VC10) solution file
 containing projects for Win32 and x64. crnlib itself also builds with
-VS2005, VS2010, and gcc 4.5.0 (TDM GCC+MinGW).  A codeblocks 10.05
+VS2005, VS2008, and gcc 4.5.0 (TDM GCC+MinGW).  A codeblocks 10.05
 workspace and project file is also included, but compiling crnlib this
 way hasn't been tested much.
 
