@@ -28,17 +28,6 @@
 #define CRND_RESTRICT __restrict
 
 #ifdef _MSC_VER
-#include <intrin.h>
-#pragma intrinsic(_WriteBarrier)
-#pragma intrinsic(_ReadWriteBarrier)
-#define CRND_WRITE_BARRIER _WriteBarrier();
-#define CRND_FULL_BARRIER _ReadWriteBarrier();
-#else
-#define CRND_WRITE_BARRIER
-#define CRND_FULL_BARRIER
-#endif
-
-#ifdef _MSC_VER
 #pragma warning(disable : 4127)  // warning C4127: conditional expression is constant
 #endif
 
@@ -136,14 +125,6 @@ struct empty_type {};
 
 // File: crnd_platform.h
 namespace crnd {
-#ifdef _XBOX
-const bool c_crnd_little_endian_platform = false;
-const bool c_crnd_big_endian_platform = true;
-#define CRND_BIG_ENDIAN_PLATFORM 1
-#else
-const bool c_crnd_little_endian_platform = true;
-const bool c_crnd_big_endian_platform = false;
-#endif
 
 bool crnd_is_debugger_present();
 void crnd_debug_break();
@@ -3053,16 +3034,8 @@ uint32 dxt5_block::get_block_values(uint32* pDst, uint32 l, uint32 h) {
 }  // namespace crnd
 
 // File: crnd_decode.cpp
-#define CRND_CREATE_BYTE_STREAMS 0
 
 namespace crnd {
-#if CRND_CREATE_BYTE_STREAMS
-static void write_array_to_file(const char* pFilename, const vector<uint8>& buf) {
-  FILE* pFile = fopen(pFilename, "wb");
-  fwrite(&buf[0], buf.size(), 1, pFile);
-  fclose(pFile);
-}
-#endif
 
 struct crnd_chunk_tile_desc {
   // These values are in blocks
@@ -3191,10 +3164,6 @@ class crn_unpacker {
     const uint32 chunks_x = (blocks_x + 1) >> 1;
     const uint32 chunks_y = (blocks_y + 1) >> 1;
 
-#if CRND_CREATE_BYTE_STREAMS
-    crnd_trace("Index stream: %u bytes\n", src_size_in_bytes);
-#endif
-
     if (!m_codec.start_decoding(static_cast<const crnd::uint8*>(pSrc), src_size_in_bytes))
       return false;
 
@@ -3319,10 +3288,6 @@ class crn_unpacker {
 
     CRND_HUFF_DECODE_BEGIN(m_codec);
 
-#if CRND_CREATE_BYTE_STREAMS
-    vector<uint8> byte_stream;
-#endif
-
     for (uint32 i = 0; i < num_color_endpoints; i++) {
       uint32 da, db, dc, dd, de, df;
       CRND_HUFF_DECODE(m_codec, dm[0], da);
@@ -3339,29 +3304,12 @@ class crn_unpacker {
       CRND_HUFF_DECODE(m_codec, dm[0], df);
       f = (f + df) & 31;
 
-#if CRND_CREATE_BYTE_STREAMS
-      byte_stream.push_back(da);
-      byte_stream.push_back(db);
-      byte_stream.push_back(dc);
-      byte_stream.push_back(dd);
-      byte_stream.push_back(de);
-      byte_stream.push_back(df);
-#endif
-
-      if (c_crnd_little_endian_platform)
-        *pDst++ = c | (b << 5U) | (a << 11U) | (f << 16U) | (e << 21U) | (d << 27U);
-      else
-        *pDst++ = f | (e << 5U) | (d << 11U) | (c << 16U) | (b << 21U) | (a << 27U);
+      *pDst++ = c | (b << 5U) | (a << 11U) | (f << 16U) | (e << 21U) | (d << 27U);
     }
 
     CRND_HUFF_DECODE_END(m_codec);
 
     m_codec.stop_decoding();
-
-#if CRND_CREATE_BYTE_STREAMS
-    write_array_to_file(L"colorendpoints.bin", byte_stream);
-    crnd_trace("color endpoints: %u\n", (uint)m_pHeader->m_color_endpoints.m_size);
-#endif
 
     return true;
   }
@@ -3404,46 +3352,25 @@ class crn_unpacker {
 
     CRND_HUFF_DECODE_BEGIN(m_codec);
 
-#if CRND_CREATE_BYTE_STREAMS
-    vector<uint8> byte_stream;
-#endif
-
     for (uint32 i = 0; i < num_color_selectors; i++) {
       for (uint32 j = 0; j < 8; j++) {
         int32 sym;
         CRND_HUFF_DECODE(m_codec, dm, sym);
 
-#if CRND_CREATE_BYTE_STREAMS
-        byte_stream.push_back(sym);
-#endif
-
         cur[j * 2 + 0] = (delta0[sym] + cur[j * 2 + 0]) & 3;
         cur[j * 2 + 1] = (delta1[sym] + cur[j * 2 + 1]) & 3;
       }
 
-      if (c_crnd_little_endian_platform) {
-        *pDst++ =
-            (pFrom_linear[cur[0]]) | (pFrom_linear[cur[1]] << 2) | (pFrom_linear[cur[2]] << 4) | (pFrom_linear[cur[3]] << 6) |
-            (pFrom_linear[cur[4]] << 8) | (pFrom_linear[cur[5]] << 10) | (pFrom_linear[cur[6]] << 12) | (pFrom_linear[cur[7]] << 14) |
-            (pFrom_linear[cur[8]] << 16) | (pFrom_linear[cur[9]] << 18) | (pFrom_linear[cur[10]] << 20) | (pFrom_linear[cur[11]] << 22) |
-            (pFrom_linear[cur[12]] << 24) | (pFrom_linear[cur[13]] << 26) | (pFrom_linear[cur[14]] << 28) | (pFrom_linear[cur[15]] << 30);
-      } else {
-        *pDst++ =
-            (pFrom_linear[cur[8]]) | (pFrom_linear[cur[9]] << 2) | (pFrom_linear[cur[10]] << 4) | (pFrom_linear[cur[11]] << 6) |
-            (pFrom_linear[cur[12]] << 8) | (pFrom_linear[cur[13]] << 10) | (pFrom_linear[cur[14]] << 12) | (pFrom_linear[cur[15]] << 14) |
-            (pFrom_linear[cur[0]] << 16) | (pFrom_linear[cur[1]] << 18) | (pFrom_linear[cur[2]] << 20) | (pFrom_linear[cur[3]] << 22) |
-            (pFrom_linear[cur[4]] << 24) | (pFrom_linear[cur[5]] << 26) | (pFrom_linear[cur[6]] << 28) | (pFrom_linear[cur[7]] << 30);
-      }
+      *pDst++ =
+          (pFrom_linear[cur[0]]) | (pFrom_linear[cur[1]] << 2) | (pFrom_linear[cur[2]] << 4) | (pFrom_linear[cur[3]] << 6) |
+          (pFrom_linear[cur[4]] << 8) | (pFrom_linear[cur[5]] << 10) | (pFrom_linear[cur[6]] << 12) | (pFrom_linear[cur[7]] << 14) |
+          (pFrom_linear[cur[8]] << 16) | (pFrom_linear[cur[9]] << 18) | (pFrom_linear[cur[10]] << 20) | (pFrom_linear[cur[11]] << 22) |
+          (pFrom_linear[cur[12]] << 24) | (pFrom_linear[cur[13]] << 26) | (pFrom_linear[cur[14]] << 28) | (pFrom_linear[cur[15]] << 30);
     }
 
     CRND_HUFF_DECODE_END(m_codec);
 
     m_codec.stop_decoding();
-
-#if CRND_CREATE_BYTE_STREAMS
-    write_array_to_file(L"colorselectors.bin", byte_stream);
-    crnd_trace("color selectors: %u\n", (uint)m_pHeader->m_color_selectors.m_size);
-#endif
 
     return true;
   }
@@ -3607,12 +3534,6 @@ class crn_unpacker {
 
     CRND_HUFF_DECODE_BEGIN(m_codec);
 
-#if CRND_CREATE_BYTE_STREAMS
-    vector<uint8> tile_encoding_stream;
-    vector<uint8> endpoint_indices_stream;
-    vector<uint8> selector_indices_stream;
-#endif
-
     for (uint32 f = 0; f < num_faces; f++) {
       uint8* CRND_RESTRICT pRow = pDst[f];
 
@@ -3638,11 +3559,6 @@ class crn_unpacker {
 
           if (chunk_encoding_bits == 1) {
             CRND_HUFF_DECODE(m_codec, m_chunk_encoding_dm, chunk_encoding_bits);
-#if CRND_CREATE_BYTE_STREAMS
-            tile_encoding_stream.push_back(chunk_encoding_bits & 7);
-            tile_encoding_stream.push_back((chunk_encoding_bits >> 3) & 7);
-            tile_encoding_stream.push_back((chunk_encoding_bits >> 6) & 7);
-#endif
             chunk_encoding_bits |= 512;
           }
 
@@ -3654,9 +3570,6 @@ class crn_unpacker {
           for (uint32 i = 0; i < num_tiles; i++) {
             uint32 delta;
             CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[0], delta);
-#if CRND_CREATE_BYTE_STREAMS
-            endpoint_indices_stream.push_back(delta);
-#endif
             prev_color_endpoint_index += delta;
             limit(prev_color_endpoint_index, num_color_endpoints);
             color_endpoints[i] = m_color_endpoints[prev_color_endpoint_index];
@@ -3668,74 +3581,17 @@ class crn_unpacker {
 
           uint32* CRND_RESTRICT pD = (uint32*)pBlock;
 
-          if ((!skip_bottom_row) && (!skip_right_col)) {
-            //CRND_ASSERT( ((uint8*)&pD[4 + row_pitch_in_dwords] - pDst) <= dst_size_in_bytes );
+          for (uint32 by = 0; by < 2; by++) {
+            pD = (uint32*)((uint8*)pBlock + row_pitch_in_bytes * by);
+            for (uint32 bx = 0; bx < 2; bx++, pD += 2) {
+              uint32 delta;
+              CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[0], delta);
+              prev_color_selector_index += delta;
+              limit(prev_color_selector_index, num_color_selectors);
 
-            pD[0] = color_endpoints[pTile_indices[0]];
-            CRND_WRITE_BARRIER
-            uint32 delta0;
-            CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[0], delta0);
-#if CRND_CREATE_BYTE_STREAMS
-            selector_indices_stream.push_back(delta0);
-#endif
-            prev_color_selector_index += delta0;
-            limit(prev_color_selector_index, num_color_selectors);
-            pD[1] = m_color_selectors[prev_color_selector_index];
-            CRND_WRITE_BARRIER
-
-            pD[2] = color_endpoints[pTile_indices[1]];
-            CRND_WRITE_BARRIER
-            uint32 delta1;
-            CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[0], delta1);
-#if CRND_CREATE_BYTE_STREAMS
-            selector_indices_stream.push_back(delta1);
-#endif
-            prev_color_selector_index += delta1;
-            limit(prev_color_selector_index, num_color_selectors);
-            pD[3] = m_color_selectors[prev_color_selector_index];
-            CRND_WRITE_BARRIER
-
-            pD[0 + row_pitch_in_dwords] = color_endpoints[pTile_indices[2]];
-            CRND_WRITE_BARRIER
-            uint32 delta2;
-            CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[0], delta2);
-#if CRND_CREATE_BYTE_STREAMS
-            selector_indices_stream.push_back(delta2);
-#endif
-            prev_color_selector_index += delta2;
-            limit(prev_color_selector_index, num_color_selectors);
-            pD[1 + row_pitch_in_dwords] = m_color_selectors[prev_color_selector_index];
-            CRND_WRITE_BARRIER
-
-            pD[2 + row_pitch_in_dwords] = color_endpoints[pTile_indices[3]];
-            CRND_WRITE_BARRIER
-            uint32 delta3;
-            CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[0], delta3);
-#if CRND_CREATE_BYTE_STREAMS
-            selector_indices_stream.push_back(delta3);
-#endif
-            prev_color_selector_index += delta3;
-            limit(prev_color_selector_index, num_color_selectors);
-            pD[3 + row_pitch_in_dwords] = m_color_selectors[prev_color_selector_index];
-            CRND_WRITE_BARRIER
-          } else {
-            for (uint32 by = 0; by < 2; by++) {
-              pD = (uint32*)((uint8*)pBlock + row_pitch_in_bytes * by);
-              for (uint32 bx = 0; bx < 2; bx++, pD += 2) {
-                uint32 delta;
-                CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[0], delta);
-#if CRND_CREATE_BYTE_STREAMS
-                selector_indices_stream.push_back(delta);
-#endif
-                prev_color_selector_index += delta;
-                limit(prev_color_selector_index, num_color_selectors);
-
-                if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
-                  pD[0] = color_endpoints[pTile_indices[bx + by * 2]];
-                  CRND_WRITE_BARRIER
-                  pD[1] = m_color_selectors[prev_color_selector_index];
-                  CRND_WRITE_BARRIER
-                }
+              if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
+                pD[0] = color_endpoints[pTile_indices[bx + by * 2]];
+                pD[1] = m_color_selectors[prev_color_selector_index];
               }
             }
           }
@@ -3751,12 +3607,6 @@ class crn_unpacker {
     }  // f
 
     CRND_HUFF_DECODE_END(m_codec);
-
-#if CRND_CREATE_BYTE_STREAMS
-    write_array_to_file(L"tile_encodings.bin", tile_encoding_stream);
-    write_array_to_file(L"endpoint_indices.bin", endpoint_indices_stream);
-    write_array_to_file(L"selector_indices.bin", selector_indices_stream);
-#endif
 
     return true;
   }
@@ -3857,25 +3707,10 @@ class crn_unpacker {
                 const uint32 tile_index = pTile_indices[bx + by * 2];
                 const uint16* pAlpha_selectors = &m_alpha_selectors[prev_alpha_selector_index * 3];
 
-#ifdef CRND_BIG_ENDIAN_PLATFORM
-                pD[0] = (alpha_endpoints[tile_index] << 16) | pAlpha_selectors[0];
-                CRND_WRITE_BARRIER
-                pD[1] = (pAlpha_selectors[1] << 16) | pAlpha_selectors[2];
-                CRND_WRITE_BARRIER
-                pD[2] = color_endpoints[tile_index];
-                CRND_WRITE_BARRIER
-                pD[3] = m_color_selectors[prev_color_selector_index];
-                CRND_WRITE_BARRIER
-#else
                 pD[0] = alpha_endpoints[tile_index] | (pAlpha_selectors[0] << 16);
-                CRND_WRITE_BARRIER
                 pD[1] = pAlpha_selectors[1] | (pAlpha_selectors[2] << 16);
-                CRND_WRITE_BARRIER
                 pD[2] = color_endpoints[tile_index];
-                CRND_WRITE_BARRIER
                 pD[3] = m_color_selectors[prev_color_selector_index];
-                CRND_WRITE_BARRIER
-#endif
               }
             }
 
@@ -3992,25 +3827,10 @@ class crn_unpacker {
                 const uint16* pAlpha0_selectors = &m_alpha_selectors[prev_alpha0_selector_index * 3];
                 const uint16* pAlpha1_selectors = &m_alpha_selectors[prev_alpha1_selector_index * 3];
 
-#ifdef CRND_BIG_ENDIAN_PLATFORM
-                pD[0] = (alpha0_endpoints[tile_index] << 16) | pAlpha0_selectors[0];
-                CRND_WRITE_BARRIER
-                pD[1] = (pAlpha0_selectors[1] << 16) | pAlpha0_selectors[2];
-                CRND_WRITE_BARRIER
-                pD[2] = (alpha1_endpoints[tile_index] << 16) | pAlpha1_selectors[0];
-                CRND_WRITE_BARRIER
-                pD[3] = (pAlpha1_selectors[1] << 16) | pAlpha1_selectors[2];
-                CRND_WRITE_BARRIER
-#else
                 pD[0] = alpha0_endpoints[tile_index] | (pAlpha0_selectors[0] << 16);
-                CRND_WRITE_BARRIER
                 pD[1] = pAlpha0_selectors[1] | (pAlpha0_selectors[2] << 16);
-                CRND_WRITE_BARRIER
                 pD[2] = alpha1_endpoints[tile_index] | (pAlpha1_selectors[0] << 16);
-                CRND_WRITE_BARRIER
                 pD[3] = pAlpha1_selectors[1] | (pAlpha1_selectors[2] << 16);
-                CRND_WRITE_BARRIER
-#endif
               }
             }
 
@@ -4108,17 +3928,8 @@ class crn_unpacker {
                 const uint32 tile_index = pTile_indices[bx + by * 2];
                 const uint16* pAlpha0_selectors = &m_alpha_selectors[prev_alpha0_selector_index * 3];
 
-#if CRND_BIG_ENDIAN_PLATFORM
-                pD[0] = (alpha0_endpoints[tile_index] << 16) | pAlpha0_selectors[0];
-                CRND_WRITE_BARRIER
-                pD[1] = (pAlpha0_selectors[1] << 16) | pAlpha0_selectors[2];
-                CRND_WRITE_BARRIER
-#else
                 pD[0] = alpha0_endpoints[tile_index] | (pAlpha0_selectors[0] << 16);
-                CRND_WRITE_BARRIER
                 pD[1] = pAlpha0_selectors[1] | (pAlpha0_selectors[2] << 16);
-                CRND_WRITE_BARRIER
-#endif
               }
             }
 
