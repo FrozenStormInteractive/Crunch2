@@ -47,6 +47,7 @@ class dxt_hc {
     }
 
     float m_weight;
+    uint m_legacy_index;
   };
 
   typedef crnlib::vector<pixel_chunk> pixel_chunk_vec;

@@ -1011,20 +1011,12 @@ bool crn_comp::alias_images() {
 
 void crn_comp::append_chunks(const image_u8& img, uint num_chunks_x, uint num_chunks_y, dxt_hc::pixel_chunk_vec& chunks, float weight) {
   for (uint y = 0; y < num_chunks_y; y++) {
-    int x_start = 0;
-    int x_end = num_chunks_x;
-    int x_dir = 1;
-    if (y & 1) {
-      x_start = num_chunks_x - 1;
-      x_end = -1;
-      x_dir = -1;
-    }
-
-    for (int x = x_start; x != x_end; x += x_dir) {
+    for (uint legacy_index = chunks.size(), x = 0; x < num_chunks_x; x++) {
       chunks.resize(chunks.size() + 1);
 
       dxt_hc::pixel_chunk& chunk = chunks.back();
       chunk.m_weight = weight;
+      chunk.m_legacy_index = legacy_index + (y & 1 ? num_chunks_x - 1 - x : x);
 
       for (uint cy = 0; cy < cChunkPixelHeight; cy++) {
         uint py = y * cChunkPixelHeight + cy;

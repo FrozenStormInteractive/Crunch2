@@ -754,12 +754,11 @@ bool dxt_hc::determine_color_endpoint_clusters() {
   if (m_canceled)
     return false;
 
-  for (uint chunk_index = 0; chunk_index < m_num_chunks; chunk_index++) {
+  for (uint i = 0; i < m_num_chunks; i++) {
+    int chunk_index = m_pChunks[i].m_legacy_index;
     compressed_chunk& chunk = m_compressed_chunks[cColorChunks][chunk_index];
-
     for (uint tile_index = 0; tile_index < chunk.m_num_tiles; tile_index++) {
       uint cluster_index = chunk.m_endpoint_cluster_index[tile_index];
-
       m_color_clusters[cluster_index].m_tiles.push_back(std::make_pair(chunk_index, tile_index));
     }
   }
@@ -899,12 +898,11 @@ bool dxt_hc::determine_alpha_endpoint_clusters() {
     return false;
 
   for (uint a = 0; a < m_num_alpha_blocks; a++) {
-    for (uint chunk_index = 0; chunk_index < m_num_chunks; chunk_index++) {
+    for (uint i = 0; i < m_num_chunks; i++) {
+      int chunk_index = m_pChunks[i].m_legacy_index;
       compressed_chunk& chunk = m_compressed_chunks[cAlpha0Chunks + a][chunk_index];
-
       for (uint tile_index = 0; tile_index < chunk.m_num_tiles; tile_index++) {
         const uint cluster_index = chunk.m_endpoint_cluster_index[tile_index];
-
         m_alpha_clusters[cluster_index].m_tiles.push_back(std::make_pair(chunk_index, tile_index | (a << 16)));
       }
     }

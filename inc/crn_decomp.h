@@ -3538,23 +3538,11 @@ class crn_unpacker {
       uint8* CRND_RESTRICT pRow = pDst[f];
 
       for (uint32 y = 0; y < chunks_y; y++) {
-        int32 start_x = 0;
-        int32 end_x = chunks_x;
-        int32 dir_x = 1;
         int32 block_delta = cBytesPerBlock * 2;
         uint8* CRND_RESTRICT pBlock = pRow;
-
-        if (y & 1) {
-          start_x = chunks_x - 1;
-          end_x = -1;
-          dir_x = -1;
-          block_delta = -cBytesPerBlock * 2;
-          pBlock += (chunks_x - 1) * cBytesPerBlock * 2;
-        }
-
         const bool skip_bottom_row = (y == (chunks_y - 1)) && (blocks_y & 1);
 
-        for (int32 x = start_x; x != end_x; x += dir_x) {
+        for (uint32 x = 0; x < chunks_x; x++) {
           uint32 color_endpoints[4];
 
           if (chunk_encoding_bits == 1) {
@@ -3638,23 +3626,11 @@ class crn_unpacker {
       uint8* CRND_RESTRICT pRow = pDst[f];
 
       for (uint32 y = 0; y < chunks_y; y++) {
-        int32 start_x = 0;
-        int32 end_x = chunks_x;
-        int32 dir_x = 1;
         int32 block_delta = cBytesPerBlock * 2;
         uint8* CRND_RESTRICT pBlock = pRow;
-
-        if (y & 1) {
-          start_x = chunks_x - 1;
-          end_x = -1;
-          dir_x = -1;
-          block_delta = -cBytesPerBlock * 2;
-          pBlock += (chunks_x - 1) * cBytesPerBlock * 2;
-        }
-
         const bool skip_bottom_row = (y == (chunks_y - 1)) && (blocks_y & 1);
 
-        for (int32 x = start_x; x != end_x; x += dir_x) {
+        for (uint32 x = 0; x < chunks_x; x++) {
           uint32 color_endpoints[4];
           uint32 alpha_endpoints[4];
 
@@ -3757,23 +3733,11 @@ class crn_unpacker {
       uint8* CRND_RESTRICT pRow = pDst[f];
 
       for (uint32 y = 0; y < chunks_y; y++) {
-        int32 start_x = 0;
-        int32 end_x = chunks_x;
-        int32 dir_x = 1;
         int32 block_delta = cBytesPerBlock * 2;
         uint8* CRND_RESTRICT pBlock = pRow;
-
-        if (y & 1) {
-          start_x = chunks_x - 1;
-          end_x = -1;
-          dir_x = -1;
-          block_delta = -cBytesPerBlock * 2;
-          pBlock += (chunks_x - 1) * cBytesPerBlock * 2;
-        }
-
         const bool skip_bottom_row = (y == (chunks_y - 1)) && (blocks_y & 1);
 
-        for (int32 x = start_x; x != end_x; x += dir_x) {
+        for (uint32 x = 0; x < chunks_x; x++) {
           uint32 alpha0_endpoints[4];
           uint32 alpha1_endpoints[4];
 
@@ -3873,23 +3837,11 @@ class crn_unpacker {
       uint8* CRND_RESTRICT pRow = pDst[f];
 
       for (uint32 y = 0; y < chunks_y; y++) {
-        int32 start_x = 0;
-        int32 end_x = chunks_x;
-        int32 dir_x = 1;
         int32 block_delta = cBytesPerBlock * 2;
         uint8* CRND_RESTRICT pBlock = pRow;
-
-        if (y & 1) {
-          start_x = chunks_x - 1;
-          end_x = -1;
-          dir_x = -1;
-          block_delta = -cBytesPerBlock * 2;
-          pBlock += (chunks_x - 1) * cBytesPerBlock * 2;
-        }
-
         const bool skip_bottom_row = (y == (chunks_y - 1)) && (blocks_y & 1);
 
-        for (int32 x = start_x; x != end_x; x += dir_x) {
+        for (uint32 x = 0; x < chunks_x; x++) {
           uint32 alpha0_endpoints[4];
 
           if (chunk_encoding_bits == 1) {
