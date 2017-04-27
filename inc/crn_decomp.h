@@ -3036,58 +3036,16 @@ uint32 dxt5_block::get_block_values(uint32* pDst, uint32 l, uint32 h) {
 // File: crnd_decode.cpp
 
 namespace crnd {
-
-struct crnd_chunk_tile_desc {
-  // These values are in blocks
-  uint8 m_x_ofs;
-  uint8 m_y_ofs;
-  uint8 m_width;
-  uint8 m_height;
+static uint8 g_crnd_endpoint_references[8][2][2] = {
+    {{0, 1}, {2, 1}},
+    {{0, 1}, {0, 1}},
+    {{0, 0}, {2, 2}},
+    {{0, 1}, {0, 0}},
+    {{0, 0}, {0, 1}},
+    {{0, 0}, {2, 0}},
+    {{0, 0}, {0, 2}},
+    {{0, 0}, {0, 0}},
 };
-
-struct crnd_chunk_encoding_desc {
-  uint32 m_num_tiles;
-  chunk_tile_desc m_tiles[4];
-};
-
-#if 0
-   static crnd_chunk_encoding_desc g_crnd_chunk_encodings[cNumChunkEncodings] =
-   {
-      { 1, { { 0, 0, 2, 2 } } },
-
-      { 2, { { 0, 0, 2, 1 }, { 0, 1, 2, 1 } } },
-      { 2, { { 0, 0, 1, 2 }, { 1, 0, 1, 2 } } },
-
-      { 3, { { 0, 0, 2, 1 }, { 0, 1, 1, 1 }, { 1, 1, 1, 1 } } },
-      { 3, { { 0, 1, 2, 1 }, { 0, 0, 1, 1 }, { 1, 0, 1, 1 } } },
-
-      { 3, { { 0, 0, 1, 2 }, { 1, 0, 1, 1 }, { 1, 1, 1, 1 } } },
-      { 3, { { 1, 0, 1, 2 }, { 0, 0, 1, 1 }, { 0, 1, 1, 1 } } },
-
-      { 1, { { 0, 0, 1, 1 }, { 1, 0, 1, 1 }, { 0, 1, 1, 1 }, { 1, 1, 1, 1 } } }
-   };
-#endif
-
-struct crnd_encoding_tile_indices {
-  uint8 m_tiles[4];
-};
-
-static crnd_encoding_tile_indices g_crnd_chunk_encoding_tiles[cNumChunkEncodings] =
-    {
-        {{0, 0, 0, 0}},
-
-        {{0, 0, 1, 1}},
-        {{0, 1, 0, 1}},
-
-        {{0, 0, 1, 2}},
-        {{1, 2, 0, 0}},
-
-        {{0, 1, 0, 2}},
-        {{1, 0, 2, 0}},
-
-        {{0, 1, 2, 3}}};
-
-static uint8 g_crnd_chunk_encoding_num_tiles[cNumChunkEncodings] = {1, 2, 2, 3, 3, 3, 3, 4};
 
 class crn_unpacker {
  public:
@@ -3523,7 +3481,7 @@ class crn_unpacker {
     const uint32 num_color_endpoints = m_color_endpoints.size();
     const uint32 num_color_selectors = m_color_selectors.size();
 
-    uint32 prev_color_endpoint_index = 0;
+    uint32 color_endpoint_index[2][2] = {};
     uint32 prev_color_selector_index = 0;
 
     const uint32 num_faces = m_pHeader->m_faces;
@@ -3543,7 +3501,6 @@ class crn_unpacker {
         const bool skip_bottom_row = (y == (chunks_y - 1)) && (blocks_y & 1);
 
         for (uint32 x = 0; x < chunks_x; x++) {
-          uint32 color_endpoints[4];
 
           if (chunk_encoding_bits == 1) {
             CRND_HUFF_DECODE(m_codec, m_chunk_encoding_dm, chunk_encoding_bits);
@@ -3553,17 +3510,20 @@ class crn_unpacker {
           const uint32 chunk_encoding_index = chunk_encoding_bits & 7;
           chunk_encoding_bits >>= 3;
 
-          const uint32 num_tiles = g_crnd_chunk_encoding_num_tiles[chunk_encoding_index];
-
-          for (uint32 i = 0; i < num_tiles; i++) {
-            uint32 delta;
-            CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[0], delta);
-            prev_color_endpoint_index += delta;
-            limit(prev_color_endpoint_index, num_color_endpoints);
-            color_endpoints[i] = m_color_endpoints[prev_color_endpoint_index];
+          for (uint32 by = 0; by < 2; by++) {
+            for (uint32 bx = 0; bx < 2; bx++) {
+              uint8 endpoint_reference = g_crnd_endpoint_references[chunk_encoding_index][by][bx];
+              if (!endpoint_reference) {
+                uint32 delta;
+                CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[0], delta);
+                color_endpoint_index[by][bx] = color_endpoint_index[by][bx ^ 1] + delta;
+                if (color_endpoint_index[by][bx] >= num_color_endpoints)
+                  color_endpoint_index[by][bx] -= num_color_endpoints;
+              } else {
+                color_endpoint_index[by][bx] = endpoint_reference == 1 ? color_endpoint_index[by][bx ^ 1] : color_endpoint_index[by ^ 1][bx];
+              }
+            }
           }
-
-          const uint8* pTile_indices = g_crnd_chunk_encoding_tiles[chunk_encoding_index].m_tiles;
 
           const bool skip_right_col = (blocks_x & 1) && (x == ((int32)chunks_x - 1));
 
@@ -3578,7 +3538,7 @@ class crn_unpacker {
               limit(prev_color_selector_index, num_color_selectors);
 
               if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
-                pD[0] = color_endpoints[pTile_indices[bx + by * 2]];
+                pD[0] = m_color_endpoints[color_endpoint_index[by][bx]];
                 pD[1] = m_color_selectors[prev_color_selector_index];
               }
             }
@@ -3609,9 +3569,9 @@ class crn_unpacker {
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
     const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
 
-    uint32 prev_color_endpoint_index = 0;
+    uint32 color_endpoint_index[2][2] = {};
     uint32 prev_color_selector_index = 0;
-    uint32 prev_alpha_endpoint_index = 0;
+    uint32 alpha_endpoint_index[2][2] = {};
     uint32 prev_alpha_selector_index = 0;
 
     const uint32 num_faces = m_pHeader->m_faces;
@@ -3631,8 +3591,8 @@ class crn_unpacker {
         const bool skip_bottom_row = (y == (chunks_y - 1)) && (blocks_y & 1);
 
         for (uint32 x = 0; x < chunks_x; x++) {
-          uint32 color_endpoints[4];
-          uint32 alpha_endpoints[4];
+          uint32 color_endpoints[2][2];
+          uint32 alpha_endpoints[2][2];
 
           if (chunk_encoding_bits == 1) {
             CRND_HUFF_DECODE(m_codec, m_chunk_encoding_dm, chunk_encoding_bits);
@@ -3642,31 +3602,40 @@ class crn_unpacker {
           const uint32 chunk_encoding_index = chunk_encoding_bits & 7;
           chunk_encoding_bits >>= 3;
 
-          const uint32 num_tiles = g_crnd_chunk_encoding_num_tiles[chunk_encoding_index];
-
-          const uint8* pTile_indices = g_crnd_chunk_encoding_tiles[chunk_encoding_index].m_tiles;
-
           const bool skip_right_col = (blocks_x & 1) && (x == ((int32)chunks_x - 1));
 
           uint32* CRND_RESTRICT pD = (uint32*)pBlock;
 
-          for (uint32 i = 0; i < num_tiles; i++) {
-            uint32 delta;
-            CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[1], delta);
-            prev_alpha_endpoint_index += delta;
-            limit(prev_alpha_endpoint_index, num_alpha_endpoints);
-            alpha_endpoints[i] = m_alpha_endpoints[prev_alpha_endpoint_index];
+          for (uint32 by = 0; by < 2; by++) {
+            for (uint32 bx = 0; bx < 2; bx++) {
+              uint8 endpoint_reference = g_crnd_endpoint_references[chunk_encoding_index][by][bx];
+              if (!endpoint_reference) {
+                uint32 delta;
+                CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[1], delta);
+                alpha_endpoint_index[by][bx] = alpha_endpoint_index[by][bx ^ 1] + delta;
+                if (alpha_endpoint_index[by][bx] >= num_alpha_endpoints)
+                  alpha_endpoint_index[by][bx] -= num_alpha_endpoints;
+              } else {
+                alpha_endpoint_index[by][bx] = endpoint_reference == 1 ? alpha_endpoint_index[by][bx ^ 1] : alpha_endpoint_index[by ^ 1][bx];
+              }
+            }
           }
 
-          for (uint32 i = 0; i < num_tiles; i++) {
-            uint32 delta;
-            CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[0], delta);
-            prev_color_endpoint_index += delta;
-            limit(prev_color_endpoint_index, num_color_endpoints);
-            color_endpoints[i] = m_color_endpoints[prev_color_endpoint_index];
+          for (uint32 by = 0; by < 2; by++) {
+            for (uint32 bx = 0; bx < 2; bx++) {
+              uint8 endpoint_reference = g_crnd_endpoint_references[chunk_encoding_index][by][bx];
+              if (!endpoint_reference) {
+                uint32 delta;
+                CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[0], delta);
+                color_endpoint_index[by][bx] = color_endpoint_index[by][bx ^ 1] + delta;
+                if (color_endpoint_index[by][bx] >= num_color_endpoints)
+                  color_endpoint_index[by][bx] -= num_color_endpoints;
+              } else {
+                color_endpoint_index[by][bx] = endpoint_reference == 1 ? color_endpoint_index[by][bx ^ 1] : color_endpoint_index[by ^ 1][bx];
+              }
+            }
           }
 
-          pD = (uint32*)pBlock;
           for (uint32 by = 0; by < 2; by++) {
             for (uint32 bx = 0; bx < 2; bx++, pD += 4) {
               uint32 delta0;
@@ -3680,12 +3649,10 @@ class crn_unpacker {
               limit(prev_color_selector_index, num_color_selectors);
 
               if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
-                const uint32 tile_index = pTile_indices[bx + by * 2];
                 const uint16* pAlpha_selectors = &m_alpha_selectors[prev_alpha_selector_index * 3];
-
-                pD[0] = alpha_endpoints[tile_index] | (pAlpha_selectors[0] << 16);
+                pD[0] = m_alpha_endpoints[alpha_endpoint_index[by][bx]] | (pAlpha_selectors[0] << 16);
                 pD[1] = pAlpha_selectors[1] | (pAlpha_selectors[2] << 16);
-                pD[2] = color_endpoints[tile_index];
+                pD[2] = m_color_endpoints[color_endpoint_index[by][bx]];
                 pD[3] = m_color_selectors[prev_color_selector_index];
               }
             }
@@ -3716,9 +3683,9 @@ class crn_unpacker {
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
     const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
 
-    uint32 prev_alpha0_endpoint_index = 0;
+    uint32 alpha0_endpoint_index[2][2] = {};
     uint32 prev_alpha0_selector_index = 0;
-    uint32 prev_alpha1_endpoint_index = 0;
+    uint32 alpha1_endpoint_index[2][2] = {};
     uint32 prev_alpha1_selector_index = 0;
 
     const uint32 num_faces = m_pHeader->m_faces;
@@ -3738,9 +3705,6 @@ class crn_unpacker {
         const bool skip_bottom_row = (y == (chunks_y - 1)) && (blocks_y & 1);
 
         for (uint32 x = 0; x < chunks_x; x++) {
-          uint32 alpha0_endpoints[4];
-          uint32 alpha1_endpoints[4];
-
           if (chunk_encoding_bits == 1) {
             CRND_HUFF_DECODE(m_codec, m_chunk_encoding_dm, chunk_encoding_bits);
             chunk_encoding_bits |= 512;
@@ -3749,31 +3713,40 @@ class crn_unpacker {
           const uint32 chunk_encoding_index = chunk_encoding_bits & 7;
           chunk_encoding_bits >>= 3;
 
-          const uint32 num_tiles = g_crnd_chunk_encoding_num_tiles[chunk_encoding_index];
-
-          const uint8* pTile_indices = g_crnd_chunk_encoding_tiles[chunk_encoding_index].m_tiles;
-
           const bool skip_right_col = (blocks_x & 1) && (x == ((int32)chunks_x - 1));
 
           uint32* CRND_RESTRICT pD = (uint32*)pBlock;
 
-          for (uint32 i = 0; i < num_tiles; i++) {
-            uint32 delta;
-            CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[1], delta);
-            prev_alpha0_endpoint_index += delta;
-            limit(prev_alpha0_endpoint_index, num_alpha_endpoints);
-            alpha0_endpoints[i] = m_alpha_endpoints[prev_alpha0_endpoint_index];
+          for (uint32 by = 0; by < 2; by++) {
+            for (uint32 bx = 0; bx < 2; bx++) {
+              uint8 endpoint_reference = g_crnd_endpoint_references[chunk_encoding_index][by][bx];
+              if (!endpoint_reference) {
+                uint32 delta;
+                CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[1], delta);
+                alpha0_endpoint_index[by][bx] = alpha0_endpoint_index[by][bx ^ 1] + delta;
+                if (alpha0_endpoint_index[by][bx] >= num_alpha_endpoints)
+                  alpha0_endpoint_index[by][bx] -= num_alpha_endpoints;
+              } else {
+                alpha0_endpoint_index[by][bx] = endpoint_reference == 1 ? alpha0_endpoint_index[by][bx ^ 1] : alpha0_endpoint_index[by ^ 1][bx];
+              }
+            }
           }
 
-          for (uint32 i = 0; i < num_tiles; i++) {
-            uint32 delta;
-            CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[1], delta);
-            prev_alpha1_endpoint_index += delta;
-            limit(prev_alpha1_endpoint_index, num_alpha_endpoints);
-            alpha1_endpoints[i] = m_alpha_endpoints[prev_alpha1_endpoint_index];
+          for (uint32 by = 0; by < 2; by++) {
+            for (uint32 bx = 0; bx < 2; bx++) {
+              uint8 endpoint_reference = g_crnd_endpoint_references[chunk_encoding_index][by][bx];
+              if (!endpoint_reference) {
+                uint32 delta;
+                CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[1], delta);
+                alpha1_endpoint_index[by][bx] = alpha1_endpoint_index[by][bx ^ 1] + delta;
+                if (alpha1_endpoint_index[by][bx] >= num_alpha_endpoints)
+                  alpha1_endpoint_index[by][bx] -= num_alpha_endpoints;
+              } else {
+                alpha1_endpoint_index[by][bx] = endpoint_reference == 1 ? alpha1_endpoint_index[by][bx ^ 1] : alpha1_endpoint_index[by ^ 1][bx];
+              }
+            }
           }
 
-          pD = (uint32*)pBlock;
           for (uint32 by = 0; by < 2; by++) {
             for (uint32 bx = 0; bx < 2; bx++, pD += 4) {
               uint32 delta0;
@@ -3787,13 +3760,11 @@ class crn_unpacker {
               limit(prev_alpha1_selector_index, num_alpha_selectors);
 
               if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
-                const uint32 tile_index = pTile_indices[bx + by * 2];
                 const uint16* pAlpha0_selectors = &m_alpha_selectors[prev_alpha0_selector_index * 3];
                 const uint16* pAlpha1_selectors = &m_alpha_selectors[prev_alpha1_selector_index * 3];
-
-                pD[0] = alpha0_endpoints[tile_index] | (pAlpha0_selectors[0] << 16);
+                pD[0] = m_alpha_endpoints[alpha0_endpoint_index[by][bx]] | (pAlpha0_selectors[0] << 16);
                 pD[1] = pAlpha0_selectors[1] | (pAlpha0_selectors[2] << 16);
-                pD[2] = alpha1_endpoints[tile_index] | (pAlpha1_selectors[0] << 16);
+                pD[2] = m_alpha_endpoints[alpha1_endpoint_index[by][bx]] | (pAlpha1_selectors[0] << 16);
                 pD[3] = pAlpha1_selectors[1] | (pAlpha1_selectors[2] << 16);
               }
             }
@@ -3824,7 +3795,7 @@ class crn_unpacker {
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
     const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
 
-    uint32 prev_alpha0_endpoint_index = 0;
+    uint32 alpha0_endpoint_index[2][2] = {};
     uint32 prev_alpha0_selector_index = 0;
 
     const uint32 num_faces = m_pHeader->m_faces;
@@ -3842,8 +3813,6 @@ class crn_unpacker {
         const bool skip_bottom_row = (y == (chunks_y - 1)) && (blocks_y & 1);
 
         for (uint32 x = 0; x < chunks_x; x++) {
-          uint32 alpha0_endpoints[4];
-
           if (chunk_encoding_bits == 1) {
             CRND_HUFF_DECODE(m_codec, m_chunk_encoding_dm, chunk_encoding_bits);
             chunk_encoding_bits |= 512;
@@ -3852,23 +3821,25 @@ class crn_unpacker {
           const uint32 chunk_encoding_index = chunk_encoding_bits & 7;
           chunk_encoding_bits >>= 3;
 
-          const uint32 num_tiles = g_crnd_chunk_encoding_num_tiles[chunk_encoding_index];
-
-          const uint8* pTile_indices = g_crnd_chunk_encoding_tiles[chunk_encoding_index].m_tiles;
-
           const bool skip_right_col = (blocks_x & 1) && (x == ((int32)chunks_x - 1));
 
           uint32* CRND_RESTRICT pD = (uint32*)pBlock;
 
-          for (uint32 i = 0; i < num_tiles; i++) {
-            uint32 delta;
-            CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[1], delta);
-            prev_alpha0_endpoint_index += delta;
-            limit(prev_alpha0_endpoint_index, num_alpha_endpoints);
-            alpha0_endpoints[i] = m_alpha_endpoints[prev_alpha0_endpoint_index];
+          for (uint32 by = 0; by < 2; by++) {
+            for (uint32 bx = 0; bx < 2; bx++) {
+              uint8 endpoint_reference = g_crnd_endpoint_references[chunk_encoding_index][by][bx];
+              if (!endpoint_reference) {
+                uint32 delta;
+                CRND_HUFF_DECODE(m_codec, m_endpoint_delta_dm[1], delta);
+                alpha0_endpoint_index[by][bx] = alpha0_endpoint_index[by][bx ^ 1] + delta;
+                if (alpha0_endpoint_index[by][bx] >= num_alpha_endpoints)
+                  alpha0_endpoint_index[by][bx] -= num_alpha_endpoints;
+              } else {
+                alpha0_endpoint_index[by][bx] = endpoint_reference == 1 ? alpha0_endpoint_index[by][bx ^ 1] : alpha0_endpoint_index[by ^ 1][bx];
+              }
+            }
           }
 
-          pD = (uint32*)pBlock;
           for (uint32 by = 0; by < 2; by++) {
             for (uint32 bx = 0; bx < 2; bx++, pD += 2) {
               uint32 delta;
@@ -3877,10 +3848,8 @@ class crn_unpacker {
               limit(prev_alpha0_selector_index, num_alpha_selectors);
 
               if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
-                const uint32 tile_index = pTile_indices[bx + by * 2];
                 const uint16* pAlpha0_selectors = &m_alpha_selectors[prev_alpha0_selector_index * 3];
-
-                pD[0] = alpha0_endpoints[tile_index] | (pAlpha0_selectors[0] << 16);
+                pD[0] = m_alpha_endpoints[alpha0_endpoint_index[by][bx]] | (pAlpha0_selectors[0] << 16);
                 pD[1] = pAlpha0_selectors[1] | (pAlpha0_selectors[2] << 16);
               }
             }

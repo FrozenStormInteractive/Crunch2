@@ -66,9 +66,9 @@ class crn_comp : public itexture_comp {
 
   struct chunk_detail {
     chunk_detail() { utils::zero_object(*this); }
-
-    uint m_first_endpoint_index;
-    uint m_first_selector_index;
+    uint8 m_endpoint_references[cNumComps][2][2];
+    uint16 m_endpoint_indices[cNumComps][2][2];
+    uint16 m_selector_indices[cNumComps][2][2];
   };
   typedef crnlib::vector<chunk_detail> chunk_detail_vec;
   chunk_detail_vec m_chunk_details;

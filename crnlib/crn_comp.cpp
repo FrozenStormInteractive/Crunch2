@@ -727,8 +727,7 @@ bool crn_comp::pack_chunks(
     }
   }
 
-  uint prev_endpoint_index[cNumComps];
-  utils::zero_object(prev_endpoint_index);
+  uint endpoint_index[cNumComps][2][2] = {};
 
   uint prev_selector_index[cNumComps];
   utils::zero_object(prev_selector_index);
@@ -763,42 +762,52 @@ bool crn_comp::pack_chunks(
       // endpoints
       if (comp_index == cColor) {
         if (pColor_endpoint_remap) {
-          for (uint i = 0; i < encoding.m_num_tiles; i++) {
-            uint cur_endpoint_index = (*pColor_endpoint_remap)[m_endpoint_indices[cColor][details.m_first_endpoint_index + i]];
-            int endpoint_delta = cur_endpoint_index - prev_endpoint_index[cColor];
+          for (uint y = 0; y < 2; y++) {
+            for (uint x = 0; x < 2; x++) {
+              uint8 endpoint_reference = details.m_endpoint_references[comp_index][y][x];
+              if (!endpoint_reference) {
+                endpoint_index[comp_index][y][x] = (*pColor_endpoint_remap)[details.m_endpoint_indices[comp_index][y][x]];
+                int endpoint_delta = endpoint_index[comp_index][y][x] - endpoint_index[comp_index][y][x ^ 1];
 
-            int sym = endpoint_delta;
-            if (sym < 0)
-              sym += pColor_endpoint_remap->size();
+                int sym = endpoint_delta;
+                if (sym < 0)
+                  sym += pColor_endpoint_remap->size();
 
-            CRNLIB_ASSERT(sym >= 0 && sym < (int)pColor_endpoint_remap->size());
+                CRNLIB_ASSERT(sym >= 0 && sym < (int)pColor_endpoint_remap->size());
 
-            if (!pCodec)
-              m_endpoint_index_hist[cColor].inc_freq(sym);
-            else
-              pCodec->encode(sym, m_endpoint_index_dm[0]);
-
-            prev_endpoint_index[cColor] = cur_endpoint_index;
+                if (!pCodec)
+                  m_endpoint_index_hist[0].inc_freq(sym);
+                else
+                  pCodec->encode(sym, m_endpoint_index_dm[0]);
+              } else {
+                endpoint_index[comp_index][y][x] = endpoint_reference == 1 ? endpoint_index[comp_index][y][x ^ 1] : endpoint_index[comp_index][y ^ 1][x];
+              }
+            }
           }
         }
       } else {
         if (pAlpha_endpoint_remap) {
-          for (uint i = 0; i < encoding.m_num_tiles; i++) {
-            uint cur_endpoint_index = (*pAlpha_endpoint_remap)[m_endpoint_indices[comp_index][details.m_first_endpoint_index + i]];
-            int endpoint_delta = cur_endpoint_index - prev_endpoint_index[comp_index];
+          for (uint y = 0; y < 2; y++) {
+            for (uint x = 0; x < 2; x++) {
+              uint8 endpoint_reference = details.m_endpoint_references[comp_index][y][x];
+              if (!endpoint_reference) {
+                endpoint_index[comp_index][y][x] = (*pAlpha_endpoint_remap)[details.m_endpoint_indices[comp_index][y][x]];
+                int endpoint_delta = endpoint_index[comp_index][y][x] - endpoint_index[comp_index][y][x ^ 1];
 
-            int sym = endpoint_delta;
-            if (sym < 0)
-              sym += pAlpha_endpoint_remap->size();
+                int sym = endpoint_delta;
+                if (sym < 0)
+                  sym += pAlpha_endpoint_remap->size();
 
-            CRNLIB_ASSERT(sym >= 0 && sym < (int)pAlpha_endpoint_remap->size());
+                CRNLIB_ASSERT(sym >= 0 && sym < (int)pAlpha_endpoint_remap->size());
 
-            if (!pCodec)
-              m_endpoint_index_hist[1].inc_freq(sym);
-            else
-              pCodec->encode(sym, m_endpoint_index_dm[1]);
-
-            prev_endpoint_index[comp_index] = cur_endpoint_index;
+                if (!pCodec)
+                  m_endpoint_index_hist[1].inc_freq(sym);
+                else
+                  pCodec->encode(sym, m_endpoint_index_dm[1]);
+              } else {
+                endpoint_index[comp_index][y][x] = endpoint_reference == 1 ? endpoint_index[comp_index][y][x ^ 1] : endpoint_index[comp_index][y ^ 1][x];
+              }
+            }
           }
         }
       }
@@ -814,7 +823,7 @@ bool crn_comp::pack_chunks(
 
           if (comp_index == cColor) {
             if (pColor_selector_remap) {
-              uint cur_selector_index = (*pColor_selector_remap)[m_selector_indices[cColor][details.m_first_selector_index + x + y * 2]];
+              uint cur_selector_index = (*pColor_selector_remap)[details.m_selector_indices[cColor][y][x]];
               int selector_delta = cur_selector_index - prev_selector_index[cColor];
 
               int sym = selector_delta;
@@ -831,7 +840,7 @@ bool crn_comp::pack_chunks(
               prev_selector_index[cColor] = cur_selector_index;
             }
           } else if (pAlpha_selector_remap) {
-            uint cur_selector_index = (*pAlpha_selector_remap)[m_selector_indices[comp_index][details.m_first_selector_index + x + y * 2]];
+            uint cur_selector_index = (*pAlpha_selector_remap)[details.m_selector_indices[comp_index][y][x]];
             int selector_delta = cur_selector_index - prev_selector_index[comp_index];
 
             int sym = selector_delta;
@@ -1251,6 +1260,28 @@ bool crn_comp::quantize_chunks() {
 }
 
 void crn_comp::create_chunk_indices() {
+  uint8 endpoint_index_map[8][4] = {
+    { 0, 0, 0, 0 },
+    { 0, 0, 1, 1 },
+    { 0, 1, 0, 1 },
+    { 0, 0, 1, 2 },
+    { 1, 2, 0, 0 },
+    { 0, 1, 0, 2 },
+    { 1, 0, 2, 0 },
+    { 0, 1, 2, 3 },
+  };
+
+  uint8 endpoint_references[8][4] = {
+    { 0, 1, 2, 1 },
+    { 0, 1, 0, 1 },
+    { 0, 0, 2, 2 },
+    { 0, 1, 0, 0 },
+    { 0, 0, 0, 1 },
+    { 0, 0, 2, 0 },
+    { 0, 0, 0, 2 },
+    { 0, 0, 0, 0 },
+  };
+
   m_chunk_details.resize(m_total_chunks);
 
   for (uint i = 0; i < cNumComps; i++) {
@@ -1262,23 +1293,20 @@ void crn_comp::create_chunk_indices() {
     const dxt_hc::chunk_encoding& chunk_encoding = m_hvq.get_chunk_encoding(chunk_index);
 
     for (uint i = 0; i < cNumComps; i++) {
-      if (m_has_comp[i]) {
-        m_chunk_details[chunk_index].m_first_endpoint_index = m_endpoint_indices[i].size();
-        m_chunk_details[chunk_index].m_first_selector_index = m_selector_indices[i].size();
-        break;
-      }
-    }
-
-    for (uint i = 0; i < cNumComps; i++) {
       if (!m_has_comp[i])
         continue;
 
       for (uint tile_index = 0; tile_index < chunk_encoding.m_num_tiles; tile_index++)
         m_endpoint_indices[i].push_back(chunk_encoding.m_endpoint_indices[i][tile_index]);
 
-      for (uint y = 0; y < cChunkBlockHeight; y++)
-        for (uint x = 0; x < cChunkBlockWidth; x++)
+      for (uint t = 0, y = 0; y < cChunkBlockHeight; y++) {
+        for (uint x = 0; x < cChunkBlockWidth; x++, t++) {
           m_selector_indices[i].push_back(chunk_encoding.m_selector_indices[i][y][x]);
+          m_chunk_details[chunk_index].m_selector_indices[i][y][x] = chunk_encoding.m_selector_indices[i][y][x];
+          m_chunk_details[chunk_index].m_endpoint_indices[i][y][x] = chunk_encoding.m_endpoint_indices[i][endpoint_index_map[chunk_encoding.m_encoding_index][t]];
+          m_chunk_details[chunk_index].m_endpoint_references[i][y][x] = endpoint_references[chunk_encoding.m_encoding_index][t];
+        }
+      }
     }
   }
 }
