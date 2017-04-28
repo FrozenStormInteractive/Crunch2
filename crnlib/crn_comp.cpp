@@ -728,9 +728,7 @@ bool crn_comp::pack_chunks(
   }
 
   uint endpoint_index[cNumComps][2][2] = {};
-
-  uint prev_selector_index[cNumComps];
-  utils::zero_object(prev_selector_index);
+  uint selector_index[cNumComps][2][2] = {};
 
   uint num_encodings_left = 0;
 
@@ -823,8 +821,8 @@ bool crn_comp::pack_chunks(
 
           if (comp_index == cColor) {
             if (pColor_selector_remap) {
-              uint cur_selector_index = (*pColor_selector_remap)[details.m_selector_indices[cColor][y][x]];
-              int selector_delta = cur_selector_index - prev_selector_index[cColor];
+              selector_index[comp_index][y][x] = (*pColor_selector_remap)[details.m_selector_indices[comp_index][y][x]];
+              int selector_delta = selector_index[comp_index][y][x] - selector_index[comp_index][y][x ^ 1];
 
               int sym = selector_delta;
               if (sym < 0)
@@ -836,12 +834,10 @@ bool crn_comp::pack_chunks(
                 m_selector_index_hist[cColor].inc_freq(sym);
               else
                 pCodec->encode(sym, m_selector_index_dm[cColor]);
-
-              prev_selector_index[cColor] = cur_selector_index;
             }
           } else if (pAlpha_selector_remap) {
-            uint cur_selector_index = (*pAlpha_selector_remap)[details.m_selector_indices[comp_index][y][x]];
-            int selector_delta = cur_selector_index - prev_selector_index[comp_index];
+            selector_index[comp_index][y][x] = (*pAlpha_selector_remap)[details.m_selector_indices[comp_index][y][x]];
+            int selector_delta = selector_index[comp_index][y][x] - selector_index[comp_index][y][x ^ 1];
 
             int sym = selector_delta;
             if (sym < 0)
@@ -853,8 +849,6 @@ bool crn_comp::pack_chunks(
               m_selector_index_hist[1].inc_freq(sym);
             else
               pCodec->encode(sym, m_selector_index_dm[1]);
-
-            prev_selector_index[comp_index] = cur_selector_index;
           }
 
         }  // c
@@ -1493,12 +1487,16 @@ bool crn_comp::optimize_color_selector_codebook(crnlib::vector<uint>& remapping)
 
   uint n = m_hvq.get_color_selector_codebook_size();
   hist_type xhist(n * n);
-  for (uint i = 0; i < m_selector_indices[cColor].size(); i++) {
-    const int prev_val = (i > 0) ? m_selector_indices[cColor][i - 1] : -1;
-    const int cur_val = m_selector_indices[cColor][i];
-    const int next_val = (i < (m_selector_indices[cColor].size() - 1)) ? m_selector_indices[cColor][i + 1] : -1;
-    update_hist(xhist, cur_val, prev_val, n);
-    update_hist(xhist, cur_val, next_val, n);
+  uint selector_index[2][2] = {};
+  for (uint chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
+    const chunk_detail& details = m_chunk_details[chunk_index];
+    for (uint y = 0; y < 2; y++) {
+      for (uint x = 0; x < 2; x++) {
+        selector_index[y][x] = details.m_selector_indices[cColor][y][x];
+        update_hist(xhist, selector_index[y][x], selector_index[y][x ^ 1], n);
+        update_hist(xhist, selector_index[y][x ^ 1], selector_index[y][x], n);
+      }
+    }
   }
 
   for (uint i = 0; i <= cMaxSelectorRemapIters; i++) {
@@ -1756,12 +1754,19 @@ bool crn_comp::optimize_alpha_selector_codebook(crnlib::vector<uint>& remapping)
 
   uint n = m_hvq.get_alpha_selector_codebook_size();
   hist_type xhist(n * n);
-  for (uint i = 0; i < alpha_indices.size(); i++) {
-    const int prev_val = (i > 0) ? alpha_indices[i - 1] : -1;
-    const int cur_val = alpha_indices[i];
-    const int next_val = (i < (alpha_indices.size() - 1)) ? alpha_indices[i + 1] : -1;
-    update_hist(xhist, cur_val, prev_val, n);
-    update_hist(xhist, cur_val, next_val, n);
+  uint selector_index[cNumComps][2][2] = {};
+  uint min_comp_index = m_has_comp[cAlpha0] ? cAlpha0 : cAlpha1, max_comp_index = m_has_comp[cAlpha1] ? cAlpha1 : cAlpha0;
+  for (uint chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
+    const chunk_detail& details = m_chunk_details[chunk_index];
+    for (uint comp_index = min_comp_index; comp_index <= max_comp_index; comp_index++) {
+      for (uint y = 0; y < 2; y++) {
+        for (uint x = 0; x < 2; x++) {
+          selector_index[comp_index][y][x] = details.m_selector_indices[comp_index][y][x];
+          update_hist(xhist, selector_index[comp_index][y][x], selector_index[comp_index][y][x ^ 1], n);
+          update_hist(xhist, selector_index[comp_index][y][x ^ 1], selector_index[comp_index][y][x], n);
+        }
+      }
+    }
   }
 
   for (uint i = 0; i <= cMaxSelectorRemapIters; i++) {

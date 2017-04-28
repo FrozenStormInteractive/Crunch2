@@ -3482,7 +3482,7 @@ class crn_unpacker {
     const uint32 num_color_selectors = m_color_selectors.size();
 
     uint32 color_endpoint_index[2][2] = {};
-    uint32 prev_color_selector_index = 0;
+    uint32 color_selector_index[2][2] = {};
 
     const uint32 num_faces = m_pHeader->m_faces;
 
@@ -3534,12 +3534,12 @@ class crn_unpacker {
             for (uint32 bx = 0; bx < 2; bx++, pD += 2) {
               uint32 delta;
               CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[0], delta);
-              prev_color_selector_index += delta;
-              limit(prev_color_selector_index, num_color_selectors);
-
+              color_selector_index[by][bx] = color_selector_index[by][bx ^ 1] + delta;
+              if (color_selector_index[by][bx] >= num_color_selectors)
+                color_selector_index[by][bx] -= num_color_selectors;
               if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
                 pD[0] = m_color_endpoints[color_endpoint_index[by][bx]];
-                pD[1] = m_color_selectors[prev_color_selector_index];
+                pD[1] = m_color_selectors[color_selector_index[by][bx]];
               }
             }
           }
@@ -3570,9 +3570,9 @@ class crn_unpacker {
     const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
 
     uint32 color_endpoint_index[2][2] = {};
-    uint32 prev_color_selector_index = 0;
+    uint32 color_selector_index[2][2] = {};
     uint32 alpha_endpoint_index[2][2] = {};
-    uint32 prev_alpha_selector_index = 0;
+    uint32 alpha_selector_index[2][2] = {};
 
     const uint32 num_faces = m_pHeader->m_faces;
 
@@ -3640,20 +3640,22 @@ class crn_unpacker {
             for (uint32 bx = 0; bx < 2; bx++, pD += 4) {
               uint32 delta0;
               CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[1], delta0);
-              prev_alpha_selector_index += delta0;
-              limit(prev_alpha_selector_index, num_alpha_selectors);
+              alpha_selector_index[by][bx] = alpha_selector_index[by][bx ^ 1] + delta0;
+              if (alpha_selector_index[by][bx] >= num_alpha_selectors)
+                alpha_selector_index[by][bx] -= num_alpha_selectors;
 
               uint32 delta1;
               CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[0], delta1);
-              prev_color_selector_index += delta1;
-              limit(prev_color_selector_index, num_color_selectors);
+              color_selector_index[by][bx] = color_selector_index[by][bx ^ 1] + delta1;
+              if (color_selector_index[by][bx] >= num_color_selectors)
+                color_selector_index[by][bx] -= num_color_selectors;
 
               if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
-                const uint16* pAlpha_selectors = &m_alpha_selectors[prev_alpha_selector_index * 3];
+                const uint16* pAlpha_selectors = &m_alpha_selectors[alpha_selector_index[by][bx] * 3];
                 pD[0] = m_alpha_endpoints[alpha_endpoint_index[by][bx]] | (pAlpha_selectors[0] << 16);
                 pD[1] = pAlpha_selectors[1] | (pAlpha_selectors[2] << 16);
                 pD[2] = m_color_endpoints[color_endpoint_index[by][bx]];
-                pD[3] = m_color_selectors[prev_color_selector_index];
+                pD[3] = m_color_selectors[color_selector_index[by][bx]];
               }
             }
 
@@ -3684,9 +3686,9 @@ class crn_unpacker {
     const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
 
     uint32 alpha0_endpoint_index[2][2] = {};
-    uint32 prev_alpha0_selector_index = 0;
+    uint32 alpha0_selector_index[2][2] = {};
     uint32 alpha1_endpoint_index[2][2] = {};
-    uint32 prev_alpha1_selector_index = 0;
+    uint32 alpha1_selector_index[2][2] = {};
 
     const uint32 num_faces = m_pHeader->m_faces;
 
@@ -3751,17 +3753,19 @@ class crn_unpacker {
             for (uint32 bx = 0; bx < 2; bx++, pD += 4) {
               uint32 delta0;
               CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[1], delta0);
-              prev_alpha0_selector_index += delta0;
-              limit(prev_alpha0_selector_index, num_alpha_selectors);
+              alpha0_selector_index[by][bx] = alpha0_selector_index[by][bx ^ 1] + delta0;
+              if (alpha0_selector_index[by][bx] >= num_alpha_selectors)
+                alpha0_selector_index[by][bx] -= num_alpha_selectors;
 
               uint32 delta1;
               CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[1], delta1);
-              prev_alpha1_selector_index += delta1;
-              limit(prev_alpha1_selector_index, num_alpha_selectors);
+              alpha1_selector_index[by][bx] = alpha1_selector_index[by][bx ^ 1] + delta1;
+              if (alpha1_selector_index[by][bx] >= num_alpha_selectors)
+                alpha1_selector_index[by][bx] -= num_alpha_selectors;
 
               if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
-                const uint16* pAlpha0_selectors = &m_alpha_selectors[prev_alpha0_selector_index * 3];
-                const uint16* pAlpha1_selectors = &m_alpha_selectors[prev_alpha1_selector_index * 3];
+                const uint16* pAlpha0_selectors = &m_alpha_selectors[alpha0_selector_index[by][bx] * 3];
+                const uint16* pAlpha1_selectors = &m_alpha_selectors[alpha1_selector_index[by][bx] * 3];
                 pD[0] = m_alpha_endpoints[alpha0_endpoint_index[by][bx]] | (pAlpha0_selectors[0] << 16);
                 pD[1] = pAlpha0_selectors[1] | (pAlpha0_selectors[2] << 16);
                 pD[2] = m_alpha_endpoints[alpha1_endpoint_index[by][bx]] | (pAlpha1_selectors[0] << 16);
@@ -3796,7 +3800,7 @@ class crn_unpacker {
     const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
 
     uint32 alpha0_endpoint_index[2][2] = {};
-    uint32 prev_alpha0_selector_index = 0;
+    uint32 alpha0_selector_index[2][2] = {};
 
     const uint32 num_faces = m_pHeader->m_faces;
 
@@ -3844,11 +3848,12 @@ class crn_unpacker {
             for (uint32 bx = 0; bx < 2; bx++, pD += 2) {
               uint32 delta;
               CRND_HUFF_DECODE(m_codec, m_selector_delta_dm[1], delta);
-              prev_alpha0_selector_index += delta;
-              limit(prev_alpha0_selector_index, num_alpha_selectors);
+              alpha0_selector_index[by][bx] = alpha0_selector_index[by][bx ^ 1] + delta;
+              if (alpha0_selector_index[by][bx] >= num_alpha_selectors)
+                alpha0_selector_index[by][bx] -= num_alpha_selectors;
 
               if (!((bx && skip_right_col) || (by && skip_bottom_row))) {
-                const uint16* pAlpha0_selectors = &m_alpha_selectors[prev_alpha0_selector_index * 3];
+                const uint16* pAlpha0_selectors = &m_alpha_selectors[alpha0_selector_index[by][bx] * 3];
                 pD[0] = m_alpha_endpoints[alpha0_endpoint_index[by][bx]] | (pAlpha0_selectors[0] << 16);
                 pD[1] = pAlpha0_selectors[1] | (pAlpha0_selectors[2] << 16);
               }
