@@ -1364,12 +1364,21 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
 
   uint n = m_hvq.get_color_endpoint_codebook_size();
   hist_type xhist(n * n);
-  for (uint i = 0; i < m_endpoint_indices[cColor].size(); i++) {
-    const int prev_val = (i > 0) ? m_endpoint_indices[cColor][i - 1] : -1;
-    const int cur_val = m_endpoint_indices[cColor][i];
-    const int next_val = (i < (m_endpoint_indices[cColor].size() - 1)) ? m_endpoint_indices[cColor][i + 1] : -1;
-    update_hist(xhist, cur_val, prev_val, n);
-    update_hist(xhist, cur_val, next_val, n);
+  uint endpoint_index[2][2] = {};
+  for (uint chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
+    const chunk_detail& details = m_chunk_details[chunk_index];
+    for (uint y = 0; y < 2; y++) {
+      for (uint x = 0; x < 2; x++) {
+        uint8 endpoint_reference = details.m_endpoint_references[cColor][y][x];
+        if (!endpoint_reference) {
+          endpoint_index[y][x] = details.m_endpoint_indices[cColor][y][x];
+          update_hist(xhist, endpoint_index[y][x], endpoint_index[y][x ^ 1], n);
+          update_hist(xhist, endpoint_index[y][x ^ 1], endpoint_index[y][x], n);
+        } else {
+          endpoint_index[y][x] = endpoint_reference == 1 ? endpoint_index[y][x ^ 1] : endpoint_index[y ^ 1][x];
+        }
+      }
+    }
   }
 
   for (uint i = 0; i <= cMaxEndpointRemapIters; i++) {
@@ -1610,12 +1619,24 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
 
   uint n = m_hvq.get_alpha_endpoint_codebook_size();
   hist_type xhist(n * n);
-  for (uint i = 0; i < alpha_indices.size(); i++) {
-    const int prev_val = (i > 0) ? alpha_indices[i - 1] : -1;
-    const int cur_val = alpha_indices[i];
-    const int next_val = (i < (alpha_indices.size() - 1)) ? alpha_indices[i + 1] : -1;
-    update_hist(xhist, cur_val, prev_val, n);
-    update_hist(xhist, cur_val, next_val, n);
+  uint endpoint_index[cNumComps][2][2] = {};
+  uint min_comp_index = m_has_comp[cAlpha0] ? cAlpha0 : cAlpha1, max_comp_index = m_has_comp[cAlpha1] ? cAlpha1 : cAlpha0;
+  for (uint chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
+    const chunk_detail& details = m_chunk_details[chunk_index];
+    for (uint comp_index = min_comp_index; comp_index <= max_comp_index; comp_index++) {
+      for (uint y = 0; y < 2; y++) {
+        for (uint x = 0; x < 2; x++) {
+          uint8 endpoint_reference = details.m_endpoint_references[comp_index][y][x];
+          if (!endpoint_reference) {
+            endpoint_index[comp_index][y][x] = details.m_endpoint_indices[comp_index][y][x];
+            update_hist(xhist, endpoint_index[comp_index][y][x], endpoint_index[comp_index][y][x ^ 1], n);
+            update_hist(xhist, endpoint_index[comp_index][y][x ^ 1], endpoint_index[comp_index][y][x], n);
+          } else {
+            endpoint_index[comp_index][y][x] = endpoint_reference == 1 ? endpoint_index[comp_index][y][x ^ 1] : endpoint_index[comp_index][y ^ 1][x];
+          }
+        }
+      }
+    }
   }
 
   for (uint i = 0; i <= cMaxEndpointRemapIters; i++) {
