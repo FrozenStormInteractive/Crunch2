@@ -1315,6 +1315,7 @@ struct optimize_color_endpoint_codebook_params {
   crnlib::vector<uint>* m_pTrial_color_endpoint_remap;
   uint m_iter_index;
   uint m_max_iter_index;
+  hist_type* xhist;
 };
 
 void crn_comp::optimize_color_endpoint_codebook_task(uint64 data, void* pData_ptr) {
@@ -1328,8 +1329,7 @@ void crn_comp::optimize_color_endpoint_codebook_task(uint64 data, void* pData_pt
 
     create_zeng_reorder_table(
         m_hvq.get_color_endpoint_codebook_size(),
-        m_endpoint_indices[cColor].size(),
-        &m_endpoint_indices[cColor][0],
+        *pParams->xhist,
         *pParams->m_pTrial_color_endpoint_remap,
         pParams->m_iter_index ? color_endpoint_similarity_func : NULL,
         &m_hvq,
@@ -1362,11 +1362,22 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
 
   crnlib::vector<uint> trial_color_endpoint_remaps[cMaxEndpointRemapIters + 1];
 
+  uint n = m_hvq.get_color_endpoint_codebook_size();
+  hist_type xhist(n * n);
+  for (uint i = 0; i < m_endpoint_indices[cColor].size(); i++) {
+    const int prev_val = (i > 0) ? m_endpoint_indices[cColor][i - 1] : -1;
+    const int cur_val = m_endpoint_indices[cColor][i];
+    const int next_val = (i < (m_endpoint_indices[cColor].size() - 1)) ? m_endpoint_indices[cColor][i + 1] : -1;
+    update_hist(xhist, cur_val, prev_val, n);
+    update_hist(xhist, cur_val, next_val, n);
+  }
+
   for (uint i = 0; i <= cMaxEndpointRemapIters; i++) {
     optimize_color_endpoint_codebook_params* pParams = crnlib_new<optimize_color_endpoint_codebook_params>();
     pParams->m_iter_index = i;
     pParams->m_max_iter_index = cMaxEndpointRemapIters;
     pParams->m_pTrial_color_endpoint_remap = &trial_color_endpoint_remaps[i];
+    pParams->xhist = &xhist;
 
     m_task_pool.queue_object_task(this, &crn_comp::optimize_color_endpoint_codebook_task, 0, pParams);
   }
@@ -1418,6 +1429,7 @@ struct optimize_color_selector_codebook_params {
   crnlib::vector<uint>* m_pTrial_color_selector_remap;
   uint m_iter_index;
   uint m_max_iter_index;
+  hist_type* xhist;
 };
 
 void crn_comp::optimize_color_selector_codebook_task(uint64 data, void* pData_ptr) {
@@ -1430,8 +1442,7 @@ void crn_comp::optimize_color_selector_codebook_task(uint64 data, void* pData_pt
     float f = pParams->m_iter_index / static_cast<float>(pParams->m_max_iter_index - 1);
     create_zeng_reorder_table(
         m_hvq.get_color_selector_codebook_size(),
-        m_selector_indices[cColor].size(),
-        &m_selector_indices[cColor][0],
+        *pParams->xhist,
         *pParams->m_pTrial_color_selector_remap,
         pParams->m_iter_index ? color_selector_similarity_func : NULL,
         (void*)&m_hvq.get_color_selectors_vec(),
@@ -1471,11 +1482,22 @@ bool crn_comp::optimize_color_selector_codebook(crnlib::vector<uint>& remapping)
 
   crnlib::vector<uint> trial_color_selector_remaps[cMaxSelectorRemapIters + 1];
 
+  uint n = m_hvq.get_color_selector_codebook_size();
+  hist_type xhist(n * n);
+  for (uint i = 0; i < m_selector_indices[cColor].size(); i++) {
+    const int prev_val = (i > 0) ? m_selector_indices[cColor][i - 1] : -1;
+    const int cur_val = m_selector_indices[cColor][i];
+    const int next_val = (i < (m_selector_indices[cColor].size() - 1)) ? m_selector_indices[cColor][i + 1] : -1;
+    update_hist(xhist, cur_val, prev_val, n);
+    update_hist(xhist, cur_val, next_val, n);
+  }
+
   for (uint i = 0; i <= cMaxSelectorRemapIters; i++) {
     optimize_color_selector_codebook_params* pParams = crnlib_new<optimize_color_selector_codebook_params>();
     pParams->m_iter_index = i;
     pParams->m_max_iter_index = cMaxSelectorRemapIters;
     pParams->m_pTrial_color_selector_remap = &trial_color_selector_remaps[i];
+    pParams->xhist = &xhist;
 
     m_task_pool.queue_object_task(this, &crn_comp::optimize_color_selector_codebook_task, 0, pParams);
   }
@@ -1530,10 +1552,10 @@ bool crn_comp::optimize_color_selector_codebook(crnlib::vector<uint>& remapping)
 }
 
 struct optimize_alpha_endpoint_codebook_params {
-  crnlib::vector<uint>* m_pAlpha_indices;
   crnlib::vector<uint>* m_pTrial_alpha_endpoint_remap;
   uint m_iter_index;
   uint m_max_iter_index;
+  hist_type* xhist;
 };
 
 void crn_comp::optimize_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr) {
@@ -1547,8 +1569,7 @@ void crn_comp::optimize_alpha_endpoint_codebook_task(uint64 data, void* pData_pt
 
     create_zeng_reorder_table(
         m_hvq.get_alpha_endpoint_codebook_size(),
-        pParams->m_pAlpha_indices->size(),
-        &(*pParams->m_pAlpha_indices)[0],
+        *pParams->xhist,
         *pParams->m_pTrial_alpha_endpoint_remap,
         pParams->m_iter_index ? alpha_endpoint_similarity_func : NULL,
         &m_hvq,
@@ -1587,12 +1608,22 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
 
   crnlib::vector<uint> trial_alpha_endpoint_remaps[cMaxEndpointRemapIters + 1];
 
+  uint n = m_hvq.get_alpha_endpoint_codebook_size();
+  hist_type xhist(n * n);
+  for (uint i = 0; i < alpha_indices.size(); i++) {
+    const int prev_val = (i > 0) ? alpha_indices[i - 1] : -1;
+    const int cur_val = alpha_indices[i];
+    const int next_val = (i < (alpha_indices.size() - 1)) ? alpha_indices[i + 1] : -1;
+    update_hist(xhist, cur_val, prev_val, n);
+    update_hist(xhist, cur_val, next_val, n);
+  }
+
   for (uint i = 0; i <= cMaxEndpointRemapIters; i++) {
     optimize_alpha_endpoint_codebook_params* pParams = crnlib_new<optimize_alpha_endpoint_codebook_params>();
-    pParams->m_pAlpha_indices = &alpha_indices;
     pParams->m_iter_index = i;
     pParams->m_max_iter_index = cMaxEndpointRemapIters;
     pParams->m_pTrial_alpha_endpoint_remap = &trial_alpha_endpoint_remaps[i];
+    pParams->xhist = &xhist;
 
     m_task_pool.queue_object_task(this, &crn_comp::optimize_alpha_endpoint_codebook_task, 0, pParams);
   }
@@ -1641,10 +1672,10 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
 }
 
 struct optimize_alpha_selector_codebook_params {
-  crnlib::vector<uint>* m_pAlpha_indices;
   crnlib::vector<uint>* m_pTrial_alpha_selector_remap;
   uint m_iter_index;
   uint m_max_iter_index;
+  hist_type* xhist;
 };
 
 void crn_comp::optimize_alpha_selector_codebook_task(uint64 data, void* pData_ptr) {
@@ -1657,8 +1688,7 @@ void crn_comp::optimize_alpha_selector_codebook_task(uint64 data, void* pData_pt
     float f = pParams->m_iter_index / static_cast<float>(pParams->m_max_iter_index - 1);
     create_zeng_reorder_table(
         m_hvq.get_alpha_selector_codebook_size(),
-        pParams->m_pAlpha_indices->size(),
-        &(*pParams->m_pAlpha_indices)[0],
+        *pParams->xhist,
         *pParams->m_pTrial_alpha_selector_remap,
         pParams->m_iter_index ? alpha_selector_similarity_func : NULL,
         (void*)&m_hvq.get_alpha_selectors_vec(),
@@ -1703,12 +1733,22 @@ bool crn_comp::optimize_alpha_selector_codebook(crnlib::vector<uint>& remapping)
 
   crnlib::vector<uint> trial_alpha_selector_remaps[cMaxSelectorRemapIters + 1];
 
+  uint n = m_hvq.get_alpha_selector_codebook_size();
+  hist_type xhist(n * n);
+  for (uint i = 0; i < alpha_indices.size(); i++) {
+    const int prev_val = (i > 0) ? alpha_indices[i - 1] : -1;
+    const int cur_val = alpha_indices[i];
+    const int next_val = (i < (alpha_indices.size() - 1)) ? alpha_indices[i + 1] : -1;
+    update_hist(xhist, cur_val, prev_val, n);
+    update_hist(xhist, cur_val, next_val, n);
+  }
+
   for (uint i = 0; i <= cMaxSelectorRemapIters; i++) {
     optimize_alpha_selector_codebook_params* pParams = crnlib_new<optimize_alpha_selector_codebook_params>();
-    pParams->m_pAlpha_indices = &alpha_indices;
     pParams->m_iter_index = i;
     pParams->m_max_iter_index = cMaxSelectorRemapIters;
     pParams->m_pTrial_alpha_selector_remap = &trial_alpha_selector_remaps[i];
+    pParams->xhist = &xhist;
 
     m_task_pool.queue_object_task(this, &crn_comp::optimize_alpha_selector_codebook_task, 0, pParams);
   }

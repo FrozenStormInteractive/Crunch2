@@ -8,16 +8,8 @@
 #include "crn_sparse_array.h"
 #include <deque>
 
-#define USE_SPARSE_ARRAY 1
-
 namespace crnlib {
-#if USE_SPARSE_ARRAY
-typedef sparse_array<uint, 4> hist_type;
-#else
-typedef crnlib::vector<uint> hist_type;
-#endif
-
-static inline void update_hist(hist_type& hist, int i, int j, int n) {
+void update_hist(hist_type& hist, int i, int j, int n) {
   if (i == j)
     return;
 
@@ -27,7 +19,7 @@ static inline void update_hist(hist_type& hist, int i, int j, int n) {
 
     uint index = i * n + j;
 
-#if USE_SPARSE_ARRAY
+#if CRN_ZENG_USE_SPARSE_ARRAY
     uint freq = hist[index];
     freq++;
     hist.set(index, freq);
@@ -44,49 +36,14 @@ static inline uint read_hist(hist_type& hist, int i, int j, int n) {
   return hist[i * n + j];
 }
 
-void create_zeng_reorder_table(uint n, uint num_indices, const uint* pIndices, crnlib::vector<uint>& remap_table, zeng_similarity_func pFunc, void* pContext, float similarity_func_weight) {
-  CRNLIB_ASSERT((n > 0) && (num_indices > 0));
+void create_zeng_reorder_table(uint n, hist_type& xhist, crnlib::vector<uint>& remap_table, zeng_similarity_func pFunc, void* pContext, float similarity_func_weight) {
+  CRNLIB_ASSERT(n > 0);
   CRNLIB_ASSERT_CLOSED_RANGE(similarity_func_weight, 0.0f, 1.0f);
-
-  //      printf("create_zeng_reorder_table start:\n");
 
   remap_table.clear();
   remap_table.resize(n);
 
-  if (num_indices <= 1)
-    return;
-
   const uint t = n * n;
-  hist_type xhist(t);
-
-  for (uint i = 0; i < num_indices; i++) {
-    const int prev_val = (i > 0) ? pIndices[i - 1] : -1;
-    const int cur_val = pIndices[i];
-    const int next_val = (i < (num_indices - 1)) ? pIndices[i + 1] : -1;
-
-    update_hist(xhist, cur_val, prev_val, n);
-    update_hist(xhist, cur_val, next_val, n);
-  }
-
-#if 0      
-      uint total1 = 0, total2 = 0;
-      for (uint i = 0; i < n; i++)
-      {
-         for (uint j = 0; j < n; j++)
-         {
-            if (i == j)
-               continue;
-               
-            //uint a = hist[i * n + j];
-            //total1 += a;
-            
-            uint c = read_hist(xhist, i, j, n);
-            total2 += c;
-         }
-      }
-      
-      printf("%u %u\n", total1, total2);
-#endif
 
   uint max_freq = 0;
   uint max_index = 0;
@@ -134,21 +91,7 @@ void create_zeng_reorder_table(uint n, uint num_indices, const uint* pIndices, c
 
     for (uint i = 0; i < values_remaining.size(); i++) {
       uint u = values_remaining[i];
-
-#if 0
-            double total_freq = 0;
-
-            for (uint j = 0; j < values_chosen.size(); j++)
-            {
-               uint l = values_chosen[j];
-
-               total_freq += read_hist(xhist, u, l, n); //[u * n + l];
-            }
-
-            CRNLIB_ASSERT(total_freq_to_chosen_values[u] == total_freq);
-#else
       double total_freq = total_freq_to_chosen_values[u];
-#endif
 
       if (pFunc) {
         float weight = math::maximum<float>(
@@ -216,55 +159,6 @@ void create_zeng_reorder_table(uint n, uint num_indices, const uint* pIndices, c
     uint v = values_chosen[i];
     remap_table[v] = i;
   }
-
-#if 0
-      uint before_sum = 0;
-      uint after_sum = 0;
-      {
-         printf("\nBEFORE:\n");
-         crnlib::vector<uint> delta_hist(n*2);
-
-         int sum = 0;
-         for (uint i = 1; i < num_indices; i++)
-         {
-            int prev = pIndices[i-1];
-            int cur = pIndices[i];
-            delta_hist[prev-cur+n]++;
-            sum += labs(prev-cur);
-         }
-
-         printf("\n");
-         for (uint i = 0; i < n*2; i++)   
-            printf("%04u ", delta_hist[i]);
-
-         printf("\nSum: %i\n", sum);
-         before_sum = sum;
-      }      
-
-      {
-         printf("AFTER:\n");
-         crnlib::vector<uint> delta_hist(n*2);
-
-         int sum = 0;
-         for (uint i = 1; i < num_indices; i++)
-         {
-            int prev = remap_table[pIndices[i-1]];
-            int cur = remap_table[pIndices[i]];
-            delta_hist[prev-cur+n]++;
-            sum += labs(prev-cur);
-         }
-
-         printf("\n");
-         for (uint i = 0; i < n*2; i++)   
-            printf("%04u ", delta_hist[i]);
-
-         printf("\nSum: %i\n", sum);
-         after_sum = sum;
-      }      
-      printf("Before sum: %u, After sum: %u\n", before_sum, after_sum);
-#endif
-
-  //      printf("create_zeng_reorder_table end:\n");
 }
 
 }  // namespace crnlib
