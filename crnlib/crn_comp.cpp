@@ -172,7 +172,6 @@ void crn_comp::sort_alpha_endpoint_codebook(crnlib::vector<uint>& remapping, con
 bool crn_comp::pack_color_endpoints(
     crnlib::vector<uint8>& data,
     const crnlib::vector<uint>& remapping,
-    const crnlib::vector<uint>& endpoint_indices,
     uint trial_index) {
   trial_index;
 
@@ -245,22 +244,6 @@ bool crn_comp::pack_color_endpoints(
     console::debug("Total endpoint residuals: %i", total_residuals);
 #endif
 
-  if (endpoint_indices.size() > 1) {
-    uint prev_index = remapping[endpoint_indices[0]];
-    int64 total_delta = 0;
-    for (uint i = 1; i < endpoint_indices.size(); i++) {
-      uint cur_index = remapping[endpoint_indices[i]];
-      int delta = cur_index - prev_index;
-      prev_index = cur_index;
-      total_delta += delta * delta;
-    }
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Total endpoint index delta: " CRNLIB_INT64_FORMAT_SPECIFIER, total_delta);
-#endif
-  }
-
 #if CRNLIB_CREATE_DEBUG_IMAGES
   image_utils::write_to_file(dynamic_string(cVarArg, "color_endpoint_residuals_%u.tga", trial_index).get_ptr(), endpoint_residual_image);
   image_utils::write_to_file(dynamic_string(cVarArg, "color_endpoints_%u.tga", trial_index).get_ptr(), endpoint_image);
@@ -318,7 +301,6 @@ bool crn_comp::pack_color_endpoints(
 bool crn_comp::pack_alpha_endpoints(
     crnlib::vector<uint8>& data,
     const crnlib::vector<uint>& remapping,
-    const crnlib::vector<uint>& endpoint_indices,
     uint trial_index) {
   trial_index;
 
@@ -383,22 +365,6 @@ bool crn_comp::pack_alpha_endpoints(
   if (m_pParams->m_flags & cCRNCompFlagDebugging)
     console::debug("Total endpoint residuals: %i", total_residuals);
 #endif
-
-  if (endpoint_indices.size() > 1) {
-    uint prev_index = remapping[endpoint_indices[0]];
-    int64 total_delta = 0;
-    for (uint i = 1; i < endpoint_indices.size(); i++) {
-      uint cur_index = remapping[endpoint_indices[i]];
-      int delta = cur_index - prev_index;
-      prev_index = cur_index;
-      total_delta += delta * delta;
-    }
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Total endpoint index delta: " CRNLIB_INT64_FORMAT_SPECIFIER, total_delta);
-#endif
-  }
 
 #if CRNLIB_CREATE_DEBUG_IMAGES
   image_utils::write_to_file(dynamic_string(cVarArg, "alpha_endpoint_residuals_%u.tga", trial_index).get_ptr(), endpoint_residual_image);
@@ -550,7 +516,6 @@ void crn_comp::sort_selector_codebook(crnlib::vector<uint>& remapping, const crn
 // The indices are only used for statistical purposes.
 bool crn_comp::pack_selectors(
     crnlib::vector<uint8>& packed_data,
-    const crnlib::vector<uint>& selector_indices,
     const crnlib::vector<dxt_hc::selectors>& selectors,
     const crnlib::vector<uint>& remapping,
     uint max_selector_value,
@@ -618,22 +583,6 @@ bool crn_comp::pack_selectors(
   if (m_pParams->m_flags & cCRNCompFlagDebugging)
     console::debug("Total selector endpoint residuals: %u", total_residuals);
 #endif
-
-  if (selector_indices.size() > 1) {
-    uint prev_index = remapping[selector_indices[1]];
-    int64 total_delta = 0;
-    for (uint i = 1; i < selector_indices.size(); i++) {
-      uint cur_index = remapping[selector_indices[i]];
-      int delta = cur_index - prev_index;
-      prev_index = cur_index;
-      total_delta += delta * delta;
-    }
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Total selector index delta: " CRNLIB_INT64_FORMAT_SPECIFIER, total_delta);
-#endif
-  }
 
 #if CRNLIB_CREATE_DEBUG_IMAGES
   image_utils::write_to_file(dynamic_string(cVarArg, "selectors_%u_%u.tga", trial_index, max_selector_value).get_ptr(), selector_image);
@@ -1071,11 +1020,6 @@ void crn_comp::clear() {
 
   m_chunk_details.clear();
 
-  for (uint i = 0; i < cNumComps; i++) {
-    m_endpoint_indices[i].clear();
-    m_selector_indices[i].clear();
-  }
-
   m_total_chunks = 0;
 
   m_chunks.clear();
@@ -1278,24 +1222,14 @@ void crn_comp::create_chunk_indices() {
 
   m_chunk_details.resize(m_total_chunks);
 
-  for (uint i = 0; i < cNumComps; i++) {
-    m_endpoint_indices[i].clear();
-    m_selector_indices[i].clear();
-  }
-
   for (uint chunk_index = 0; chunk_index < m_total_chunks; chunk_index++) {
     const dxt_hc::chunk_encoding& chunk_encoding = m_hvq.get_chunk_encoding(chunk_index);
 
     for (uint i = 0; i < cNumComps; i++) {
       if (!m_has_comp[i])
         continue;
-
-      for (uint tile_index = 0; tile_index < chunk_encoding.m_num_tiles; tile_index++)
-        m_endpoint_indices[i].push_back(chunk_encoding.m_endpoint_indices[i][tile_index]);
-
       for (uint t = 0, y = 0; y < cChunkBlockHeight; y++) {
         for (uint x = 0; x < cChunkBlockWidth; x++, t++) {
-          m_selector_indices[i].push_back(chunk_encoding.m_selector_indices[i][y][x]);
           m_chunk_details[chunk_index].m_selector_indices[i][y][x] = chunk_encoding.m_selector_indices[i][y][x];
           m_chunk_details[chunk_index].m_endpoint_indices[i][y][x] = chunk_encoding.m_endpoint_indices[i][endpoint_index_map[chunk_encoding.m_encoding_index][t]];
           m_chunk_details[chunk_index].m_endpoint_references[i][y][x] = endpoint_references[chunk_encoding.m_encoding_index][t];
@@ -1339,7 +1273,7 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
     for (uint i = 0; i < m_hvq.get_color_endpoint_vec().size(); i++)
       remapping[i] = i;
 
-    if (!pack_color_endpoints(m_packed_color_endpoints, remapping, m_endpoint_indices[cColor], 0))
+    if (!pack_color_endpoints(m_packed_color_endpoints, remapping, 0))
       return false;
 
     return true;
@@ -1394,7 +1328,7 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
     crnlib::vector<uint>& trial_color_endpoint_remap = trial_color_endpoint_remaps[i];
 
     crnlib::vector<uint8> packed_data;
-    if (!pack_color_endpoints(packed_data, trial_color_endpoint_remap, m_endpoint_indices[cColor], i))
+    if (!pack_color_endpoints(packed_data, trial_color_endpoint_remap, i))
       return false;
 
     uint total_packed_chunk_bits;
@@ -1463,7 +1397,6 @@ bool crn_comp::optimize_color_selector_codebook(crnlib::vector<uint>& remapping)
 
     if (!pack_selectors(
             m_packed_color_selectors,
-            m_selector_indices[cColor],
             m_hvq.get_color_selectors_vec(),
             remapping,
             3,
@@ -1520,7 +1453,6 @@ bool crn_comp::optimize_color_selector_codebook(crnlib::vector<uint>& remapping)
     crnlib::vector<uint8> packed_data;
     if (!pack_selectors(
             packed_data,
-            m_selector_indices[cColor],
             m_hvq.get_color_selectors_vec(),
             trial_color_selector_remap,
             3,
@@ -1587,19 +1519,12 @@ void crn_comp::optimize_alpha_endpoint_codebook_task(uint64 data, void* pData_pt
 }
 
 bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping) {
-  crnlib::vector<uint> alpha_indices;
-  alpha_indices.reserve(m_endpoint_indices[cAlpha0].size() + m_endpoint_indices[cAlpha1].size());
-  for (uint i = 0; i < m_endpoint_indices[cAlpha0].size(); i++)
-    alpha_indices.push_back(m_endpoint_indices[cAlpha0][i]);
-  for (uint i = 0; i < m_endpoint_indices[cAlpha1].size(); i++)
-    alpha_indices.push_back(m_endpoint_indices[cAlpha1][i]);
-
   if (m_pParams->m_flags & cCRNCompFlagQuick) {
     remapping.resize(m_hvq.get_alpha_endpoint_vec().size());
     for (uint i = 0; i < m_hvq.get_alpha_endpoint_vec().size(); i++)
       remapping[i] = i;
 
-    if (!pack_alpha_endpoints(m_packed_alpha_endpoints, remapping, alpha_indices, 0))
+    if (!pack_alpha_endpoints(m_packed_alpha_endpoints, remapping, 0))
       return false;
 
     return true;
@@ -1656,7 +1581,7 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
     crnlib::vector<uint>& trial_alpha_endpoint_remap = trial_alpha_endpoint_remaps[i];
 
     crnlib::vector<uint8> packed_data;
-    if (!pack_alpha_endpoints(packed_data, trial_alpha_endpoint_remap, alpha_indices, i))
+    if (!pack_alpha_endpoints(packed_data, trial_alpha_endpoint_remap, i))
       return false;
 
     uint total_packed_chunk_bits;
@@ -1716,13 +1641,6 @@ void crn_comp::optimize_alpha_selector_codebook_task(uint64 data, void* pData_pt
 }
 
 bool crn_comp::optimize_alpha_selector_codebook(crnlib::vector<uint>& remapping) {
-  crnlib::vector<uint> alpha_indices;
-  alpha_indices.reserve(m_selector_indices[cAlpha0].size() + m_selector_indices[cAlpha1].size());
-  for (uint i = 0; i < m_selector_indices[cAlpha0].size(); i++)
-    alpha_indices.push_back(m_selector_indices[cAlpha0][i]);
-  for (uint i = 0; i < m_selector_indices[cAlpha1].size(); i++)
-    alpha_indices.push_back(m_selector_indices[cAlpha1][i]);
-
   if (m_pParams->m_flags & cCRNCompFlagQuick) {
     remapping.resize(m_hvq.get_alpha_selectors_vec().size());
     for (uint i = 0; i < m_hvq.get_alpha_selectors_vec().size(); i++)
@@ -1730,7 +1648,6 @@ bool crn_comp::optimize_alpha_selector_codebook(crnlib::vector<uint>& remapping)
 
     if (!pack_selectors(
             m_packed_alpha_selectors,
-            alpha_indices,
             m_hvq.get_alpha_selectors_vec(),
             remapping,
             7,
@@ -1790,7 +1707,6 @@ bool crn_comp::optimize_alpha_selector_codebook(crnlib::vector<uint>& remapping)
     crnlib::vector<uint8> packed_data;
     if (!pack_selectors(
             packed_data,
-            alpha_indices,
             m_hvq.get_alpha_selectors_vec(),
             trial_alpha_selector_remap,
             7,

@@ -70,11 +70,7 @@ class crn_comp : public itexture_comp {
     uint16 m_endpoint_indices[cNumComps][2][2];
     uint16 m_selector_indices[cNumComps][2][2];
   };
-  typedef crnlib::vector<chunk_detail> chunk_detail_vec;
-  chunk_detail_vec m_chunk_details;
-
-  crnlib::vector<uint> m_endpoint_indices[cNumComps];
-  crnlib::vector<uint> m_selector_indices[cNumComps];
+  crnlib::vector<chunk_detail> m_chunk_details;
 
   uint m_total_chunks;
   dxt_hc::pixel_chunk_vec m_chunks;
@@ -109,8 +105,8 @@ class crn_comp : public itexture_comp {
   void sort_color_endpoint_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoints);
   void sort_alpha_endpoint_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoints);
 
-  bool pack_color_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoint_indices, uint trial_index);
-  bool pack_alpha_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoint_indices, uint trial_index);
+  bool pack_color_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping, uint trial_index);
+  bool pack_alpha_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping, uint trial_index);
 
   static float color_selector_similarity_func(uint index_a, uint index_b, void* pContext);
   static float alpha_selector_similarity_func(uint index_a, uint index_b, void* pContext);
@@ -118,7 +114,6 @@ class crn_comp : public itexture_comp {
 
   bool pack_selectors(
       crnlib::vector<uint8>& packed_data,
-      const crnlib::vector<uint>& selector_indices,
       const crnlib::vector<dxt_hc::selectors>& selectors,
       const crnlib::vector<uint>& remapping,
       uint max_selector_value,
