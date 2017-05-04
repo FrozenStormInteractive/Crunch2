@@ -52,6 +52,7 @@ class crn_comp : public itexture_comp {
 
     uint m_first_chunk;
     uint m_num_chunks;
+    uint m_chunk_width;
   };
   crnlib::vector<mip_group> m_mip_groups;
 
@@ -66,9 +67,10 @@ class crn_comp : public itexture_comp {
 
   struct chunk_detail {
     chunk_detail() { utils::zero_object(*this); }
-    uint8 m_endpoint_references[cNumComps][2][2];
-    uint16 m_endpoint_indices[cNumComps][2][2];
-    uint16 m_selector_indices[cNumComps][2][2];
+    uint16 m_endpoint_indices[2][2][cNumComps];
+    uint16 m_selector_indices[2][2][cNumComps];
+    uint8 m_endpoint_references[2][2];
+    uint8 m_reference_group;
   };
   crnlib::vector<chunk_detail> m_chunk_details;
 
@@ -81,7 +83,7 @@ class crn_comp : public itexture_comp {
   dxt_hc m_hvq;
 
   symbol_histogram m_chunk_encoding_hist;
-  static_huffman_data_model m_chunk_encoding_dm;
+  static_huffman_data_model m_reference_encoding_dm;
 
   symbol_histogram m_endpoint_index_hist[2];
   static_huffman_data_model m_endpoint_index_dm[2];  // color, alpha
@@ -126,7 +128,7 @@ class crn_comp : public itexture_comp {
   void create_chunk_indices();
 
   bool pack_chunks(
-      uint first_chunk, uint num_chunks,
+      uint group,
       bool clear_histograms,
       symbol_codec* pCodec,
       const crnlib::vector<uint>* pColor_endpoint_remap,

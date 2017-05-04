@@ -635,15 +635,19 @@ bool crn_comp::pack_selectors(
 }
 
 bool crn_comp::pack_chunks(
-    uint first_chunk, uint num_chunks,
+    uint group,
     bool clear_histograms,
     symbol_codec* pCodec,
     const crnlib::vector<uint>* pColor_endpoint_remap,
     const crnlib::vector<uint>* pColor_selector_remap,
     const crnlib::vector<uint>* pAlpha_endpoint_remap,
     const crnlib::vector<uint>* pAlpha_selector_remap) {
+  uint first_chunk = m_mip_groups[group].m_first_chunk;
+  uint num_chunks = m_mip_groups[group].m_num_chunks;
+  uint chunk_width = m_mip_groups[group].m_chunk_width;
+
   if (!pCodec) {
-    m_chunk_encoding_hist.resize(1 << (3 * cEncodingMapNumChunksPerCode));
+    m_chunk_encoding_hist.resize(256);
     if (clear_histograms)
       m_chunk_encoding_hist.set_all(0);
 
@@ -676,137 +680,60 @@ bool crn_comp::pack_chunks(
     }
   }
 
-  uint endpoint_index[cNumComps][2][2] = {};
-  uint selector_index[cNumComps][2][2] = {};
-
-  uint num_encodings_left = 0;
-
-  for (uint chunk_index = first_chunk; chunk_index < (first_chunk + num_chunks); chunk_index++) {
-    if (!num_encodings_left) {
-      uint index = 0;
-      for (uint i = 0; i < cEncodingMapNumChunksPerCode; i++)
-        if ((chunk_index + i) < (first_chunk + num_chunks))
-          index |= (m_hvq.get_chunk_encoding(chunk_index + i).m_encoding_index << (i * 3));
-
-      if (pCodec)
-        pCodec->encode(index, m_chunk_encoding_dm);
-      else
-        m_chunk_encoding_hist.inc_freq(index);
-
-      num_encodings_left = cEncodingMapNumChunksPerCode;
+  uint selector_index[cNumComps] = {};
+  uint endpoint_index[cNumComps] = {};
+  const crnlib::vector<uint>* endpoint_remap[cNumComps] = {};
+  const crnlib::vector<uint>* selector_remap[cNumComps] = {};
+  for (uint c = 0; c < cNumComps; c++) {
+    if (m_has_comp[c]) {
+      endpoint_remap[c] = c ? pAlpha_endpoint_remap : pColor_endpoint_remap;
+      selector_remap[c] = c ? pAlpha_selector_remap : pColor_selector_remap;
     }
-    num_encodings_left--;
+  }
 
-    const dxt_hc::chunk_encoding& encoding = m_hvq.get_chunk_encoding(chunk_index);
-    const chunk_detail& details = m_chunk_details[chunk_index];
-
-    const uint comp_order[3] = {cAlpha0, cAlpha1, cColor};
-    for (uint c = 0; c < 3; c++) {
-      const uint comp_index = comp_order[c];
-      if (!m_has_comp[comp_index])
-        continue;
-
-      // endpoints
-      if (comp_index == cColor) {
-        if (pColor_endpoint_remap) {
-          for (uint y = 0; y < 2; y++) {
-            for (uint x = 0; x < 2; x++) {
-              uint8 endpoint_reference = details.m_endpoint_references[comp_index][y][x];
-              if (!endpoint_reference) {
-                endpoint_index[comp_index][y][x] = (*pColor_endpoint_remap)[details.m_endpoint_indices[comp_index][y][x]];
-                int endpoint_delta = endpoint_index[comp_index][y][x] - endpoint_index[comp_index][y][x ^ 1];
-
-                int sym = endpoint_delta;
+  for (uint chunk_base = first_chunk; chunk_base < first_chunk + num_chunks; chunk_base += chunk_width) {
+    for (uint by = 0; by < 2; by++) {
+      for (uint cx = 0; cx < chunk_width; cx++) {
+        const chunk_detail& details = m_chunk_details[chunk_base + cx];
+        if (!by) {
+          if (pCodec)
+            pCodec->encode(details.m_reference_group, m_reference_encoding_dm);
+          else
+            m_chunk_encoding_hist.inc_freq(details.m_reference_group);
+        }
+        for (uint bx = 0; bx < 2; bx++) {
+          for (uint c = 0; c < cNumComps; c++) {
+            if (endpoint_remap[c]) {
+              uint index = (*endpoint_remap[c])[details.m_endpoint_indices[by][bx][c]];
+              if (!details.m_endpoint_references[by][bx]) {
+                int sym = index - endpoint_index[c];
                 if (sym < 0)
-                  sym += pColor_endpoint_remap->size();
-
-                CRNLIB_ASSERT(sym >= 0 && sym < (int)pColor_endpoint_remap->size());
-
+                  sym += endpoint_remap[c]->size();
                 if (!pCodec)
-                  m_endpoint_index_hist[0].inc_freq(sym);
+                  m_endpoint_index_hist[c ? 1 : 0].inc_freq(sym);
                 else
-                  pCodec->encode(sym, m_endpoint_index_dm[0]);
-              } else {
-                endpoint_index[comp_index][y][x] = endpoint_reference == 1 ? endpoint_index[comp_index][y][x ^ 1] : endpoint_index[comp_index][y ^ 1][x];
+                  pCodec->encode(sym, m_endpoint_index_dm[c ? 1 : 0]);
               }
+              endpoint_index[c] = index;
             }
           }
-        }
-      } else {
-        if (pAlpha_endpoint_remap) {
-          for (uint y = 0; y < 2; y++) {
-            for (uint x = 0; x < 2; x++) {
-              uint8 endpoint_reference = details.m_endpoint_references[comp_index][y][x];
-              if (!endpoint_reference) {
-                endpoint_index[comp_index][y][x] = (*pAlpha_endpoint_remap)[details.m_endpoint_indices[comp_index][y][x]];
-                int endpoint_delta = endpoint_index[comp_index][y][x] - endpoint_index[comp_index][y][x ^ 1];
-
-                int sym = endpoint_delta;
-                if (sym < 0)
-                  sym += pAlpha_endpoint_remap->size();
-
-                CRNLIB_ASSERT(sym >= 0 && sym < (int)pAlpha_endpoint_remap->size());
-
-                if (!pCodec)
-                  m_endpoint_index_hist[1].inc_freq(sym);
-                else
-                  pCodec->encode(sym, m_endpoint_index_dm[1]);
-              } else {
-                endpoint_index[comp_index][y][x] = endpoint_reference == 1 ? endpoint_index[comp_index][y][x ^ 1] : endpoint_index[comp_index][y ^ 1][x];
-              }
+          for (uint c = 0; c < cNumComps; c++) {
+            if (selector_remap[c]) {
+              uint index = (*selector_remap[c])[details.m_selector_indices[by][bx][c]];
+              int sym = index - selector_index[c];
+              if (sym < 0)
+                sym += selector_remap[c]->size();
+              if (!pCodec)
+                m_selector_index_hist[c ? 1 : 0].inc_freq(sym);
+              else
+                pCodec->encode(sym, m_selector_index_dm[c ? 1 : 0]);
+              selector_index[c] = index;
             }
           }
         }
       }
-    }  // c
-
-    // selectors
-    for (uint y = 0; y < 2; y++) {
-      for (uint x = 0; x < 2; x++) {
-        for (uint c = 0; c < 3; c++) {
-          const uint comp_index = comp_order[c];
-          if (!m_has_comp[comp_index])
-            continue;
-
-          if (comp_index == cColor) {
-            if (pColor_selector_remap) {
-              selector_index[comp_index][y][x] = (*pColor_selector_remap)[details.m_selector_indices[comp_index][y][x]];
-              int selector_delta = selector_index[comp_index][y][x] - selector_index[comp_index][y][x ^ 1];
-
-              int sym = selector_delta;
-              if (sym < 0)
-                sym += pColor_selector_remap->size();
-
-              CRNLIB_ASSERT(sym >= 0 && sym < (int)pColor_selector_remap->size());
-
-              if (!pCodec)
-                m_selector_index_hist[cColor].inc_freq(sym);
-              else
-                pCodec->encode(sym, m_selector_index_dm[cColor]);
-            }
-          } else if (pAlpha_selector_remap) {
-            selector_index[comp_index][y][x] = (*pAlpha_selector_remap)[details.m_selector_indices[comp_index][y][x]];
-            int selector_delta = selector_index[comp_index][y][x] - selector_index[comp_index][y][x ^ 1];
-
-            int sym = selector_delta;
-            if (sym < 0)
-              sym += pAlpha_selector_remap->size();
-
-            CRNLIB_ASSERT(sym >= 0 && sym < (int)pAlpha_selector_remap->size());
-
-            if (!pCodec)
-              m_selector_index_hist[1].inc_freq(sym);
-            else
-              pCodec->encode(sym, m_selector_index_dm[1]);
-          }
-
-        }  // c
-
-      }  // x
-    }    // y
-
-  }  // chunk_index
-
+    }
+  }
   return true;
 }
 
@@ -817,14 +744,16 @@ bool crn_comp::pack_chunks_simulation(
     const crnlib::vector<uint>* pColor_selector_remap,
     const crnlib::vector<uint>* pAlpha_endpoint_remap,
     const crnlib::vector<uint>* pAlpha_selector_remap) {
-  if (!pack_chunks(first_chunk, num_chunks, true, NULL, pColor_endpoint_remap, pColor_selector_remap, pAlpha_endpoint_remap, pAlpha_selector_remap))
-    return false;
+  for (uint group = 0; group < m_mip_groups.size(); group++) {
+    if (!pack_chunks(group, !group, NULL, pColor_endpoint_remap, pColor_selector_remap, pAlpha_endpoint_remap, pAlpha_selector_remap))
+      return false;
+  }
 
   symbol_codec codec;
   codec.start_encoding(2 * 1024 * 1024);
   codec.encode_enable_simulation(true);
 
-  m_chunk_encoding_dm.init(true, m_chunk_encoding_hist, 16);
+  m_reference_encoding_dm.init(true, m_chunk_encoding_hist, 16);
 
   for (uint i = 0; i < 2; i++) {
     if (m_endpoint_index_hist[i].size()) {
@@ -840,8 +769,10 @@ bool crn_comp::pack_chunks_simulation(
     }
   }
 
-  if (!pack_chunks(first_chunk, num_chunks, false, &codec, pColor_endpoint_remap, pColor_selector_remap, pAlpha_endpoint_remap, pAlpha_selector_remap))
-    return false;
+  for (uint group = 0; group < m_mip_groups.size(); group++) {
+    if (!pack_chunks(group, false, &codec, pColor_endpoint_remap, pColor_selector_remap, pAlpha_endpoint_remap, pAlpha_selector_remap))
+      return false;
+  }
 
   codec.stop_encoding(false);
 
@@ -941,6 +872,7 @@ bool crn_comp::alias_images() {
     mip_group_chunk_index = 0;
 
     m_mip_groups[mip_group].m_num_chunks += num_chunks;
+    m_mip_groups[mip_group].m_chunk_width = chunk_width;
 
     m_levels[level_index].m_width = width;
     m_levels[level_index].m_height = height;
@@ -1031,7 +963,7 @@ void crn_comp::clear() {
   m_hvq.clear();
 
   m_chunk_encoding_hist.clear();
-  m_chunk_encoding_dm.clear();
+  m_reference_encoding_dm.clear();
   for (uint i = 0; i < 2; i++) {
     m_endpoint_index_hist[i].clear();
     m_endpoint_index_dm[i].clear();
@@ -1209,30 +1141,34 @@ void crn_comp::create_chunk_indices() {
     { 0, 1, 2, 3 },
   };
 
-  uint8 endpoint_references[8][4] = {
-    { 0, 1, 2, 1 },
-    { 0, 1, 0, 1 },
-    { 0, 0, 2, 2 },
-    { 0, 1, 0, 0 },
-    { 0, 0, 0, 1 },
-    { 0, 0, 2, 0 },
-    { 0, 0, 0, 2 },
-    { 0, 0, 0, 0 },
-  };
-
   m_chunk_details.resize(m_total_chunks);
 
-  for (uint chunk_index = 0; chunk_index < m_total_chunks; chunk_index++) {
-    const dxt_hc::chunk_encoding& chunk_encoding = m_hvq.get_chunk_encoding(chunk_index);
-
-    for (uint i = 0; i < cNumComps; i++) {
-      if (!m_has_comp[i])
-        continue;
-      for (uint t = 0, y = 0; y < cChunkBlockHeight; y++) {
-        for (uint x = 0; x < cChunkBlockWidth; x++, t++) {
-          m_chunk_details[chunk_index].m_selector_indices[i][y][x] = chunk_encoding.m_selector_indices[i][y][x];
-          m_chunk_details[chunk_index].m_endpoint_indices[i][y][x] = chunk_encoding.m_endpoint_indices[i][endpoint_index_map[chunk_encoding.m_encoding_index][t]];
-          m_chunk_details[chunk_index].m_endpoint_references[i][y][x] = endpoint_references[chunk_encoding.m_encoding_index][t];
+  for (uint group = 0; group < m_mip_groups.size(); group++) {
+    uint chunk_width = m_mip_groups[group].m_chunk_width;
+    for (uint i = 0; i < m_mip_groups[group].m_num_chunks;) {
+      for (uint cx = 0; cx < chunk_width; cx++, i++) {
+        uint chunk_index = m_mip_groups[group].m_first_chunk + i, left_chunk_index = 0, top_chunk_index = 0;
+        const dxt_hc::chunk_encoding& chunk_encoding = m_hvq.get_chunk_encoding(chunk_index);
+        for (uint t = 0, by = 0; by < 2; by++) {
+          for (uint bx = 0; bx < 2; bx++, t++) {
+            bool left_match = bx || cx;
+            if (left_match)
+              left_chunk_index = bx ? chunk_index : chunk_index - 1;
+            bool top_match = by || i >= chunk_width;
+            if (top_match)
+              top_chunk_index = by ? chunk_index : chunk_index - chunk_width;
+            for (uint c = 0; c < cNumComps; c++) {
+              if (m_has_comp[c]) {
+                m_chunk_details[chunk_index].m_endpoint_indices[by][bx][c] = chunk_encoding.m_endpoint_indices[c][endpoint_index_map[chunk_encoding.m_encoding_index][t]];
+                left_match = left_match && m_chunk_details[chunk_index].m_endpoint_indices[by][bx][c] == m_chunk_details[left_chunk_index].m_endpoint_indices[by][bx ^ 1][c];
+                top_match = top_match && m_chunk_details[chunk_index].m_endpoint_indices[by][bx][c] == m_chunk_details[top_chunk_index].m_endpoint_indices[by ^ 1][bx][c];
+                m_chunk_details[chunk_index].m_selector_indices[by][bx][c] = chunk_encoding.m_selector_indices[c][by][bx];
+              }
+            }
+            uint8 endpoint_reference = left_match ? 1 : top_match ? 2 : 0;
+            m_chunk_details[chunk_index].m_endpoint_references[by][bx] = endpoint_reference;
+            m_chunk_details[chunk_index].m_reference_group |= endpoint_reference << (bx << 2 | by << 1);
+          }
         }
       }
     }
@@ -1297,13 +1233,10 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
     const chunk_detail& details = m_chunk_details[chunk_index];
     for (uint y = 0; y < 2; y++) {
       for (uint x = 0; x < 2; x++) {
-        uint8 endpoint_reference = details.m_endpoint_references[cColor][y][x];
-        if (!endpoint_reference) {
-          endpoint_index[y][x] = details.m_endpoint_indices[cColor][y][x];
+        endpoint_index[y][x] = details.m_endpoint_indices[y][x][cColor];
+        if (!details.m_endpoint_references[y][x]) {
           update_hist(xhist, endpoint_index[y][x], endpoint_index[y][x ^ 1], n);
           update_hist(xhist, endpoint_index[y][x ^ 1], endpoint_index[y][x], n);
-        } else {
-          endpoint_index[y][x] = endpoint_reference == 1 ? endpoint_index[y][x ^ 1] : endpoint_index[y ^ 1][x];
         }
       }
     }
@@ -1425,7 +1358,7 @@ bool crn_comp::optimize_color_selector_codebook(crnlib::vector<uint>& remapping)
     const chunk_detail& details = m_chunk_details[chunk_index];
     for (uint y = 0; y < 2; y++) {
       for (uint x = 0; x < 2; x++) {
-        selector_index[y][x] = details.m_selector_indices[cColor][y][x];
+        selector_index[y][x] = details.m_selector_indices[y][x][cColor];
         update_hist(xhist, selector_index[y][x], selector_index[y][x ^ 1], n);
         update_hist(xhist, selector_index[y][x ^ 1], selector_index[y][x], n);
       }
@@ -1542,20 +1475,17 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
 
   uint n = m_hvq.get_alpha_endpoint_codebook_size();
   hist_type xhist(n * n);
-  uint endpoint_index[cNumComps][2][2] = {};
+  uint endpoint_index[2][2][cNumComps] = {};
   uint min_comp_index = m_has_comp[cAlpha0] ? cAlpha0 : cAlpha1, max_comp_index = m_has_comp[cAlpha1] ? cAlpha1 : cAlpha0;
   for (uint chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
     const chunk_detail& details = m_chunk_details[chunk_index];
-    for (uint comp_index = min_comp_index; comp_index <= max_comp_index; comp_index++) {
-      for (uint y = 0; y < 2; y++) {
-        for (uint x = 0; x < 2; x++) {
-          uint8 endpoint_reference = details.m_endpoint_references[comp_index][y][x];
-          if (!endpoint_reference) {
-            endpoint_index[comp_index][y][x] = details.m_endpoint_indices[comp_index][y][x];
-            update_hist(xhist, endpoint_index[comp_index][y][x], endpoint_index[comp_index][y][x ^ 1], n);
-            update_hist(xhist, endpoint_index[comp_index][y][x ^ 1], endpoint_index[comp_index][y][x], n);
-          } else {
-            endpoint_index[comp_index][y][x] = endpoint_reference == 1 ? endpoint_index[comp_index][y][x ^ 1] : endpoint_index[comp_index][y ^ 1][x];
+    for (uint y = 0; y < 2; y++) {
+      for (uint x = 0; x < 2; x++) {
+        for (uint comp_index = min_comp_index; comp_index <= max_comp_index; comp_index++) {
+          endpoint_index[y][x][comp_index] = details.m_endpoint_indices[y][x][comp_index];
+          if (!details.m_endpoint_references[y][x]) {
+            update_hist(xhist, endpoint_index[y][x][comp_index], endpoint_index[y][x ^ 1][comp_index], n);
+            update_hist(xhist, endpoint_index[y][x ^ 1][comp_index], endpoint_index[y][x][comp_index], n);
           }
         }
       }
@@ -1678,7 +1608,7 @@ bool crn_comp::optimize_alpha_selector_codebook(crnlib::vector<uint>& remapping)
     for (uint comp_index = min_comp_index; comp_index <= max_comp_index; comp_index++) {
       for (uint y = 0; y < 2; y++) {
         for (uint x = 0; x < 2; x++) {
-          selector_index[comp_index][y][x] = details.m_selector_indices[comp_index][y][x];
+          selector_index[comp_index][y][x] = details.m_selector_indices[y][x][comp_index];
           update_hist(xhist, selector_index[comp_index][y][x], selector_index[comp_index][y][x ^ 1], n);
           update_hist(xhist, selector_index[comp_index][y][x ^ 1], selector_index[comp_index][y][x], n);
         }
@@ -1749,7 +1679,7 @@ bool crn_comp::pack_data_models() {
   symbol_codec codec;
   codec.start_encoding(1024 * 1024);
 
-  if (!codec.encode_transmit_static_huffman_data_model(m_chunk_encoding_dm, false))
+  if (!codec.encode_transmit_static_huffman_data_model(m_reference_encoding_dm, false))
     return false;
 
   for (uint i = 0; i < 2; i++) {
@@ -1901,10 +1831,10 @@ bool crn_comp::compress_internal() {
       codec.start_encoding(2 * 1024 * 1024);
 
       if (!pack_chunks(
-              m_mip_groups[mip_group].m_first_chunk, m_mip_groups[mip_group].m_num_chunks,
-              !pass && !mip_group, pass ? &codec : NULL,
-              m_has_comp[cColor] ? &endpoint_remap[0] : NULL, m_has_comp[cColor] ? &selector_remap[0] : NULL,
-              m_has_comp[cAlpha0] ? &endpoint_remap[1] : NULL, m_has_comp[cAlpha0] ? &selector_remap[1] : NULL)) {
+          mip_group,
+          !pass && !mip_group, pass ? &codec : NULL,
+          m_has_comp[cColor] ? &endpoint_remap[0] : NULL, m_has_comp[cColor] ? &selector_remap[0] : NULL,
+          m_has_comp[cAlpha0] ? &endpoint_remap[1] : NULL, m_has_comp[cAlpha0] ? &selector_remap[1] : NULL)) {
         return false;
       }
 
@@ -1915,7 +1845,7 @@ bool crn_comp::compress_internal() {
     }
 
     if (!pass) {
-      m_chunk_encoding_dm.init(true, m_chunk_encoding_hist, 16);
+      m_reference_encoding_dm.init(true, m_chunk_encoding_hist, 16);
 
       for (uint i = 0; i < 2; i++) {
         if (m_endpoint_index_hist[i].size())
