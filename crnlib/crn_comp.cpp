@@ -680,7 +680,6 @@ bool crn_comp::pack_chunks(
     }
   }
 
-  uint selector_index[cNumComps] = {};
   uint endpoint_index[cNumComps] = {};
   const crnlib::vector<uint>* endpoint_remap[cNumComps] = {};
   const crnlib::vector<uint>* selector_remap[cNumComps] = {};
@@ -720,14 +719,10 @@ bool crn_comp::pack_chunks(
           for (uint c = 0; c < cNumComps; c++) {
             if (selector_remap[c]) {
               uint index = (*selector_remap[c])[details.m_selector_indices[by][bx][c]];
-              int sym = index - selector_index[c];
-              if (sym < 0)
-                sym += selector_remap[c]->size();
               if (!pCodec)
-                m_selector_index_hist[c ? 1 : 0].inc_freq(sym);
+                m_selector_index_hist[c ? 1 : 0].inc_freq(index);
               else
-                pCodec->encode(sym, m_selector_index_dm[c ? 1 : 0]);
-              selector_index[c] = index;
+                pCodec->encode(index, m_selector_index_dm[c ? 1 : 0]);
             }
           }
         }
@@ -1295,132 +1290,15 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
   return true;
 }
 
-struct optimize_color_selector_codebook_params {
-  crnlib::vector<uint>* m_pTrial_color_selector_remap;
-  uint m_iter_index;
-  uint m_max_iter_index;
-  hist_type* xhist;
-};
-
-void crn_comp::optimize_color_selector_codebook_task(uint64 data, void* pData_ptr) {
-  data;
-  optimize_color_selector_codebook_params* pParams = reinterpret_cast<optimize_color_selector_codebook_params*>(pData_ptr);
-
-  if (pParams->m_iter_index == pParams->m_max_iter_index) {
-    sort_selector_codebook(*pParams->m_pTrial_color_selector_remap, m_hvq.get_color_selectors_vec(), g_dxt1_to_linear);
-  } else {
-    float f = pParams->m_iter_index / static_cast<float>(pParams->m_max_iter_index - 1);
-    create_zeng_reorder_table(
-        m_hvq.get_color_selector_codebook_size(),
-        *pParams->xhist,
-        *pParams->m_pTrial_color_selector_remap,
-        pParams->m_iter_index ? color_selector_similarity_func : NULL,
-        (void*)&m_hvq.get_color_selectors_vec(),
-        f);
-  }
-
-  crnlib_delete(pParams);
-}
-
 bool crn_comp::optimize_color_selector_codebook(crnlib::vector<uint>& remapping) {
   if (m_pParams->m_flags & cCRNCompFlagQuick) {
     remapping.resize(m_hvq.get_color_selectors_vec().size());
     for (uint i = 0; i < m_hvq.get_color_selectors_vec().size(); i++)
       remapping[i] = i;
-
-    if (!pack_selectors(
-            m_packed_color_selectors,
-            m_hvq.get_color_selectors_vec(),
-            remapping,
-            3,
-            g_dxt1_to_linear, 0)) {
-      return false;
-    }
-
-    return true;
+  } else {
+    sort_selector_codebook(remapping, m_hvq.get_color_selectors_vec(), g_dxt1_to_linear);
   }
-
-  const uint cMaxSelectorRemapIters = 3;
-
-  uint best_bits = UINT_MAX;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-  if (m_pParams->m_flags & cCRNCompFlagDebugging)
-    console::debug("----- Begin optimization of color selector codebook");
-#endif
-
-  crnlib::vector<uint> trial_color_selector_remaps[cMaxSelectorRemapIters + 1];
-
-  uint n = m_hvq.get_color_selector_codebook_size();
-  hist_type xhist(n * n);
-  uint selector_index[2][2] = {};
-  for (uint chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
-    const chunk_detail& details = m_chunk_details[chunk_index];
-    for (uint y = 0; y < 2; y++) {
-      for (uint x = 0; x < 2; x++) {
-        selector_index[y][x] = details.m_selector_indices[y][x][cColor];
-        update_hist(xhist, selector_index[y][x], selector_index[y][x ^ 1], n);
-        update_hist(xhist, selector_index[y][x ^ 1], selector_index[y][x], n);
-      }
-    }
-  }
-
-  for (uint i = 0; i <= cMaxSelectorRemapIters; i++) {
-    optimize_color_selector_codebook_params* pParams = crnlib_new<optimize_color_selector_codebook_params>();
-    pParams->m_iter_index = i;
-    pParams->m_max_iter_index = cMaxSelectorRemapIters;
-    pParams->m_pTrial_color_selector_remap = &trial_color_selector_remaps[i];
-    pParams->xhist = &xhist;
-
-    m_task_pool.queue_object_task(this, &crn_comp::optimize_color_selector_codebook_task, 0, pParams);
-  }
-
-  m_task_pool.join();
-
-  for (uint i = 0; i <= cMaxSelectorRemapIters; i++) {
-    if (!update_progress(21, i, cMaxSelectorRemapIters + 1))
-      return false;
-
-    crnlib::vector<uint>& trial_color_selector_remap = trial_color_selector_remaps[i];
-
-    crnlib::vector<uint8> packed_data;
-    if (!pack_selectors(
-            packed_data,
-            m_hvq.get_color_selectors_vec(),
-            trial_color_selector_remap,
-            3,
-            g_dxt1_to_linear, i)) {
-      return false;
-    }
-
-    uint total_packed_chunk_bits;
-    if (!pack_chunks_simulation(0, m_total_chunks, total_packed_chunk_bits, NULL, &trial_color_selector_remap, NULL, NULL))
-      return false;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Pack chunks simulation: %u bits", total_packed_chunk_bits);
-#endif
-
-    uint total_bits = packed_data.size() * 8 + total_packed_chunk_bits;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Total bits: %u", total_bits);
-#endif
-    if (total_bits < best_bits) {
-      m_packed_color_selectors.swap(packed_data);
-      remapping.swap(trial_color_selector_remap);
-      best_bits = total_bits;
-    }
-  }
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-  if (m_pParams->m_flags & cCRNCompFlagDebugging)
-    console::debug("End optimization of color selector codebook");
-#endif
-
-  return true;
+  return pack_selectors(m_packed_color_selectors, m_hvq.get_color_selectors_vec(), remapping, 3, g_dxt1_to_linear, 0);
 }
 
 struct optimize_alpha_endpoint_codebook_params {
@@ -1545,134 +1423,15 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
   return true;
 }
 
-struct optimize_alpha_selector_codebook_params {
-  crnlib::vector<uint>* m_pTrial_alpha_selector_remap;
-  uint m_iter_index;
-  uint m_max_iter_index;
-  hist_type* xhist;
-};
-
-void crn_comp::optimize_alpha_selector_codebook_task(uint64 data, void* pData_ptr) {
-  data;
-  optimize_alpha_selector_codebook_params* pParams = reinterpret_cast<optimize_alpha_selector_codebook_params*>(pData_ptr);
-
-  if (pParams->m_iter_index == pParams->m_max_iter_index) {
-    sort_selector_codebook(*pParams->m_pTrial_alpha_selector_remap, m_hvq.get_alpha_selectors_vec(), g_dxt5_to_linear);
-  } else {
-    float f = pParams->m_iter_index / static_cast<float>(pParams->m_max_iter_index - 1);
-    create_zeng_reorder_table(
-        m_hvq.get_alpha_selector_codebook_size(),
-        *pParams->xhist,
-        *pParams->m_pTrial_alpha_selector_remap,
-        pParams->m_iter_index ? alpha_selector_similarity_func : NULL,
-        (void*)&m_hvq.get_alpha_selectors_vec(),
-        f);
-  }
-}
-
 bool crn_comp::optimize_alpha_selector_codebook(crnlib::vector<uint>& remapping) {
   if (m_pParams->m_flags & cCRNCompFlagQuick) {
     remapping.resize(m_hvq.get_alpha_selectors_vec().size());
     for (uint i = 0; i < m_hvq.get_alpha_selectors_vec().size(); i++)
       remapping[i] = i;
-
-    if (!pack_selectors(
-            m_packed_alpha_selectors,
-            m_hvq.get_alpha_selectors_vec(),
-            remapping,
-            7,
-            g_dxt5_to_linear, 0)) {
-      return false;
-    }
-
-    return true;
+  } else {
+    sort_selector_codebook(remapping, m_hvq.get_alpha_selectors_vec(), g_dxt5_to_linear);
   }
-
-  const uint cMaxSelectorRemapIters = 3;
-
-  uint best_bits = UINT_MAX;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-  if (m_pParams->m_flags & cCRNCompFlagDebugging)
-    console::debug("----- Begin optimization of alpha selector codebook");
-#endif
-
-  crnlib::vector<uint> trial_alpha_selector_remaps[cMaxSelectorRemapIters + 1];
-
-  uint n = m_hvq.get_alpha_selector_codebook_size();
-  hist_type xhist(n * n);
-  uint selector_index[cNumComps][2][2] = {};
-  uint min_comp_index = m_has_comp[cAlpha0] ? cAlpha0 : cAlpha1, max_comp_index = m_has_comp[cAlpha1] ? cAlpha1 : cAlpha0;
-  for (uint chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
-    const chunk_detail& details = m_chunk_details[chunk_index];
-    for (uint comp_index = min_comp_index; comp_index <= max_comp_index; comp_index++) {
-      for (uint y = 0; y < 2; y++) {
-        for (uint x = 0; x < 2; x++) {
-          selector_index[comp_index][y][x] = details.m_selector_indices[y][x][comp_index];
-          update_hist(xhist, selector_index[comp_index][y][x], selector_index[comp_index][y][x ^ 1], n);
-          update_hist(xhist, selector_index[comp_index][y][x ^ 1], selector_index[comp_index][y][x], n);
-        }
-      }
-    }
-  }
-
-  for (uint i = 0; i <= cMaxSelectorRemapIters; i++) {
-    optimize_alpha_selector_codebook_params* pParams = crnlib_new<optimize_alpha_selector_codebook_params>();
-    pParams->m_iter_index = i;
-    pParams->m_max_iter_index = cMaxSelectorRemapIters;
-    pParams->m_pTrial_alpha_selector_remap = &trial_alpha_selector_remaps[i];
-    pParams->xhist = &xhist;
-
-    m_task_pool.queue_object_task(this, &crn_comp::optimize_alpha_selector_codebook_task, 0, pParams);
-  }
-
-  m_task_pool.join();
-
-  for (uint i = 0; i <= cMaxSelectorRemapIters; i++) {
-    if (!update_progress(23, i, cMaxSelectorRemapIters + 1))
-      return false;
-
-    crnlib::vector<uint>& trial_alpha_selector_remap = trial_alpha_selector_remaps[i];
-
-    crnlib::vector<uint8> packed_data;
-    if (!pack_selectors(
-            packed_data,
-            m_hvq.get_alpha_selectors_vec(),
-            trial_alpha_selector_remap,
-            7,
-            g_dxt5_to_linear, i)) {
-      return false;
-    }
-
-    uint total_packed_chunk_bits;
-    if (!pack_chunks_simulation(0, m_total_chunks, total_packed_chunk_bits, NULL, NULL, NULL, &trial_alpha_selector_remap))
-      return false;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Pack chunks simulation: %u bits", total_packed_chunk_bits);
-#endif
-
-    uint total_bits = packed_data.size() * 8 + total_packed_chunk_bits;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Total bits: %u", total_bits);
-#endif
-    if (total_bits < best_bits) {
-      m_packed_alpha_selectors.swap(packed_data);
-
-      remapping.swap(trial_alpha_selector_remap);
-      best_bits = total_bits;
-    }
-  }
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-  if (m_pParams->m_flags & cCRNCompFlagDebugging)
-    console::debug("End optimization of alpha selector codebook");
-#endif
-
-  return true;
+  return pack_selectors(m_packed_alpha_selectors, m_hvq.get_alpha_selectors_vec(), remapping, 7, g_dxt5_to_linear, 0);
 }
 
 bool crn_comp::pack_data_models() {

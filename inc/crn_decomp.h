@@ -3412,14 +3412,12 @@ class crn_unpacker {
 
   bool unpack_dxt1(uint8** pDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes, uint32 blocks_x, uint32 blocks_y, uint32 chunks_x, uint32 chunks_y) {
     const uint32 num_color_endpoints = m_color_endpoints.size();
-    const uint32 num_color_selectors = m_color_selectors.size();
     const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (chunks_x << 2);
 
     if (m_block_buffer.size() < chunks_x << 1)
       m_block_buffer.resize(chunks_x << 1);
 
     uint32 color_endpoint_index = 0;
-    uint32 color_selector_index = 0;
     uint8 reference_group = 0;
 
     for (uint32 f = 0; f < m_pHeader->m_faces; f++) {
@@ -3450,9 +3448,7 @@ class crn_unpacker {
           } else {
             color_endpoint_index = buffer.color_endpoint_index;
           }
-          color_selector_index += m_codec.decode(m_selector_delta_dm[0]);
-          if (color_selector_index >= num_color_selectors)
-            color_selector_index -= num_color_selectors;
+          uint32 color_selector_index = m_codec.decode(m_selector_delta_dm[0]);
           if (visible) {
             pData[0] = m_color_endpoints[color_endpoint_index];
             pData[1] = m_color_selectors[color_selector_index];
@@ -3465,18 +3461,14 @@ class crn_unpacker {
 
   bool unpack_dxt5(uint8** pDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes, uint32 blocks_x, uint32 blocks_y, uint32 chunks_x, uint32 chunks_y) {
     const uint32 num_color_endpoints = m_color_endpoints.size();
-    const uint32 num_color_selectors = m_color_selectors.size();
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
     const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (chunks_x << 3);
 
     if (m_block_buffer.size() < chunks_x << 1)
       m_block_buffer.resize(chunks_x << 1);
 
     uint32 color_endpoint_index = 0;
-    uint32 color_selector_index = 0;
     uint32 alpha0_endpoint_index = 0;
-    uint32 alpha0_selector_index = 0;
     uint8 reference_group = 0;
 
     for (uint32 f = 0; f < m_pHeader->m_faces; f++) {
@@ -3513,12 +3505,8 @@ class crn_unpacker {
             color_endpoint_index = buffer.color_endpoint_index;
             alpha0_endpoint_index = buffer.alpha0_endpoint_index;
           }
-          color_selector_index += m_codec.decode(m_selector_delta_dm[0]);
-          if (color_selector_index >= num_color_selectors)
-            color_selector_index -= num_color_selectors;
-          alpha0_selector_index += m_codec.decode(m_selector_delta_dm[1]);
-          if (alpha0_selector_index >= num_alpha_selectors)
-            alpha0_selector_index -= num_alpha_selectors;
+          uint32 color_selector_index = m_codec.decode(m_selector_delta_dm[0]);
+          uint32 alpha0_selector_index = m_codec.decode(m_selector_delta_dm[1]);
           if (visible) {
             const uint16* pAlpha0_selectors = &m_alpha_selectors[alpha0_selector_index * 3];
             pData[0] = m_alpha_endpoints[alpha0_endpoint_index] | (pAlpha0_selectors[0] << 16);
@@ -3534,16 +3522,13 @@ class crn_unpacker {
 
   bool unpack_dxn(uint8** pDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes, uint32 blocks_x, uint32 blocks_y, uint32 chunks_x, uint32 chunks_y) {
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
     const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (chunks_x << 3);
 
     if (m_block_buffer.size() < chunks_x << 1)
       m_block_buffer.resize(chunks_x << 1);
 
     uint32 alpha0_endpoint_index = 0;
-    uint32 alpha0_selector_index = 0;
     uint32 alpha1_endpoint_index = 0;
-    uint32 alpha1_selector_index = 0;
     uint8 reference_group = 0;
 
     for (uint32 f = 0; f < m_pHeader->m_faces; f++) {
@@ -3580,12 +3565,8 @@ class crn_unpacker {
             alpha0_endpoint_index = buffer.alpha0_endpoint_index;
             alpha1_endpoint_index = buffer.alpha1_endpoint_index;
           }
-          alpha0_selector_index += m_codec.decode(m_selector_delta_dm[1]);
-          if (alpha0_selector_index >= num_alpha_selectors)
-            alpha0_selector_index -= num_alpha_selectors;
-          alpha1_selector_index += m_codec.decode(m_selector_delta_dm[1]);
-          if (alpha1_selector_index >= num_alpha_selectors)
-            alpha1_selector_index -= num_alpha_selectors;
+          uint32 alpha0_selector_index = m_codec.decode(m_selector_delta_dm[1]);
+          uint32 alpha1_selector_index = m_codec.decode(m_selector_delta_dm[1]);
           if (visible) {
             const uint16* pAlpha0_selectors = &m_alpha_selectors[alpha0_selector_index * 3];
             const uint16* pAlpha1_selectors = &m_alpha_selectors[alpha1_selector_index * 3];
@@ -3602,14 +3583,12 @@ class crn_unpacker {
 
   bool unpack_dxt5a(uint8** pDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes, uint32 blocks_x, uint32 blocks_y, uint32 chunks_x, uint32 chunks_y) {
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
     const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (chunks_x << 2);
 
     if (m_block_buffer.size() < chunks_x << 1)
       m_block_buffer.resize(chunks_x << 1);
 
     uint32 alpha0_endpoint_index = 0;
-    uint32 alpha0_selector_index = 0;
     uint8 reference_group = 0;
 
     for (uint32 f = 0; f < m_pHeader->m_faces; f++) {
@@ -3640,9 +3619,7 @@ class crn_unpacker {
           } else {
             alpha0_endpoint_index = buffer.alpha0_endpoint_index;
           }
-          alpha0_selector_index += m_codec.decode(m_selector_delta_dm[1]);
-          if (alpha0_selector_index >= num_alpha_selectors)
-            alpha0_selector_index -= num_alpha_selectors;
+          uint32 alpha0_selector_index = m_codec.decode(m_selector_delta_dm[1]);
           if (visible) {
             const uint16* pAlpha0_selectors = &m_alpha_selectors[alpha0_selector_index * 3];
             pData[0] = m_alpha_endpoints[alpha0_endpoint_index] | (pAlpha0_selectors[0] << 16);
