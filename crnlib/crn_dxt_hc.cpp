@@ -1729,6 +1729,37 @@ bool dxt_hc::refine_quantized_color_selectors() {
     console::info("Total refined pixels: %u, selectors: %u out of %u", total_refined_pixels, total_refined_selectors, total_selectors);
 #endif
 
+  uint selector_count = 0;
+  hash_map<uint32, uint> packed_selectors;
+  for (uint i = 0; i < m_color_selectors.size(); i++) {
+    if (m_chunk_blocks_using_color_selectors[i].size()) {
+      uint32 packed_selector = 0;
+      for (uint s = 0; s < 16; s++)
+        packed_selector |= m_color_selectors[i].get_by_index(s) << (s << 1);
+      hash_map<uint32, uint>::insert_result insert_result = packed_selectors.insert(packed_selector, selector_count);
+      if (insert_result.second) {
+        if (selector_count != i) {
+          m_color_selectors[selector_count] = m_color_selectors[i];
+          m_chunk_blocks_using_color_selectors[selector_count].swap(m_chunk_blocks_using_color_selectors[i]);
+          for (uint b = 0; b < m_chunk_blocks_using_color_selectors[selector_count].size(); b++) {
+            const block_id& id = m_chunk_blocks_using_color_selectors[selector_count][b];
+            m_compressed_chunks[cColorChunks][id.m_chunk_index].m_selector_cluster_index[id.m_block_y][id.m_block_x] = selector_count;
+          }
+        }
+        selector_count++;
+      } else {
+        for (uint b = 0; b < m_chunk_blocks_using_color_selectors[i].size(); b++) {
+          const block_id& id = m_chunk_blocks_using_color_selectors[i][b];
+          m_compressed_chunks[cColorChunks][id.m_chunk_index].m_selector_cluster_index[id.m_block_y][id.m_block_x] = insert_result.first->second;
+        }
+        m_chunk_blocks_using_color_selectors[insert_result.first->second].append(m_chunk_blocks_using_color_selectors[i]);
+        m_chunk_blocks_using_color_selectors[i].clear();
+      }
+    }
+  }
+  m_color_selectors.resize(selector_count);
+  m_chunk_blocks_using_color_selectors.resize(selector_count);
+  
   return true;
 }
 
@@ -1824,6 +1855,37 @@ bool dxt_hc::refine_quantized_alpha_selectors() {
     console::info("Total refined pixels: %u, selectors: %u out of %u", total_refined_pixels, total_refined_selectors, total_selectors);
 #endif
 
+  uint selector_count = 0;
+  hash_map<uint64, uint> packed_selectors;
+  for (uint i = 0; i < m_alpha_selectors.size(); i++) {
+    if (m_chunk_blocks_using_alpha_selectors[i].size()) {
+      uint64 packed_selector = 0;
+      for (uint s = 0; s < 16; s++)
+        packed_selector |= (uint64)m_alpha_selectors[i].get_by_index(s) << (s << 2);
+      hash_map<uint64, uint>::insert_result insert_result = packed_selectors.insert(packed_selector, selector_count);
+      if (insert_result.second) {
+        if (selector_count != i) {
+          m_alpha_selectors[selector_count] = m_alpha_selectors[i];
+          m_chunk_blocks_using_alpha_selectors[selector_count].swap(m_chunk_blocks_using_alpha_selectors[i]);
+          for (uint b = 0; b < m_chunk_blocks_using_alpha_selectors[selector_count].size(); b++) {
+            const block_id& id = m_chunk_blocks_using_alpha_selectors[selector_count][b];
+            m_compressed_chunks[cAlpha0Chunks + id.m_alpha_index][id.m_chunk_index].m_selector_cluster_index[id.m_block_y][id.m_block_x] = selector_count;
+          }
+        }
+        selector_count++;
+      } else {
+        for (uint b = 0; b < m_chunk_blocks_using_alpha_selectors[i].size(); b++) {
+          const block_id& id = m_chunk_blocks_using_alpha_selectors[i][b];
+          m_compressed_chunks[cAlpha0Chunks + id.m_alpha_index][id.m_chunk_index].m_selector_cluster_index[id.m_block_y][id.m_block_x] = insert_result.first->second;
+        }
+        m_chunk_blocks_using_alpha_selectors[insert_result.first->second].append(m_chunk_blocks_using_alpha_selectors[i]);
+        m_chunk_blocks_using_alpha_selectors[i].clear();
+      }
+    }
+  }
+  m_alpha_selectors.resize(selector_count);
+  m_chunk_blocks_using_alpha_selectors.resize(selector_count);
+  
   return true;
 }
 
@@ -1932,6 +1994,47 @@ bool dxt_hc::refine_quantized_color_endpoints() {
   if (m_params.m_debugging)
     console::info("Total refined pixels: %u, endpoints: %u out of %u", total_refined_pixels, total_refined_tiles, m_color_clusters.size());
 #endif
+
+  uint cluster_count = 0;
+  hash_map<uint64, uint> packed_clusters;
+  for (uint i = 0; i < m_color_clusters.size(); i++) {
+    tile_cluster& cluster = m_color_clusters[i];
+    if (cluster.m_tiles.size()) {
+      uint64 packed_cluster = cluster.m_first_endpoint | cluster.m_second_endpoint << 16 | (cluster.m_alpha_encoding ? 1ULL << 32 : 0);
+      hash_map<uint64, uint>::insert_result insert_result = packed_clusters.insert(packed_cluster, cluster_count);
+      if (insert_result.second) {
+        if (cluster_count != i) {
+          tile_cluster& destination_cluster = m_color_clusters[cluster_count];
+          destination_cluster.m_alpha_encoding = cluster.m_alpha_encoding;
+          destination_cluster.m_error = cluster.m_error;
+          destination_cluster.m_first_endpoint = cluster.m_first_endpoint;
+          destination_cluster.m_second_endpoint = cluster.m_second_endpoint;
+          destination_cluster.m_tiles.swap(cluster.m_tiles);
+          for (uint t = 0; t < destination_cluster.m_tiles.size(); t++) {
+            const uint chunk_index = destination_cluster.m_tiles[t].first;
+            const uint tile_index = destination_cluster.m_tiles[t].second;
+            compressed_tile& tile = m_compressed_chunks[cColorChunks][chunk_index].m_quantized_tiles[tile_index];
+            tile.m_first_endpoint = destination_cluster.m_first_endpoint;
+            tile.m_second_endpoint = destination_cluster.m_second_endpoint;
+            tile.m_endpoint_cluster_index = cluster_count;
+          }
+        }
+        cluster_count++;
+      } else {
+        tile_cluster& destination_cluster = m_color_clusters[insert_result.first->second];
+        for (uint t = 0; t < cluster.m_tiles.size(); t++) {
+          const uint chunk_index = cluster.m_tiles[t].first;
+          const uint tile_index = cluster.m_tiles[t].second;
+          compressed_tile& tile = m_compressed_chunks[cColorChunks][chunk_index].m_quantized_tiles[tile_index];
+          tile.m_endpoint_cluster_index = insert_result.first->second;
+        }
+        destination_cluster.m_error += cluster.m_error;
+        destination_cluster.m_tiles.append(cluster.m_tiles);
+        cluster.m_tiles.clear();
+      }
+    }
+  }
+  m_color_clusters.resize(cluster_count);
 
   return true;
 }
@@ -2043,6 +2146,49 @@ bool dxt_hc::refine_quantized_alpha_endpoints() {
   if (m_params.m_debugging)
     console::info("Total refined pixels: %u, endpoints: %u out of %u", total_refined_pixels, total_refined_tiles, m_alpha_clusters.size());
 #endif
+
+  uint cluster_count = 0;
+  hash_map<uint64, uint> packed_clusters;
+  for (uint i = 0; i < m_alpha_clusters.size(); i++) {
+    tile_cluster& cluster = m_alpha_clusters[i];
+    if (cluster.m_tiles.size()) {
+      uint64 packed_cluster = cluster.m_first_endpoint | cluster.m_second_endpoint << 16 | (cluster.m_alpha_encoding ? 1ULL << 32 : 0);
+      hash_map<uint64, uint>::insert_result insert_result = packed_clusters.insert(packed_cluster, cluster_count);
+      if (insert_result.second) {
+        if (cluster_count != i) {
+          tile_cluster& destination_cluster = m_alpha_clusters[cluster_count];
+          destination_cluster.m_alpha_encoding = cluster.m_alpha_encoding;
+          destination_cluster.m_error = cluster.m_error;
+          destination_cluster.m_first_endpoint = cluster.m_first_endpoint;
+          destination_cluster.m_second_endpoint = cluster.m_second_endpoint;
+          destination_cluster.m_tiles.swap(cluster.m_tiles);
+          for (uint t = 0; t < destination_cluster.m_tiles.size(); t++) {
+            const uint chunk_index = destination_cluster.m_tiles[t].first;
+            const uint tile_index = destination_cluster.m_tiles[t].second & 0xFFFFU;
+            const uint alpha_index = destination_cluster.m_tiles[t].second >> 16U;
+            compressed_tile& tile = m_compressed_chunks[cAlpha0Chunks + alpha_index][chunk_index].m_quantized_tiles[tile_index];
+            tile.m_first_endpoint = destination_cluster.m_first_endpoint;
+            tile.m_second_endpoint = destination_cluster.m_second_endpoint;
+            tile.m_endpoint_cluster_index = cluster_count;
+          }
+        }
+        cluster_count++;
+      } else {
+        tile_cluster& destination_cluster = m_alpha_clusters[insert_result.first->second];
+        for (uint t = 0; t < cluster.m_tiles.size(); t++) {
+          const uint chunk_index = cluster.m_tiles[t].first;
+          const uint tile_index = cluster.m_tiles[t].second & 0xFFFFU;
+          const uint alpha_index = cluster.m_tiles[t].second >> 16U;
+          compressed_tile& tile = m_compressed_chunks[cAlpha0Chunks + alpha_index][chunk_index].m_quantized_tiles[tile_index];
+          tile.m_endpoint_cluster_index = insert_result.first->second;
+        }
+        destination_cluster.m_error += cluster.m_error;
+        destination_cluster.m_tiles.append(cluster.m_tiles);
+        cluster.m_tiles.clear();
+      }
+    }
+  }
+  m_alpha_clusters.resize(cluster_count);
 
   return true;
 }
