@@ -65,14 +65,8 @@ class crn_comp : public itexture_comp {
 
   bool m_has_comp[cNumComps];
 
-  struct chunk_detail {
-    chunk_detail() { utils::zero_object(*this); }
-    uint16 m_endpoint_indices[2][2][cNumComps];
-    uint16 m_selector_indices[2][2][cNumComps];
-    uint8 m_endpoint_references[2][2];
-    uint8 m_reference_group;
-  };
-  crnlib::vector<chunk_detail> m_chunk_details;
+  crnlib::vector<dxt_hc::endpoint_indices_details> m_endpoint_indices;
+  crnlib::vector<dxt_hc::selector_indices_details> m_selector_indices;
 
   uint m_total_chunks;
   dxt_hc::pixel_chunk_vec m_chunks;
@@ -125,7 +119,6 @@ class crn_comp : public itexture_comp {
   bool alias_images();
   void create_chunks();
   bool quantize_chunks();
-  void create_chunk_indices();
 
   bool pack_chunks(
       uint group,
@@ -137,7 +130,6 @@ class crn_comp : public itexture_comp {
       const crnlib::vector<uint>* pAlpha_selector_remap);
 
   bool pack_chunks_simulation(
-      uint first_chunk, uint num_chunks,
       uint& total_bits,
       const crnlib::vector<uint>* pColor_endpoint_remap,
       const crnlib::vector<uint>* pColor_selector_remap,

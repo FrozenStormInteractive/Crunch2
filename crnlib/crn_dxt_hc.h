@@ -22,6 +22,29 @@ class dxt_hc {
   dxt_hc();
   ~dxt_hc();
 
+  struct endpoint_indices_details {
+    union {
+      struct {
+        uint16 color;
+        uint16 alpha0;
+        uint16 alpha1;
+      };
+      uint16 component[3];
+    };
+    uint8 reference;
+  };
+
+  struct selector_indices_details {
+    union {
+      struct {
+        uint16 color;
+        uint16 alpha0;
+        uint16 alpha1;
+      };
+      uint16 component[3];
+    };
+  };
+
   struct pixel_chunk {
     pixel_chunk() { clear(); }
 
@@ -99,10 +122,14 @@ class dxt_hc {
     struct miplevel_desc {
       uint m_first_chunk;
       uint m_num_chunks;
+      uint m_chunk_width;
     };
     // The mip level data is optional!
     miplevel_desc m_levels[cCRNMaxLevels];
     uint m_num_levels;
+
+    crnlib::vector<endpoint_indices_details> *m_endpoint_indices;
+    crnlib::vector<selector_indices_details> *m_selector_indices;
 
     dxt_format m_format;
 
@@ -125,28 +152,6 @@ class dxt_hc {
 
   // Output accessors
   inline uint get_num_chunks() const { return m_num_chunks; }
-
-  struct chunk_encoding {
-    chunk_encoding() { utils::zero_object(*this); };
-
-    // Index into g_chunk_encodings.
-    uint8 m_encoding_index;
-
-    // Number of tiles, endpoint indices.
-    uint8 m_num_tiles;
-
-    // Color, alpha0, alpha1
-    enum { cColorIndex = 0,
-           cAlpha0Index = 1,
-           cAlpha1Index = 2 };
-    uint16 m_endpoint_indices[3][cChunkMaxTiles];
-    uint16 m_selector_indices[3][cChunkBlockHeight][cChunkBlockWidth];  // [block_y][block_x]
-  };
-
-  typedef crnlib::vector<chunk_encoding> chunk_encoding_vec;
-
-  inline const chunk_encoding& get_chunk_encoding(uint chunk_index) const { return m_chunk_encoding[chunk_index]; }
-  inline const chunk_encoding_vec& get_chunk_encoding_vec() const { return m_chunk_encoding; }
 
   struct selectors {
     selectors() { utils::zero_object(*this); }
@@ -201,15 +206,11 @@ class dxt_hc {
   const pixel_chunk_vec& get_compressed_chunk_pixels_quantized_alpha_selectors() const { return m_dbg_chunk_pixels_quantized_alpha_selectors; }
   const pixel_chunk_vec& get_compressed_chunk_pixels_final_alpha_selectors() const { return m_dbg_chunk_pixels_final_alpha_selectors; }
 
-  static void create_debug_image_from_chunks(uint num_chunks_x, uint num_chunks_y, const pixel_chunk_vec& chunks, const chunk_encoding_vec* pChunk_encodings, image_u8& img, bool serpentine_scan, int comp_index = -1);
-
  private:
   params m_params;
 
   uint m_num_chunks;
   const pixel_chunk* m_pChunks;
-
-  chunk_encoding_vec m_chunk_encoding;
 
   uint m_num_alpha_blocks;  // 0, 1, or 2
   bool m_has_color_blocks;
@@ -416,13 +417,12 @@ class dxt_hc {
   bool refine_quantized_alpha_endpoints();
   bool refine_quantized_alpha_selectors();
   void create_final_debug_image();
-  bool create_chunk_encodings();
+  bool create_block_encodings(const params& p);
   bool update_progress(uint phase_index, uint subphase_index, uint subphase_total);
   bool compress_internal(const params& p, uint num_chunks, const pixel_chunk* pChunks);
 };
 
 CRNLIB_DEFINE_BITWISE_COPYABLE(dxt_hc::pixel_chunk);
-CRNLIB_DEFINE_BITWISE_COPYABLE(dxt_hc::chunk_encoding);
 CRNLIB_DEFINE_BITWISE_COPYABLE(dxt_hc::selectors);
 
 }  // namespace crnlib

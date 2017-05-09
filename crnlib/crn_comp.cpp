@@ -690,41 +690,38 @@ bool crn_comp::pack_chunks(
     }
   }
 
-  for (uint chunk_base = first_chunk; chunk_base < first_chunk + num_chunks; chunk_base += chunk_width) {
-    for (uint by = 0; by < 2; by++) {
-      for (uint cx = 0; cx < chunk_width; cx++) {
-        const chunk_detail& details = m_chunk_details[chunk_base + cx];
-        if (!by) {
-          if (pCodec)
-            pCodec->encode(details.m_reference_group, m_reference_encoding_dm);
-          else
-            m_chunk_encoding_hist.inc_freq(details.m_reference_group);
+  for (uint by = 0, block_width = chunk_width << 1, b = first_chunk << 2, bEnd = b + (num_chunks << 2); b < bEnd; by++) {
+    for (uint bx = 0; bx < block_width; bx++, b++) {
+      if (!(by & 1) && !(bx & 1)) {
+        uint8 reference_group = m_endpoint_indices[b].reference | m_endpoint_indices[b + block_width].reference << 2 |
+          m_endpoint_indices[b + 1].reference << 4 | m_endpoint_indices[b + block_width + 1].reference << 6;
+        if (pCodec)
+          pCodec->encode(reference_group, m_reference_encoding_dm);
+        else
+          m_chunk_encoding_hist.inc_freq(reference_group);
+      }
+      for (uint c = 0; c < cNumComps; c++) {
+        if (endpoint_remap[c]) {
+          uint index = (*endpoint_remap[c])[m_endpoint_indices[b].component[c]];
+          if (!m_endpoint_indices[b].reference) {
+            int sym = index - endpoint_index[c];
+            if (sym < 0)
+              sym += endpoint_remap[c]->size();
+            if (!pCodec)
+              m_endpoint_index_hist[c ? 1 : 0].inc_freq(sym);
+            else
+              pCodec->encode(sym, m_endpoint_index_dm[c ? 1 : 0]);
+          }
+          endpoint_index[c] = index;
         }
-        for (uint bx = 0; bx < 2; bx++) {
-          for (uint c = 0; c < cNumComps; c++) {
-            if (endpoint_remap[c]) {
-              uint index = (*endpoint_remap[c])[details.m_endpoint_indices[by][bx][c]];
-              if (!details.m_endpoint_references[by][bx]) {
-                int sym = index - endpoint_index[c];
-                if (sym < 0)
-                  sym += endpoint_remap[c]->size();
-                if (!pCodec)
-                  m_endpoint_index_hist[c ? 1 : 0].inc_freq(sym);
-                else
-                  pCodec->encode(sym, m_endpoint_index_dm[c ? 1 : 0]);
-              }
-              endpoint_index[c] = index;
-            }
-          }
-          for (uint c = 0; c < cNumComps; c++) {
-            if (selector_remap[c]) {
-              uint index = (*selector_remap[c])[details.m_selector_indices[by][bx][c]];
-              if (!pCodec)
-                m_selector_index_hist[c ? 1 : 0].inc_freq(index);
-              else
-                pCodec->encode(index, m_selector_index_dm[c ? 1 : 0]);
-            }
-          }
+      }
+      for (uint c = 0; c < cNumComps; c++) {
+        if (selector_remap[c]) {
+          uint index = (*selector_remap[c])[m_selector_indices[b].component[c]];
+          if (!pCodec)
+            m_selector_index_hist[c ? 1 : 0].inc_freq(index);
+          else
+            pCodec->encode(index, m_selector_index_dm[c ? 1 : 0]);
         }
       }
     }
@@ -733,7 +730,6 @@ bool crn_comp::pack_chunks(
 }
 
 bool crn_comp::pack_chunks_simulation(
-    uint first_chunk, uint num_chunks,
     uint& total_bits,
     const crnlib::vector<uint>* pColor_endpoint_remap,
     const crnlib::vector<uint>* pColor_selector_remap,
@@ -945,7 +941,8 @@ void crn_comp::clear() {
 
   utils::zero_object(m_has_comp);
 
-  m_chunk_details.clear();
+  m_endpoint_indices.clear();
+  m_selector_indices.clear();
 
   m_total_chunks = 0;
 
@@ -1106,68 +1103,16 @@ bool crn_comp::quantize_chunks() {
   for (uint i = 0; i < m_pParams->m_levels; i++) {
     params.m_levels[i].m_first_chunk = m_levels[i].m_first_chunk;
     params.m_levels[i].m_num_chunks = m_levels[i].m_num_chunks;
+    params.m_levels[i].m_chunk_width = m_levels[i].m_chunk_width;
   }
+
+  params.m_endpoint_indices = &m_endpoint_indices;
+  params.m_selector_indices = &m_selector_indices;
 
   if (!m_hvq.compress(params, m_total_chunks, &m_chunks[0], m_task_pool))
     return false;
 
-#if CRNLIB_CREATE_DEBUG_IMAGES
-  if (params.m_debugging) {
-    const dxt_hc::pixel_chunk_vec& pixel_chunks = m_hvq.get_compressed_chunk_pixels_final();
-
-    image_u8 img;
-    dxt_hc::create_debug_image_from_chunks((m_pParams->m_width + 7) >> 3, (m_pParams->m_height + 7) >> 3, pixel_chunks, &m_hvq.get_chunk_encoding_vec(), img, true, -1);
-    image_utils::write_to_file("quantized_chunks.tga", img);
-  }
-#endif
-
   return true;
-}
-
-void crn_comp::create_chunk_indices() {
-  uint8 endpoint_index_map[8][4] = {
-    { 0, 0, 0, 0 },
-    { 0, 0, 1, 1 },
-    { 0, 1, 0, 1 },
-    { 0, 0, 1, 2 },
-    { 1, 2, 0, 0 },
-    { 0, 1, 0, 2 },
-    { 1, 0, 2, 0 },
-    { 0, 1, 2, 3 },
-  };
-
-  m_chunk_details.resize(m_total_chunks);
-
-  for (uint group = 0; group < m_mip_groups.size(); group++) {
-    uint chunk_width = m_mip_groups[group].m_chunk_width;
-    for (uint i = 0; i < m_mip_groups[group].m_num_chunks;) {
-      for (uint cx = 0; cx < chunk_width; cx++, i++) {
-        uint chunk_index = m_mip_groups[group].m_first_chunk + i, left_chunk_index = 0, top_chunk_index = 0;
-        const dxt_hc::chunk_encoding& chunk_encoding = m_hvq.get_chunk_encoding(chunk_index);
-        for (uint t = 0, by = 0; by < 2; by++) {
-          for (uint bx = 0; bx < 2; bx++, t++) {
-            bool left_match = bx || cx;
-            if (left_match)
-              left_chunk_index = bx ? chunk_index : chunk_index - 1;
-            bool top_match = by || i >= chunk_width;
-            if (top_match)
-              top_chunk_index = by ? chunk_index : chunk_index - chunk_width;
-            for (uint c = 0; c < cNumComps; c++) {
-              if (m_has_comp[c]) {
-                m_chunk_details[chunk_index].m_endpoint_indices[by][bx][c] = chunk_encoding.m_endpoint_indices[c][endpoint_index_map[chunk_encoding.m_encoding_index][t]];
-                left_match = left_match && m_chunk_details[chunk_index].m_endpoint_indices[by][bx][c] == m_chunk_details[left_chunk_index].m_endpoint_indices[by][bx ^ 1][c];
-                top_match = top_match && m_chunk_details[chunk_index].m_endpoint_indices[by][bx][c] == m_chunk_details[top_chunk_index].m_endpoint_indices[by ^ 1][bx][c];
-                m_chunk_details[chunk_index].m_selector_indices[by][bx][c] = chunk_encoding.m_selector_indices[c][by][bx];
-              }
-            }
-            uint8 endpoint_reference = left_match ? 1 : top_match ? 2 : 0;
-            m_chunk_details[chunk_index].m_endpoint_references[by][bx] = endpoint_reference;
-            m_chunk_details[chunk_index].m_reference_group |= endpoint_reference << (bx << 2 | by << 1);
-          }
-        }
-      }
-    }
-  }
 }
 
 struct optimize_color_endpoint_codebook_params {
@@ -1223,17 +1168,10 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
 
   uint n = m_hvq.get_color_endpoint_codebook_size();
   hist_type xhist(n * n);
-  uint endpoint_index[2][2] = {};
-  for (uint chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
-    const chunk_detail& details = m_chunk_details[chunk_index];
-    for (uint y = 0; y < 2; y++) {
-      for (uint x = 0; x < 2; x++) {
-        endpoint_index[y][x] = details.m_endpoint_indices[y][x][cColor];
-        if (!details.m_endpoint_references[y][x]) {
-          update_hist(xhist, endpoint_index[y][x], endpoint_index[y][x ^ 1], n);
-          update_hist(xhist, endpoint_index[y][x ^ 1], endpoint_index[y][x], n);
-        }
-      }
+  for (uint b = 1; b < m_endpoint_indices.size(); b++) {
+    if (!m_endpoint_indices[b].reference) {
+      update_hist(xhist, m_endpoint_indices[b - 1].color, m_endpoint_indices[b].color, n);
+      update_hist(xhist, m_endpoint_indices[b].color, m_endpoint_indices[b - 1].color, n);
     }
   }
 
@@ -1260,7 +1198,7 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
       return false;
 
     uint total_packed_chunk_bits;
-    if (!pack_chunks_simulation(0, m_total_chunks, total_packed_chunk_bits, &trial_color_endpoint_remap, NULL, NULL, NULL))
+    if (!pack_chunks_simulation(total_packed_chunk_bits, &trial_color_endpoint_remap, NULL, NULL, NULL))
       return false;
 
 #if CRNLIB_ENABLE_DEBUG_MESSAGES
@@ -1353,19 +1291,16 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
 
   uint n = m_hvq.get_alpha_endpoint_codebook_size();
   hist_type xhist(n * n);
-  uint endpoint_index[2][2][cNumComps] = {};
-  uint min_comp_index = m_has_comp[cAlpha0] ? cAlpha0 : cAlpha1, max_comp_index = m_has_comp[cAlpha1] ? cAlpha1 : cAlpha0;
-  for (uint chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
-    const chunk_detail& details = m_chunk_details[chunk_index];
-    for (uint y = 0; y < 2; y++) {
-      for (uint x = 0; x < 2; x++) {
-        for (uint comp_index = min_comp_index; comp_index <= max_comp_index; comp_index++) {
-          endpoint_index[y][x][comp_index] = details.m_endpoint_indices[y][x][comp_index];
-          if (!details.m_endpoint_references[y][x]) {
-            update_hist(xhist, endpoint_index[y][x][comp_index], endpoint_index[y][x ^ 1][comp_index], n);
-            update_hist(xhist, endpoint_index[y][x ^ 1][comp_index], endpoint_index[y][x][comp_index], n);
-          }
-        }
+  bool hasAlpha0 = m_has_comp[cAlpha0], hasAlpha1 = m_has_comp[cAlpha1];
+  for (uint b = 1; b < m_endpoint_indices.size(); b++) {
+    if (!m_endpoint_indices[b].reference) {
+      if (hasAlpha0) {
+        update_hist(xhist, m_endpoint_indices[b - 1].alpha0, m_endpoint_indices[b].alpha0, n);
+        update_hist(xhist, m_endpoint_indices[b].alpha0, m_endpoint_indices[b - 1].alpha0, n);
+      }
+      if (hasAlpha1) {
+        update_hist(xhist, m_endpoint_indices[b - 1].alpha1, m_endpoint_indices[b].alpha1, n);
+        update_hist(xhist, m_endpoint_indices[b].alpha1, m_endpoint_indices[b - 1].alpha1, n);
       }
     }
   }
@@ -1393,7 +1328,7 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
       return false;
 
     uint total_packed_chunk_bits;
-    if (!pack_chunks_simulation(0, m_total_chunks, total_packed_chunk_bits, NULL, NULL, &trial_alpha_endpoint_remap, NULL))
+    if (!pack_chunks_simulation(total_packed_chunk_bits, NULL, NULL, &trial_alpha_endpoint_remap, NULL))
       return false;
 
 #if CRNLIB_ENABLE_DEBUG_MESSAGES
@@ -1556,8 +1491,6 @@ bool crn_comp::compress_internal() {
 
   if (!quantize_chunks())
     return false;
-
-  create_chunk_indices();
 
   crnlib::vector<uint> endpoint_remap[2];
   crnlib::vector<uint> selector_remap[2];

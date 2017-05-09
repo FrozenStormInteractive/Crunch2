@@ -46,8 +46,6 @@ void dxt_hc::clear() {
   m_num_chunks = 0;
   m_pChunks = NULL;
 
-  m_chunk_encoding.clear();
-
   m_num_alpha_blocks = 0;
   m_has_color_blocks = false;
   m_has_alpha0_blocks = false;
@@ -194,7 +192,7 @@ bool dxt_hc::compress_internal(const params& p, uint num_chunks, const pixel_chu
 
   create_final_debug_image();
 
-  if (!create_chunk_encodings())
+  if (!create_block_encodings(p))
     return false;
 
   return true;
@@ -2287,66 +2285,52 @@ void dxt_hc::create_final_debug_image() {
   }  // chunk_index
 }
 
-bool dxt_hc::create_chunk_encodings() {
-  m_chunk_encoding.resize(m_num_chunks);
+bool dxt_hc::create_block_encodings(const params& p) {
+  crnlib::vector<endpoint_indices_details>& m_endpoint_indices = *p.m_endpoint_indices;
+  crnlib::vector<selector_indices_details>& m_selector_indices = *p.m_selector_indices;
 
-  for (uint chunk_index = 0; chunk_index < m_num_chunks; chunk_index++) {
-    if ((chunk_index & 255) == 0) {
-      if (!update_progress(19, chunk_index, m_num_chunks))
-        return false;
-    }
+  uint8 tile_map[8][2][2] = {
+    {{ 0, 0 }, { 0, 0 }},
+    {{ 0, 0 }, { 1, 1 }},
+    {{ 0, 1 }, { 0, 1 }},
+    {{ 0, 0 }, { 1, 2 }},
+    {{ 1, 2 }, { 0, 0 }},
+    {{ 0, 1 }, { 0, 2 }},
+    {{ 1, 0 }, { 2, 0 }},
+    {{ 0, 1 }, { 2, 3 }},
+  };
 
-    chunk_encoding& encoding = m_chunk_encoding[chunk_index];
+  m_endpoint_indices.resize(m_num_chunks << 2);
+  m_selector_indices.resize(m_num_chunks << 2);
+  bool hasBlocks[cNumCompressedChunkVecs] = {m_has_color_blocks, m_num_alpha_blocks > 0, m_num_alpha_blocks > 1};
 
-    for (uint q = 0; q < cNumCompressedChunkVecs; q++) {
-      bool skip = true;
-      if (q == cColorChunks) {
-        if (m_has_color_blocks)
-          skip = false;
-      } else if (q <= m_num_alpha_blocks)
-        skip = false;
-
-      if (skip)
-        continue;
-
-      CRNLIB_ASSERT(!m_compressed_chunks[q].empty());
-      const compressed_chunk& chunk = m_compressed_chunks[q][chunk_index];
-
-      CRNLIB_ASSERT(chunk.m_encoding_index < cNumChunkEncodings);
-      encoding.m_encoding_index = static_cast<uint8>(chunk.m_encoding_index);
-
-      CRNLIB_ASSERT(chunk.m_num_tiles <= cChunkMaxTiles);
-      encoding.m_num_tiles = static_cast<uint8>(chunk.m_num_tiles);
-
-      for (uint tile_index = 0; tile_index < chunk.m_num_tiles; tile_index++) {
-        const compressed_tile& quantized_tile = chunk.m_quantized_tiles[tile_index];
-
-        if (!q) {
-          CRNLIB_ASSERT(quantized_tile.m_endpoint_cluster_index < m_color_clusters.size());
-        } else {
-          CRNLIB_ASSERT(quantized_tile.m_endpoint_cluster_index < m_alpha_clusters.size());
-        }
-
-        encoding.m_endpoint_indices[q][tile_index] = static_cast<uint16>(quantized_tile.m_endpoint_cluster_index);
-      }
-
-      for (uint y = 0; y < cChunkBlockHeight; y++) {
-        for (uint x = 0; x < cChunkBlockWidth; x++) {
-          const uint selector_index = chunk.m_selector_cluster_index[y][x];
-
-          if (!q) {
-            CRNLIB_ASSERT(selector_index < m_color_selectors.size());
-          } else {
-            CRNLIB_ASSERT(selector_index < m_alpha_selectors.size());
+  for (uint level = 0; level < p.m_num_levels; level++) {
+    uint first_chunk = p.m_levels[level].m_first_chunk;
+    uint end_chunk = p.m_levels[level].m_first_chunk + p.m_levels[level].m_num_chunks;
+    uint chunk_width = p.m_levels[level].m_chunk_width;
+    uint block_width = chunk_width << 1;
+    for (uint b = first_chunk << 2, cy = 0, chunk_base = first_chunk; chunk_base < end_chunk; chunk_base += chunk_width, cy++) {
+      for (uint by = 0; by < 2; by++) {
+        for (uint cx = 0; cx < chunk_width; cx++) {
+          for (uint bx = 0; bx < 2; bx++, b++) {
+            bool top_match = cy || by;
+            bool left_match = top_match || cx || bx;
+            for (uint c = 0; c < cNumCompressedChunkVecs; c++) {
+              if (hasBlocks[c]) {
+                const compressed_chunk& chunk = m_compressed_chunks[c][chunk_base + cx];
+                uint16 endpoint_index = chunk.m_quantized_tiles[tile_map[chunk.m_encoding_index][by][bx]].m_endpoint_cluster_index;
+                left_match = left_match && endpoint_index == m_endpoint_indices[b - 1].component[c];
+                top_match = top_match && endpoint_index == m_endpoint_indices[b - block_width].component[c];
+                m_endpoint_indices[b].component[c] = endpoint_index;
+                m_selector_indices[b].component[c] = chunk.m_selector_cluster_index[by][bx];
+              }
+            }
+            m_endpoint_indices[b].reference = left_match ? 1 : top_match ? 2 : 0;
           }
-
-          encoding.m_selector_indices[q][y][x] = static_cast<uint16>(selector_index);
         }
       }
-
-    }  // q
-
-  }  // chunk_index
+    }
+  }
 
   if (m_has_color_blocks) {
     m_color_endpoints.resize(m_color_clusters.size());
@@ -2361,46 +2345,6 @@ bool dxt_hc::create_chunk_encodings() {
   }
 
   return true;
-}
-
-void dxt_hc::create_debug_image_from_chunks(uint num_chunks_x, uint num_chunks_y, const pixel_chunk_vec& chunks, const chunk_encoding_vec* pChunk_encodings, image_u8& img, bool serpentine_scan, int comp_index) {
-  if (chunks.empty()) {
-    img.set_all(color_quad_u8::make_black());
-    return;
-  }
-
-  img.resize(num_chunks_x * cChunkPixelWidth, num_chunks_y * cChunkPixelHeight);
-
-  for (uint y = 0; y < num_chunks_y; y++) {
-    for (uint x = 0; x < num_chunks_x; x++) {
-      uint c = x + y * num_chunks_x;
-      if ((serpentine_scan) && (y & 1))
-        c = (num_chunks_x - 1 - x) + y * num_chunks_x;
-
-      if (comp_index >= 0) {
-        for (uint cy = 0; cy < cChunkPixelHeight; cy++)
-          for (uint cx = 0; cx < cChunkPixelWidth; cx++)
-            img(x * cChunkPixelWidth + cx, y * cChunkPixelHeight + cy) = chunks[c](cx, cy)[comp_index];
-      } else {
-        for (uint cy = 0; cy < cChunkPixelHeight; cy++)
-          for (uint cx = 0; cx < cChunkPixelWidth; cx++)
-            img(x * cChunkPixelWidth + cx, y * cChunkPixelHeight + cy) = chunks[c](cx, cy);
-      }
-
-      if (pChunk_encodings) {
-        const chunk_encoding& chunk = (*pChunk_encodings)[c];
-        const chunk_encoding_desc& encoding_desc = g_chunk_encodings[chunk.m_encoding_index];
-        CRNLIB_ASSERT(chunk.m_num_tiles == encoding_desc.m_num_tiles);
-        for (uint t = 0; t < chunk.m_num_tiles; t++) {
-          const chunk_tile_desc& tile_desc = encoding_desc.m_tiles[t];
-
-          img.unclipped_fill_box(
-              x * 8 + tile_desc.m_x_ofs, y * 8 + tile_desc.m_y_ofs,
-              tile_desc.m_width + 1, tile_desc.m_height + 1, color_quad_u8(128, 128, 128, 255));
-        }
-      }
-    }
-  }
 }
 
 bool dxt_hc::update_progress(uint phase_index, uint subphase_index, uint subphase_total) {
