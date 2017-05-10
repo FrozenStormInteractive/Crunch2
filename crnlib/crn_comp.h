@@ -129,13 +129,6 @@ class crn_comp : public itexture_comp {
       const crnlib::vector<uint>* pAlpha_endpoint_remap,
       const crnlib::vector<uint>* pAlpha_selector_remap);
 
-  bool pack_chunks_simulation(
-      uint& total_bits,
-      const crnlib::vector<uint>* pColor_endpoint_remap,
-      const crnlib::vector<uint>* pColor_selector_remap,
-      const crnlib::vector<uint>* pAlpha_endpoint_remap,
-      const crnlib::vector<uint>* pAlpha_selector_remap);
-
   void optimize_color_endpoint_codebook_task(uint64 data, void* pData_ptr);
   bool optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping);
 

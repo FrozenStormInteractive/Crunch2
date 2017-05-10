@@ -729,49 +729,6 @@ bool crn_comp::pack_chunks(
   return true;
 }
 
-bool crn_comp::pack_chunks_simulation(
-    uint& total_bits,
-    const crnlib::vector<uint>* pColor_endpoint_remap,
-    const crnlib::vector<uint>* pColor_selector_remap,
-    const crnlib::vector<uint>* pAlpha_endpoint_remap,
-    const crnlib::vector<uint>* pAlpha_selector_remap) {
-  for (uint group = 0; group < m_mip_groups.size(); group++) {
-    if (!pack_chunks(group, !group, NULL, pColor_endpoint_remap, pColor_selector_remap, pAlpha_endpoint_remap, pAlpha_selector_remap))
-      return false;
-  }
-
-  symbol_codec codec;
-  codec.start_encoding(2 * 1024 * 1024);
-  codec.encode_enable_simulation(true);
-
-  m_reference_encoding_dm.init(true, m_chunk_encoding_hist, 16);
-
-  for (uint i = 0; i < 2; i++) {
-    if (m_endpoint_index_hist[i].size()) {
-      m_endpoint_index_dm[i].init(true, m_endpoint_index_hist[i], 16);
-
-      codec.encode_transmit_static_huffman_data_model(m_endpoint_index_dm[i], false);
-    }
-
-    if (m_selector_index_hist[i].size()) {
-      m_selector_index_dm[i].init(true, m_selector_index_hist[i], 16);
-
-      codec.encode_transmit_static_huffman_data_model(m_selector_index_dm[i], false);
-    }
-  }
-
-  for (uint group = 0; group < m_mip_groups.size(); group++) {
-    if (!pack_chunks(group, false, &codec, pColor_endpoint_remap, pColor_selector_remap, pAlpha_endpoint_remap, pAlpha_selector_remap))
-      return false;
-  }
-
-  codec.stop_encoding(false);
-
-  total_bits = codec.encode_get_total_bits_written();
-
-  return true;
-}
-
 void crn_comp::append_vec(crnlib::vector<uint8>& a, const void* p, uint size) {
   if (size) {
     uint ofs = a.size();
@@ -1116,29 +1073,63 @@ bool crn_comp::quantize_chunks() {
 }
 
 struct optimize_color_endpoint_codebook_params {
-  crnlib::vector<uint>* m_pTrial_color_endpoint_remap;
+  struct trial {
+    crnlib::vector<uint> remapping;
+    crnlib::vector<uint8> packed_endpoints;
+    uint total_bits;
+  } *m_trial;
+  hist_type* m_xhist;
   uint m_iter_index;
   uint m_max_iter_index;
-  hist_type* xhist;
 };
 
 void crn_comp::optimize_color_endpoint_codebook_task(uint64 data, void* pData_ptr) {
   data;
   optimize_color_endpoint_codebook_params* pParams = reinterpret_cast<optimize_color_endpoint_codebook_params*>(pData_ptr);
+  crnlib::vector<uint>& remapping = pParams->m_trial->remapping;
 
   if (pParams->m_iter_index == pParams->m_max_iter_index) {
-    sort_color_endpoint_codebook(*pParams->m_pTrial_color_endpoint_remap, m_hvq.get_color_endpoint_vec());
+    sort_color_endpoint_codebook(remapping, m_hvq.get_color_endpoint_vec());
   } else {
-    float f = pParams->m_iter_index / static_cast<float>(pParams->m_max_iter_index - 1);
-
     create_zeng_reorder_table(
         m_hvq.get_color_endpoint_codebook_size(),
-        *pParams->xhist,
-        *pParams->m_pTrial_color_endpoint_remap,
+        *pParams->m_xhist,
+        remapping,
         pParams->m_iter_index ? color_endpoint_similarity_func : NULL,
         &m_hvq,
-        f);
+        pParams->m_iter_index / static_cast<float>(pParams->m_max_iter_index - 1));
   }
+
+  pack_color_endpoints(pParams->m_trial->packed_endpoints, remapping, pParams->m_iter_index);
+  uint total_bits = pParams->m_trial->packed_endpoints.size() << 3;
+  uint codebook_size = remapping.size();
+
+  crnlib::vector<uint> hist(codebook_size);
+  for (uint group = 0; group < m_mip_groups.size(); group++) {
+    for (uint endpoint_index = 0, b = m_mip_groups[group].m_first_chunk << 2, bEnd = b + (m_mip_groups[group].m_num_chunks << 2); b < bEnd; b++) {
+      uint index = remapping[m_endpoint_indices[b].component[cColor]];
+      if (!m_endpoint_indices[b].reference) {
+        int sym = index - endpoint_index;
+        hist[sym < 0 ? sym + codebook_size : sym]++;
+      }
+      endpoint_index = index;
+    }
+  }
+
+  static_huffman_data_model dm;
+  dm.init(true, codebook_size, hist.get_ptr(), 16);
+  const uint8* code_sizes = dm.get_code_sizes();
+  for (uint s = 0; s < codebook_size; s++)
+    total_bits += hist[s] * code_sizes[s];
+
+  symbol_codec codec;
+  codec.start_encoding(64 * 1024);
+  codec.encode_enable_simulation(true);
+  codec.encode_transmit_static_huffman_data_model(dm, false);
+  codec.stop_encoding(false);
+  total_bits += codec.encode_get_total_bits_written();
+
+  pParams->m_trial->total_bits = total_bits;
 
   crnlib_delete(pParams);
 }
@@ -1155,16 +1146,13 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
     return true;
   }
 
-  const uint cMaxEndpointRemapIters = 3;
-
-  uint best_bits = UINT_MAX;
-
 #if CRNLIB_ENABLE_DEBUG_MESSAGES
   if (m_pParams->m_flags & cCRNCompFlagDebugging)
     console::debug("----- Begin optimization of color endpoint codebook");
 #endif
 
-  crnlib::vector<uint> trial_color_endpoint_remaps[cMaxEndpointRemapIters + 1];
+  const uint cMaxEndpointRemapIters = 3;
+  optimize_color_endpoint_codebook_params::trial remapping_trial[cMaxEndpointRemapIters + 1];
 
   uint n = m_hvq.get_color_endpoint_codebook_size();
   hist_type xhist(n * n);
@@ -1179,44 +1167,17 @@ bool crn_comp::optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping)
     optimize_color_endpoint_codebook_params* pParams = crnlib_new<optimize_color_endpoint_codebook_params>();
     pParams->m_iter_index = i;
     pParams->m_max_iter_index = cMaxEndpointRemapIters;
-    pParams->m_pTrial_color_endpoint_remap = &trial_color_endpoint_remaps[i];
-    pParams->xhist = &xhist;
-
+    pParams->m_trial = remapping_trial + i;
+    pParams->m_xhist = &xhist;
     m_task_pool.queue_object_task(this, &crn_comp::optimize_color_endpoint_codebook_task, 0, pParams);
   }
-
   m_task_pool.join();
 
-  for (uint i = 0; i <= cMaxEndpointRemapIters; i++) {
-    if (!update_progress(20, i, cMaxEndpointRemapIters + 1))
-      return false;
-
-    crnlib::vector<uint>& trial_color_endpoint_remap = trial_color_endpoint_remaps[i];
-
-    crnlib::vector<uint8> packed_data;
-    if (!pack_color_endpoints(packed_data, trial_color_endpoint_remap, i))
-      return false;
-
-    uint total_packed_chunk_bits;
-    if (!pack_chunks_simulation(total_packed_chunk_bits, &trial_color_endpoint_remap, NULL, NULL, NULL))
-      return false;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Pack chunks simulation: %u bits", total_packed_chunk_bits);
-#endif
-
-    uint total_bits = packed_data.size() * 8 + total_packed_chunk_bits;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Total bits: %u", total_bits);
-#endif
-
-    if (total_bits < best_bits) {
-      m_packed_color_endpoints.swap(packed_data);
-      remapping.swap(trial_color_endpoint_remap);
-      best_bits = total_bits;
+  for (uint best_bits = UINT_MAX, i = 0; i <= cMaxEndpointRemapIters; i++) {
+    if (remapping_trial[i].total_bits < best_bits) {
+      m_packed_color_endpoints.swap(remapping_trial[i].packed_endpoints);
+      remapping.swap(remapping_trial[i].remapping);
+      best_bits = remapping_trial[i].total_bits;
     }
   }
 
@@ -1240,29 +1201,74 @@ bool crn_comp::optimize_color_selector_codebook(crnlib::vector<uint>& remapping)
 }
 
 struct optimize_alpha_endpoint_codebook_params {
-  crnlib::vector<uint>* m_pTrial_alpha_endpoint_remap;
+  struct trial {
+    crnlib::vector<uint> remapping;
+    crnlib::vector<uint8> packed_endpoints;
+    uint total_bits;
+  } *m_trial;
+  hist_type* m_xhist;
   uint m_iter_index;
   uint m_max_iter_index;
-  hist_type* xhist;
 };
 
 void crn_comp::optimize_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr) {
   data;
   optimize_alpha_endpoint_codebook_params* pParams = reinterpret_cast<optimize_alpha_endpoint_codebook_params*>(pData_ptr);
+  crnlib::vector<uint>& remapping = pParams->m_trial->remapping;
 
   if (pParams->m_iter_index == pParams->m_max_iter_index) {
-    sort_alpha_endpoint_codebook(*pParams->m_pTrial_alpha_endpoint_remap, m_hvq.get_alpha_endpoint_vec());
+    sort_alpha_endpoint_codebook(remapping, m_hvq.get_alpha_endpoint_vec());
   } else {
-    float f = pParams->m_iter_index / static_cast<float>(pParams->m_max_iter_index - 1);
-
     create_zeng_reorder_table(
         m_hvq.get_alpha_endpoint_codebook_size(),
-        *pParams->xhist,
-        *pParams->m_pTrial_alpha_endpoint_remap,
+        *pParams->m_xhist,
+        remapping,
         pParams->m_iter_index ? alpha_endpoint_similarity_func : NULL,
         &m_hvq,
-        f);
+        pParams->m_iter_index / static_cast<float>(pParams->m_max_iter_index - 1));
   }
+
+  pack_alpha_endpoints(pParams->m_trial->packed_endpoints, remapping, pParams->m_iter_index);
+  uint total_bits = pParams->m_trial->packed_endpoints.size() << 3;
+  uint codebook_size = remapping.size();
+
+  crnlib::vector<uint> hist(codebook_size);
+  bool hasAlpha0 = m_has_comp[cAlpha0], hasAlpha1 = m_has_comp[cAlpha1];
+  for (uint group = 0; group < m_mip_groups.size(); group++) {
+    for (uint index0 = 0, index1 = 0, b = m_mip_groups[group].m_first_chunk << 2, bEnd = b + (m_mip_groups[group].m_num_chunks << 2); b < bEnd; b++) {
+      if (hasAlpha0) {
+        uint index = remapping[m_endpoint_indices[b].component[cAlpha0]];
+        if (!m_endpoint_indices[b].reference) {
+          int sym = index - index0;
+          hist[sym < 0 ? sym + codebook_size : sym]++;
+        }
+        index0 = index;
+      }
+      if (hasAlpha1) {
+        uint index = remapping[m_endpoint_indices[b].component[cAlpha1]];
+        if (!m_endpoint_indices[b].reference) {
+          int sym = index - index1;
+          hist[sym < 0 ? sym + codebook_size : sym]++;
+        }
+        index1 = index;
+      }
+    }
+  }
+
+  static_huffman_data_model dm;
+  dm.init(true, codebook_size, hist.get_ptr(), 16);
+  const uint8* code_sizes = dm.get_code_sizes();
+  for (uint s = 0; s < codebook_size; s++)
+    total_bits += hist[s] * code_sizes[s];
+
+  symbol_codec codec;
+  codec.start_encoding(64 * 1024);
+  codec.encode_enable_simulation(true);
+  codec.encode_transmit_static_huffman_data_model(dm, false);
+  codec.stop_encoding(false);
+  total_bits += codec.encode_get_total_bits_written();
+
+  pParams->m_trial->total_bits = total_bits;
 
   crnlib_delete(pParams);
 }
@@ -1279,15 +1285,13 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
     return true;
   }
 
-  const uint cMaxEndpointRemapIters = 3;
-  uint best_bits = UINT_MAX;
-
 #if CRNLIB_ENABLE_DEBUG_MESSAGES
   if (m_pParams->m_flags & cCRNCompFlagDebugging)
     console::debug("----- Begin optimization of alpha endpoint codebook");
 #endif
 
-  crnlib::vector<uint> trial_alpha_endpoint_remaps[cMaxEndpointRemapIters + 1];
+  const uint cMaxEndpointRemapIters = 3;
+  optimize_alpha_endpoint_codebook_params::trial remapping_trial[cMaxEndpointRemapIters + 1];
 
   uint n = m_hvq.get_alpha_endpoint_codebook_size();
   hist_type xhist(n * n);
@@ -1309,44 +1313,17 @@ bool crn_comp::optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping)
     optimize_alpha_endpoint_codebook_params* pParams = crnlib_new<optimize_alpha_endpoint_codebook_params>();
     pParams->m_iter_index = i;
     pParams->m_max_iter_index = cMaxEndpointRemapIters;
-    pParams->m_pTrial_alpha_endpoint_remap = &trial_alpha_endpoint_remaps[i];
-    pParams->xhist = &xhist;
-
+    pParams->m_trial = remapping_trial + i;
+    pParams->m_xhist = &xhist;
     m_task_pool.queue_object_task(this, &crn_comp::optimize_alpha_endpoint_codebook_task, 0, pParams);
   }
-
   m_task_pool.join();
 
-  for (uint i = 0; i <= cMaxEndpointRemapIters; i++) {
-    if (!update_progress(22, i, cMaxEndpointRemapIters + 1))
-      return false;
-
-    crnlib::vector<uint>& trial_alpha_endpoint_remap = trial_alpha_endpoint_remaps[i];
-
-    crnlib::vector<uint8> packed_data;
-    if (!pack_alpha_endpoints(packed_data, trial_alpha_endpoint_remap, i))
-      return false;
-
-    uint total_packed_chunk_bits;
-    if (!pack_chunks_simulation(total_packed_chunk_bits, NULL, NULL, &trial_alpha_endpoint_remap, NULL))
-      return false;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Pack chunks simulation: %u bits", total_packed_chunk_bits);
-#endif
-
-    uint total_bits = packed_data.size() * 8 + total_packed_chunk_bits;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-    if (m_pParams->m_flags & cCRNCompFlagDebugging)
-      console::debug("Total bits: %u", total_bits);
-#endif
-
-    if (total_bits < best_bits) {
-      m_packed_alpha_endpoints.swap(packed_data);
-      remapping.swap(trial_alpha_endpoint_remap);
-      best_bits = total_bits;
+  for (uint best_bits = UINT_MAX, i = 0; i <= cMaxEndpointRemapIters; i++) {
+    if (remapping_trial[i].total_bits < best_bits) {
+      m_packed_alpha_endpoints.swap(remapping_trial[i].packed_endpoints);
+      remapping.swap(remapping_trial[i].remapping);
+      best_bits = remapping_trial[i].total_bits;
     }
   }
 
