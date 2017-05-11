@@ -72,22 +72,6 @@ void dxt_hc::clear() {
   m_color_endpoints.clear();
   m_alpha_endpoints.clear();
 
-  m_dbg_chunk_pixels.clear();
-  m_dbg_chunk_pixels_tile_vis.clear();
-  m_dbg_chunk_pixels_color_quantized.clear();
-  m_dbg_chunk_pixels_alpha_quantized.clear();
-
-  m_dbg_chunk_pixels_quantized_color_selectors.clear();
-  m_dbg_chunk_pixels_orig_color_selectors.clear();
-  m_dbg_chunk_pixels_final_color_selectors.clear();
-  m_dbg_chunk_pixels_final_alpha_selectors.clear();
-
-  m_dbg_chunk_pixels_quantized_alpha_selectors.clear();
-  m_dbg_chunk_pixels_orig_alpha_selectors.clear();
-  m_dbg_chunk_pixels_final_alpha_selectors.clear();
-
-  m_dbg_chunk_pixels_final.clear();
-
   m_canceled = false;
 
   m_prev_phase_index = -1;
@@ -162,8 +146,6 @@ bool dxt_hc::compress_internal(const params& p, uint num_chunks, const pixel_chu
       return false;
   }
 
-  create_quantized_debug_images();
-
   if (m_has_color_blocks) {
     if (!create_selector_codebook(false))
       return false;
@@ -189,8 +171,6 @@ bool dxt_hc::compress_internal(const params& p, uint num_chunks, const pixel_chu
     if (!refine_quantized_alpha_selectors())
       return false;
   }
-
-  create_final_debug_image();
 
   if (!create_block_encodings(p))
     return false;
@@ -527,7 +507,6 @@ void dxt_hc::determine_compressed_chunks_task(uint64 data, void* pData_ptr) {
           output.m_tiles[t].m_second_endpoint = color_results.m_high_color;
 
           memcpy(output.m_tiles[t].m_selectors, pColor_selectors, cChunkPixelWidth * cChunkPixelHeight);
-          output.m_tiles[t].m_alpha_encoding = color_results.m_alpha_block;
         } else {
           const uint a = q - cAlpha0Chunks;
 
@@ -539,27 +518,9 @@ void dxt_hc::determine_compressed_chunks_task(uint64 data, void* pData_ptr) {
           output.m_tiles[t].m_second_endpoint = alpha_results.m_second_endpoint;
 
           memcpy(output.m_tiles[t].m_selectors, pAlpha_selectors, cChunkPixelWidth * cChunkPixelHeight);
-          output.m_tiles[t].m_alpha_encoding = alpha_results.m_block_type != 0;
         }
       }  // t
     }    // q
-
-    if (m_params.m_debugging) {
-      for (uint y = 0; y < cChunkPixelHeight; y++)
-        for (uint x = 0; x < cChunkPixelWidth; x++)
-          m_dbg_chunk_pixels[chunk_index](x, y) = decomp_chunk[best_encoding](x, y);
-
-      for (uint t = 0; t < g_chunk_encodings[best_encoding].m_num_tiles; t++) {
-        const uint layout_index = g_chunk_encodings[best_encoding].m_tiles[t].m_layout_index;
-
-        const chunk_tile_desc& tile_desc = g_chunk_tile_layouts[layout_index];
-
-        for (uint ty = 0; ty < tile_desc.m_height; ty++)
-          for (uint tx = 0; tx < tile_desc.m_width; tx++)
-            m_dbg_chunk_pixels_tile_vis[chunk_index](tile_desc.m_x_ofs + tx, tile_desc.m_y_ofs + ty) = g_tile_layout_colors[layout_index];
-      }
-    }
-
   }  // chunk_index
 }
 
@@ -574,16 +535,6 @@ bool dxt_hc::determine_compressed_chunks() {
 
   for (uint a = 0; a < m_num_alpha_blocks; a++)
     m_compressed_chunks[cAlpha0Chunks + a].resize(m_num_chunks);
-
-  if (m_params.m_debugging) {
-    m_dbg_chunk_pixels.resize(m_num_chunks);
-    m_dbg_chunk_pixels_tile_vis.resize(m_num_chunks);
-
-    for (uint i = 0; i < m_num_chunks; i++) {
-      m_dbg_chunk_pixels[i].clear();
-      m_dbg_chunk_pixels_tile_vis[i].clear();
-    }
-  }
 
   m_total_tiles = 0;
 
@@ -758,6 +709,12 @@ bool dxt_hc::determine_color_endpoint_clusters() {
     for (uint tile_index = 0; tile_index < chunk.m_num_tiles; tile_index++) {
       uint cluster_index = chunk.m_endpoint_cluster_index[tile_index];
       m_color_clusters[cluster_index].m_tiles.push_back(std::make_pair(chunk_index, tile_index));
+
+      const compressed_tile& tile = chunk.m_tiles[tile_index];
+      const chunk_tile_desc& layout = g_chunk_tile_layouts[tile.m_layout_index];
+      for (uint y = 0; y < layout.m_height; y++)
+        for (uint x = 0; x < layout.m_width; x++)
+          m_color_clusters[cluster_index].m_pixels.push_back(m_pChunks[chunk_index](layout.m_x_ofs + x, layout.m_y_ofs + y));
     }
   }
 
@@ -921,13 +878,6 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
   if (!m_has_color_blocks)
     return;
 
-  crnlib::vector<color_quad_u8> pixels;
-  pixels.reserve(512);
-
-  crnlib::vector<uint8> selectors;
-
-  uint total_pixels = 0;
-
   uint total_empty_clusters = 0;
   for (uint cluster_index = 0; cluster_index < m_color_clusters.size(); cluster_index++) {
     if (m_canceled)
@@ -944,39 +894,15 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
     }
 
     tile_cluster& cluster = m_color_clusters[cluster_index];
-    if (cluster.m_tiles.empty()) {
-      total_empty_clusters++;
+    if (cluster.m_pixels.empty())
       continue;
-    }
 
-    pixels.resize(0);
-
-    for (uint t = 0; t < cluster.m_tiles.size(); t++) {
-      const uint chunk_index = cluster.m_tiles[t].first;
-      const uint tile_index = cluster.m_tiles[t].second;
-      CRNLIB_ASSERT(chunk_index < m_num_chunks);
-      CRNLIB_ASSERT(tile_index < cChunkMaxTiles);
-
-      const compressed_chunk& chunk = m_compressed_chunks[cColorChunks][chunk_index];
-
-      CRNLIB_ASSERT(tile_index < chunk.m_num_tiles);
-      const compressed_tile& tile = chunk.m_tiles[tile_index];
-
-      const chunk_tile_desc& layout = g_chunk_tile_layouts[tile.m_layout_index];
-
-      for (uint y = 0; y < layout.m_height; y++)
-        for (uint x = 0; x < layout.m_width; x++)
-          pixels.push_back(m_pChunks[chunk_index](layout.m_x_ofs + x, layout.m_y_ofs + y));
-    }
-
-    total_pixels += pixels.size();
-
-    selectors.resize(pixels.size());
+    cluster.m_selectors.resize(cluster.m_pixels.size());
 
     dxt1_endpoint_optimizer::params params;
     params.m_block_index = cluster_index;
-    params.m_pPixels = &pixels[0];
-    params.m_num_pixels = pixels.size();
+    params.m_pPixels = cluster.m_pixels.get_ptr();
+    params.m_num_pixels = cluster.m_pixels.size();
     params.m_pixels_have_alpha = false;
     params.m_use_alpha_blocks = false;
     params.m_perceptual = m_params.m_perceptual;
@@ -984,16 +910,29 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
     params.m_endpoint_caching = false;
 
     dxt1_endpoint_optimizer::results results;
-    results.m_pSelectors = &selectors[0];
+    results.m_pSelectors = cluster.m_selectors.get_ptr();
 
     dxt1_endpoint_optimizer optimizer;
-    const bool all_transparent = optimizer.compute(params, results);
-    all_transparent;
+    optimizer.compute(params, results);
 
     cluster.m_first_endpoint = results.m_low_color;
     cluster.m_second_endpoint = results.m_high_color;
-    cluster.m_alpha_encoding = results.m_alpha_block;
     cluster.m_error = results.m_error;
+
+    dxt_endpoint_refiner refiner;
+    dxt_endpoint_refiner::params p;
+    dxt_endpoint_refiner::results r;
+    p.m_perceptual = m_params.m_perceptual;
+    p.m_pSelectors = cluster.m_selectors.get_ptr();
+    p.m_pPixels = cluster.m_pixels.get_ptr();
+    p.m_num_pixels = cluster.m_pixels.size();
+    p.m_dxt1_selectors = true;
+    p.m_error_to_beat = cluster.m_error;
+    p.m_block_index = cluster_index;
+    cluster.m_refined.result = refiner.refine(p, r);
+    cluster.m_refined.first_endpoint = r.m_low_color;
+    cluster.m_refined.second_endpoint = r.m_high_color;
+    cluster.m_refined.error = r.m_error;
 
     uint pixel_index = 0;
 
@@ -1021,26 +960,15 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
       quantized_tile.m_endpoint_cluster_index = cluster_index;
       quantized_tile.m_first_endpoint = results.m_low_color;
       quantized_tile.m_second_endpoint = results.m_high_color;
-      //quantized_tile.m_error = results.m_error;
-      quantized_tile.m_alpha_encoding = results.m_alpha_block;
       quantized_tile.m_pixel_width = tile.m_pixel_width;
       quantized_tile.m_pixel_height = tile.m_pixel_height;
       quantized_tile.m_layout_index = tile.m_layout_index;
 
-      memcpy(quantized_tile.m_selectors, &selectors[pixel_index], total_pixels);
+      memcpy(quantized_tile.m_selectors, &cluster.m_selectors[pixel_index], total_pixels);
 
       pixel_index += total_pixels;
     }
   }
-
-//CRNLIB_ASSERT(total_pixels == (m_num_chunks * cChunkPixelWidth * cChunkPixelHeight));
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-  if (m_params.m_debugging) {
-    if (total_empty_clusters)
-      console::warning("Total empty color clusters: %u", total_empty_clusters);
-  }
-#endif
 }
 
 bool dxt_hc::determine_color_endpoint_codebook() {
@@ -1142,7 +1070,6 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr
 
     cluster.m_first_endpoint = results.m_first_endpoint;
     cluster.m_second_endpoint = results.m_second_endpoint;
-    cluster.m_alpha_encoding = results.m_block_type != 0;
     cluster.m_error = results.m_error;
 
     uint pixel_index = 0;
@@ -1172,8 +1099,6 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr
       quantized_tile.m_endpoint_cluster_index = cluster_index;
       quantized_tile.m_first_endpoint = results.m_first_endpoint;
       quantized_tile.m_second_endpoint = results.m_second_endpoint;
-      //quantized_tile.m_error = results.m_error;
-      quantized_tile.m_alpha_encoding = results.m_block_type != 0;
       quantized_tile.m_pixel_width = tile.m_pixel_width;
       quantized_tile.m_pixel_height = tile.m_pixel_height;
       quantized_tile.m_layout_index = tile.m_layout_index;
@@ -1207,103 +1132,6 @@ bool dxt_hc::determine_alpha_endpoint_codebook() {
   m_pTask_pool->join();
 
   return !m_canceled;
-}
-
-void dxt_hc::create_quantized_debug_images() {
-  if (!m_params.m_debugging)
-    return;
-
-  if (m_has_color_blocks) {
-    m_dbg_chunk_pixels_color_quantized.resize(m_num_chunks);
-    m_dbg_chunk_pixels_quantized_color_selectors.resize(m_num_chunks);
-    m_dbg_chunk_pixels_orig_color_selectors.resize(m_num_chunks);
-
-    for (uint i = 0; i < m_num_chunks; i++) {
-      m_dbg_chunk_pixels_color_quantized[i].clear();
-      m_dbg_chunk_pixels_quantized_color_selectors[i].clear();
-      m_dbg_chunk_pixels_orig_color_selectors[i].clear();
-    }
-  }
-
-  if (m_num_alpha_blocks) {
-    m_dbg_chunk_pixels_alpha_quantized.resize(m_num_chunks);
-    m_dbg_chunk_pixels_quantized_alpha_selectors.resize(m_num_chunks);
-    m_dbg_chunk_pixels_orig_alpha_selectors.resize(m_num_chunks);
-
-    for (uint i = 0; i < m_num_chunks; i++) {
-      m_dbg_chunk_pixels_alpha_quantized[i].clear();
-      m_dbg_chunk_pixels_quantized_alpha_selectors[i].clear();
-      m_dbg_chunk_pixels_orig_alpha_selectors[i].clear();
-    }
-  }
-
-  for (uint chunk_index = 0; chunk_index < m_num_chunks; chunk_index++) {
-    if (m_has_color_blocks) {
-      pixel_chunk& output_chunk_color_quantized = m_dbg_chunk_pixels_color_quantized[chunk_index];
-      pixel_chunk& output_chunk_selectors = m_dbg_chunk_pixels_quantized_color_selectors[chunk_index];
-      pixel_chunk& output_chunk_orig_selectors = m_dbg_chunk_pixels_orig_color_selectors[chunk_index];
-
-      const compressed_chunk& color_chunk = m_compressed_chunks[cColorChunks][chunk_index];
-
-      for (uint tile_index = 0; tile_index < color_chunk.m_num_tiles; tile_index++) {
-        const compressed_tile& quantized_tile = color_chunk.m_quantized_tiles[tile_index];
-
-        const chunk_tile_desc& layout = g_chunk_tile_layouts[quantized_tile.m_layout_index];
-
-        const uint8* pColor_Selectors = quantized_tile.m_selectors;
-
-        color_quad_u8 block_colors[cDXT1SelectorValues];
-        CRNLIB_ASSERT(quantized_tile.m_first_endpoint >= quantized_tile.m_second_endpoint);
-        dxt1_block::get_block_colors(block_colors, static_cast<uint16>(quantized_tile.m_first_endpoint), static_cast<uint16>(quantized_tile.m_second_endpoint));
-
-        for (uint y = 0; y < layout.m_height; y++) {
-          for (uint x = 0; x < layout.m_width; x++) {
-            const uint selector = pColor_Selectors[x + y * layout.m_width];
-
-            output_chunk_selectors(x + layout.m_x_ofs, y + layout.m_y_ofs) = selector * 255 / (cDXT1SelectorValues - 1);
-
-            output_chunk_orig_selectors(x + layout.m_x_ofs, y + layout.m_y_ofs) = color_chunk.m_tiles[tile_index].m_selectors[x + y * layout.m_width] * 255 / (cDXT1SelectorValues - 1);
-
-            output_chunk_color_quantized(x + layout.m_x_ofs, y + layout.m_y_ofs) = block_colors[selector];
-          }
-        }
-      }
-    }
-
-    for (uint a = 0; a < m_num_alpha_blocks; a++) {
-      pixel_chunk& output_chunk_alpha_quantized = m_dbg_chunk_pixels_alpha_quantized[chunk_index];
-      pixel_chunk& output_chunk_selectors = m_dbg_chunk_pixels_quantized_alpha_selectors[chunk_index];
-      pixel_chunk& output_chunk_orig_selectors = m_dbg_chunk_pixels_orig_alpha_selectors[chunk_index];
-
-      const compressed_chunk& alpha_chunk = m_compressed_chunks[cAlpha0Chunks + a][chunk_index];
-
-      for (uint tile_index = 0; tile_index < alpha_chunk.m_num_tiles; tile_index++) {
-        const compressed_tile& quantized_tile = alpha_chunk.m_quantized_tiles[tile_index];
-
-        const chunk_tile_desc& layout = g_chunk_tile_layouts[quantized_tile.m_layout_index];
-
-        const uint8* pAlpha_selectors = quantized_tile.m_selectors;
-
-        uint block_values[cDXT5SelectorValues];
-        CRNLIB_ASSERT(quantized_tile.m_first_endpoint >= quantized_tile.m_second_endpoint);
-        dxt5_block::get_block_values(block_values, quantized_tile.m_first_endpoint, quantized_tile.m_second_endpoint);
-
-        for (uint y = 0; y < layout.m_height; y++) {
-          for (uint x = 0; x < layout.m_width; x++) {
-            const uint selector = pAlpha_selectors[x + y * layout.m_width];
-
-            CRNLIB_ASSERT(selector < cDXT5SelectorValues);
-
-            output_chunk_selectors(x + layout.m_x_ofs, y + layout.m_y_ofs)[m_params.m_alpha_component_indices[a]] = static_cast<uint8>(selector * 255 / (cDXT5SelectorValues - 1));
-
-            output_chunk_orig_selectors(x + layout.m_x_ofs, y + layout.m_y_ofs)[m_params.m_alpha_component_indices[a]] = static_cast<uint8>(alpha_chunk.m_tiles[tile_index].m_selectors[x + y * layout.m_width] * 255 / (cDXT5SelectorValues - 1));
-
-            output_chunk_alpha_quantized(x + layout.m_x_ofs, y + layout.m_y_ofs)[m_params.m_alpha_component_indices[a]] = static_cast<uint8>(block_values[selector]);
-          }
-        }
-      }
-    }  // a
-  }
 }
 
 void dxt_hc::create_selector_codebook_task(uint64 data, void* pData_ptr) {
@@ -1891,119 +1719,33 @@ bool dxt_hc::refine_quantized_color_endpoints() {
   if (!m_has_color_blocks)
     return true;
 
-  uint total_refined_tiles = 0;
-  uint total_refined_pixels = 0;
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-  if (m_params.m_debugging)
-    console::info("Refining quantized color endpoints");
-#endif
-
   for (uint cluster_index = 0; cluster_index < m_color_clusters.size(); cluster_index++) {
-    if ((cluster_index & 255) == 0) {
-      if (!update_progress(17, cluster_index, m_color_clusters.size()))
-        return false;
-    }
-
     tile_cluster& cluster = m_color_clusters[cluster_index];
-
-    uint total_pixels = 0;
-    for (uint tile_iter = 0; tile_iter < cluster.m_tiles.size(); tile_iter++) {
-      const uint chunk_index = cluster.m_tiles[tile_iter].first;
-      const uint tile_index = cluster.m_tiles[tile_iter].second;
-
-      compressed_chunk& chunk = m_compressed_chunks[cColorChunks][chunk_index];
-      compressed_tile& tile = chunk.m_quantized_tiles[tile_index];
-
-      CRNLIB_ASSERT(tile.m_first_endpoint == cluster.m_first_endpoint);
-      CRNLIB_ASSERT(tile.m_second_endpoint == cluster.m_second_endpoint);
-
-      total_pixels += (tile.m_pixel_width * tile.m_pixel_height);
-    }
-
-    if (!total_pixels)
-      continue;
-
-    crnlib::vector<color_quad_u8> pixels;
-    crnlib::vector<uint8> selectors;
-
-    pixels.reserve(total_pixels);
-    selectors.reserve(total_pixels);
-
-    for (uint tile_iter = 0; tile_iter < cluster.m_tiles.size(); tile_iter++) {
-      const uint chunk_index = cluster.m_tiles[tile_iter].first;
-      const uint tile_index = cluster.m_tiles[tile_iter].second;
-
-      compressed_chunk& chunk = m_compressed_chunks[cColorChunks][chunk_index];
-      compressed_tile& tile = chunk.m_quantized_tiles[tile_index];
-
-      const pixel_chunk& src_pixels = m_pChunks[chunk_index];
-
-      CRNLIB_ASSERT(tile.m_first_endpoint == cluster.m_first_endpoint);
-      CRNLIB_ASSERT(tile.m_second_endpoint == cluster.m_second_endpoint);
-
-      const chunk_tile_desc& tile_layout = g_chunk_tile_layouts[tile.m_layout_index];
-
-      for (uint y = 0; y < tile.m_pixel_height; y++) {
-        for (uint x = 0; x < tile.m_pixel_width; x++) {
-          selectors.push_back(tile.m_selectors[x + y * tile.m_pixel_width]);
-
-          pixels.push_back(src_pixels(x + tile_layout.m_x_ofs, y + tile_layout.m_y_ofs));
-        }
+    if (cluster.m_refined.result) {
+      cluster.m_error = cluster.m_refined.error;
+      cluster.m_first_endpoint = cluster.m_refined.first_endpoint;
+      cluster.m_second_endpoint = cluster.m_refined.second_endpoint;
+      for (uint tile_iter = 0; tile_iter < cluster.m_tiles.size(); tile_iter++) {
+        const uint chunk_index = cluster.m_tiles[tile_iter].first;
+        const uint tile_index = cluster.m_tiles[tile_iter].second;
+        compressed_chunk& chunk = m_compressed_chunks[cColorChunks][chunk_index];
+        compressed_tile& tile = chunk.m_quantized_tiles[tile_index];
+        tile.m_first_endpoint = cluster.m_first_endpoint;
+        tile.m_second_endpoint = cluster.m_second_endpoint;
       }
     }
-
-    dxt_endpoint_refiner refiner;
-    dxt_endpoint_refiner::params p;
-    dxt_endpoint_refiner::results r;
-
-    p.m_perceptual = m_params.m_perceptual;
-    p.m_pSelectors = &selectors[0];
-    p.m_pPixels = &pixels[0];
-    p.m_num_pixels = total_pixels;
-    p.m_dxt1_selectors = true;
-    p.m_error_to_beat = cluster.m_error;
-    p.m_block_index = cluster_index;
-
-    if (!refiner.refine(p, r))
-      continue;
-
-    total_refined_tiles++;
-    total_refined_pixels += total_pixels;
-
-    cluster.m_error = r.m_error;
-
-    cluster.m_first_endpoint = r.m_low_color;
-    cluster.m_second_endpoint = r.m_high_color;
-
-    for (uint tile_iter = 0; tile_iter < cluster.m_tiles.size(); tile_iter++) {
-      const uint chunk_index = cluster.m_tiles[tile_iter].first;
-      const uint tile_index = cluster.m_tiles[tile_iter].second;
-
-      compressed_chunk& chunk = m_compressed_chunks[cColorChunks][chunk_index];
-      compressed_tile& tile = chunk.m_quantized_tiles[tile_index];
-
-      tile.m_first_endpoint = r.m_low_color;
-      tile.m_second_endpoint = r.m_high_color;
-    }
-  }
-
-#if CRNLIB_ENABLE_DEBUG_MESSAGES
-  if (m_params.m_debugging)
-    console::info("Total refined pixels: %u, endpoints: %u out of %u", total_refined_pixels, total_refined_tiles, m_color_clusters.size());
-#endif
+  }  
 
   uint cluster_count = 0;
-  hash_map<uint64, uint> packed_clusters;
+  hash_map<uint32, uint> packed_clusters;
   for (uint i = 0; i < m_color_clusters.size(); i++) {
     tile_cluster& cluster = m_color_clusters[i];
     if (cluster.m_tiles.size()) {
-      uint64 packed_cluster = cluster.m_first_endpoint | cluster.m_second_endpoint << 16 | (cluster.m_alpha_encoding ? 1ULL << 32 : 0);
-      hash_map<uint64, uint>::insert_result insert_result = packed_clusters.insert(packed_cluster, cluster_count);
+      uint32 packed_cluster = cluster.m_first_endpoint | cluster.m_second_endpoint << 16;
+      hash_map<uint32, uint>::insert_result insert_result = packed_clusters.insert(packed_cluster, cluster_count);
       if (insert_result.second) {
         if (cluster_count != i) {
           tile_cluster& destination_cluster = m_color_clusters[cluster_count];
-          destination_cluster.m_alpha_encoding = cluster.m_alpha_encoding;
           destination_cluster.m_error = cluster.m_error;
           destination_cluster.m_first_endpoint = cluster.m_first_endpoint;
           destination_cluster.m_second_endpoint = cluster.m_second_endpoint;
@@ -2146,16 +1888,15 @@ bool dxt_hc::refine_quantized_alpha_endpoints() {
 #endif
 
   uint cluster_count = 0;
-  hash_map<uint64, uint> packed_clusters;
+  hash_map<uint32, uint> packed_clusters;
   for (uint i = 0; i < m_alpha_clusters.size(); i++) {
     tile_cluster& cluster = m_alpha_clusters[i];
     if (cluster.m_tiles.size()) {
-      uint64 packed_cluster = cluster.m_first_endpoint | cluster.m_second_endpoint << 16 | (cluster.m_alpha_encoding ? 1ULL << 32 : 0);
-      hash_map<uint64, uint>::insert_result insert_result = packed_clusters.insert(packed_cluster, cluster_count);
+      uint32 packed_cluster = cluster.m_first_endpoint | cluster.m_second_endpoint << 16;
+      hash_map<uint32, uint>::insert_result insert_result = packed_clusters.insert(packed_cluster, cluster_count);
       if (insert_result.second) {
         if (cluster_count != i) {
           tile_cluster& destination_cluster = m_alpha_clusters[cluster_count];
-          destination_cluster.m_alpha_encoding = cluster.m_alpha_encoding;
           destination_cluster.m_error = cluster.m_error;
           destination_cluster.m_first_endpoint = cluster.m_first_endpoint;
           destination_cluster.m_second_endpoint = cluster.m_second_endpoint;
@@ -2189,100 +1930,6 @@ bool dxt_hc::refine_quantized_alpha_endpoints() {
   m_alpha_clusters.resize(cluster_count);
 
   return true;
-}
-
-void dxt_hc::create_final_debug_image() {
-  if (!m_params.m_debugging)
-    return;
-
-  m_dbg_chunk_pixels_final.resize(m_num_chunks);
-  for (uint i = 0; i < m_num_chunks; i++)
-    m_dbg_chunk_pixels_final[i].clear();
-
-  if (m_has_color_blocks) {
-    m_dbg_chunk_pixels_final_color_selectors.resize(m_num_chunks);
-    for (uint i = 0; i < m_num_chunks; i++)
-      m_dbg_chunk_pixels_final_color_selectors[i].clear();
-  }
-
-  if (m_num_alpha_blocks) {
-    m_dbg_chunk_pixels_final_alpha_selectors.resize(m_num_chunks);
-    for (uint i = 0; i < m_num_chunks; i++)
-      m_dbg_chunk_pixels_final_alpha_selectors[i].clear();
-  }
-
-  for (uint chunk_index = 0; chunk_index < m_num_chunks; chunk_index++) {
-    pixel_chunk& output_chunk_final = m_dbg_chunk_pixels_final[chunk_index];
-
-    if (m_has_color_blocks) {
-      const compressed_chunk& chunk = m_compressed_chunks[cColorChunks][chunk_index];
-
-      pixel_chunk& output_chunk_quantized_color_selectors = m_dbg_chunk_pixels_final_color_selectors[chunk_index];
-
-      for (uint tile_index = 0; tile_index < chunk.m_num_tiles; tile_index++) {
-        const compressed_tile& quantized_tile = chunk.m_quantized_tiles[tile_index];
-
-        const chunk_tile_desc& layout = g_chunk_tile_layouts[quantized_tile.m_layout_index];
-
-        color_quad_u8 block_colors[cDXT1SelectorValues];
-        dxt1_block::get_block_colors(block_colors, static_cast<uint16>(quantized_tile.m_first_endpoint), static_cast<uint16>(quantized_tile.m_second_endpoint));
-
-        for (uint y = 0; y < layout.m_height; y++) {
-          for (uint x = 0; x < layout.m_width; x++) {
-            const uint chunk_x_ofs = x + layout.m_x_ofs;
-            const uint chunk_y_ofs = y + layout.m_y_ofs;
-            const uint block_x = chunk_x_ofs >> 2;
-            const uint block_y = chunk_y_ofs >> 2;
-            const selectors& s = m_color_selectors[chunk.m_selector_cluster_index[block_y][block_x]];
-
-            uint selector = s.m_selectors[chunk_y_ofs & 3][chunk_x_ofs & 3];
-
-            output_chunk_final(x + layout.m_x_ofs, y + layout.m_y_ofs) = block_colors[selector];
-            output_chunk_quantized_color_selectors(x + layout.m_x_ofs, y + layout.m_y_ofs) = g_tile_layout_colors[selector];
-          }
-        }
-      }
-    }
-
-    if (m_num_alpha_blocks) {
-      pixel_chunk& output_chunk_quantized_alpha_selectors = m_dbg_chunk_pixels_final_alpha_selectors[chunk_index];
-
-      for (uint a = 0; a < m_num_alpha_blocks; a++) {
-        const compressed_chunk& chunk = m_compressed_chunks[cAlpha0Chunks + a][chunk_index];
-
-        for (uint tile_index = 0; tile_index < chunk.m_num_tiles; tile_index++) {
-          const compressed_tile& quantized_tile = chunk.m_quantized_tiles[tile_index];
-
-          const chunk_tile_desc& layout = g_chunk_tile_layouts[quantized_tile.m_layout_index];
-
-          uint block_values[cDXT5SelectorValues];
-
-          // purposely call the general version to debug single color alpah6 blocks
-          CRNLIB_ASSERT(quantized_tile.m_first_endpoint >= quantized_tile.m_second_endpoint);
-          dxt5_block::get_block_values(block_values, quantized_tile.m_first_endpoint, quantized_tile.m_second_endpoint);
-
-          for (uint y = 0; y < layout.m_height; y++) {
-            for (uint x = 0; x < layout.m_width; x++) {
-              const uint chunk_x_ofs = x + layout.m_x_ofs;
-              const uint chunk_y_ofs = y + layout.m_y_ofs;
-              const uint block_x = chunk_x_ofs >> 2;
-              const uint block_y = chunk_y_ofs >> 2;
-              const selectors& s = m_alpha_selectors[chunk.m_selector_cluster_index[block_y][block_x]];
-
-              uint selector = s.m_selectors[chunk_y_ofs & 3][chunk_x_ofs & 3];
-
-              CRNLIB_ASSERT(selector < cDXT5SelectorValues);
-
-              output_chunk_final(x + layout.m_x_ofs, y + layout.m_y_ofs)[m_params.m_alpha_component_indices[a]] = static_cast<uint8>(block_values[selector]);
-
-              output_chunk_quantized_alpha_selectors(x + layout.m_x_ofs, y + layout.m_y_ofs)[m_params.m_alpha_component_indices[a]] = static_cast<uint8>(selector * 255 / (cDXT5SelectorValues - 1));
-            }  //x
-          }    // y
-        }      // tile_index
-
-      }  // a
-    }
-  }  // chunk_index
 }
 
 bool dxt_hc::create_block_encodings(const params& p) {

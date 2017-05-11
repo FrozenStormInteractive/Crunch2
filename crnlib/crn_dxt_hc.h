@@ -191,21 +191,6 @@ class dxt_hc {
   const selectors& get_alpha_selectors(uint codebook_index) const { return m_alpha_selectors[codebook_index]; }
   const crnlib::vector<selectors>& get_alpha_selectors_vec() const { return m_alpha_selectors; }
 
-  // Debug images
-  const pixel_chunk_vec& get_compressed_chunk_pixels() const { return m_dbg_chunk_pixels; }
-  const pixel_chunk_vec& get_compressed_chunk_pixels_tile_vis() const { return m_dbg_chunk_pixels_tile_vis; }
-  const pixel_chunk_vec& get_compressed_chunk_pixels_color_quantized() const { return m_dbg_chunk_pixels_color_quantized; }
-  const pixel_chunk_vec& get_compressed_chunk_pixels_alpha_quantized() const { return m_dbg_chunk_pixels_alpha_quantized; }
-  const pixel_chunk_vec& get_compressed_chunk_pixels_final() const { return m_dbg_chunk_pixels_final; }
-
-  const pixel_chunk_vec& get_compressed_chunk_pixels_orig_color_selectors() const { return m_dbg_chunk_pixels_orig_color_selectors; }
-  const pixel_chunk_vec& get_compressed_chunk_pixels_quantized_color_selectors() const { return m_dbg_chunk_pixels_quantized_color_selectors; }
-  const pixel_chunk_vec& get_compressed_chunk_pixels_final_color_selectors() const { return m_dbg_chunk_pixels_final_color_selectors; }
-
-  const pixel_chunk_vec& get_compressed_chunk_pixels_orig_alpha_selectors() const { return m_dbg_chunk_pixels_orig_alpha_selectors; }
-  const pixel_chunk_vec& get_compressed_chunk_pixels_quantized_alpha_selectors() const { return m_dbg_chunk_pixels_quantized_alpha_selectors; }
-  const pixel_chunk_vec& get_compressed_chunk_pixels_final_alpha_selectors() const { return m_dbg_chunk_pixels_final_alpha_selectors; }
-
  private:
   params m_params;
 
@@ -224,22 +209,10 @@ class dxt_hc {
 
     uint8 m_selectors[cChunkPixelWidth * cChunkPixelHeight];
 
-    void set_selector(uint x, uint y, uint s) {
-      CRNLIB_ASSERT((x < m_pixel_width) && (y < m_pixel_height));
-      m_selectors[x + y * m_pixel_width] = static_cast<uint8>(s);
-    }
-
-    uint get_selector(uint x, uint y) const {
-      CRNLIB_ASSERT((x < m_pixel_width) && (y < m_pixel_height));
-      return m_selectors[x + y * m_pixel_width];
-    }
-
     uint8 m_pixel_width;
     uint8 m_pixel_height;
 
     uint8 m_layout_index;
-
-    bool m_alpha_encoding;
   };
 
   struct compressed_chunk {
@@ -285,17 +258,23 @@ class dxt_hc {
 
   struct tile_cluster {
     tile_cluster()
-        : m_first_endpoint(0), m_second_endpoint(0), m_error(0), m_alpha_encoding(false) {}
+        : m_first_endpoint(0), m_second_endpoint(0), m_error(0) {}
 
     // first = chunk, second = tile
     // if an alpha tile, second's upper 16 bits contains the alpha index (0 or 1)
     crnlib::vector<std::pair<uint, uint> > m_tiles;
+    crnlib::vector<color_quad_u8> m_pixels;
+    crnlib::vector<uint8> m_selectors;
+    struct {
+      bool result;
+      uint first_endpoint;
+      uint second_endpoint;
+      uint64 error;
+    } m_refined;
 
     uint m_first_endpoint;
     uint m_second_endpoint;
     uint64 m_error;
-
-    bool m_alpha_encoding;
   };
 
   typedef crnlib::vector<tile_cluster> tile_cluster_vec;
@@ -326,22 +305,6 @@ class dxt_hc {
 
   crnlib::vector<uint> m_color_endpoints;  // not valid until end, only for user access
   crnlib::vector<uint> m_alpha_endpoints;  // not valid until end, only for user access
-
-  // Debugging
-  pixel_chunk_vec m_dbg_chunk_pixels;
-  pixel_chunk_vec m_dbg_chunk_pixels_tile_vis;
-  pixel_chunk_vec m_dbg_chunk_pixels_color_quantized;
-  pixel_chunk_vec m_dbg_chunk_pixels_alpha_quantized;
-
-  pixel_chunk_vec m_dbg_chunk_pixels_orig_color_selectors;
-  pixel_chunk_vec m_dbg_chunk_pixels_quantized_color_selectors;
-  pixel_chunk_vec m_dbg_chunk_pixels_final_color_selectors;
-
-  pixel_chunk_vec m_dbg_chunk_pixels_orig_alpha_selectors;
-  pixel_chunk_vec m_dbg_chunk_pixels_quantized_alpha_selectors;
-  pixel_chunk_vec m_dbg_chunk_pixels_final_alpha_selectors;
-
-  pixel_chunk_vec m_dbg_chunk_pixels_final;
 
   crn_thread_id_t m_main_thread_id;
   bool m_canceled;
@@ -407,8 +370,6 @@ class dxt_hc {
   void determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr);
   bool determine_alpha_endpoint_codebook();
 
-  void create_quantized_debug_images();
-
   void create_selector_codebook_task(uint64 data, void* pData_ptr);
   bool create_selector_codebook(bool alpha_blocks);
 
@@ -416,7 +377,6 @@ class dxt_hc {
   bool refine_quantized_color_selectors();
   bool refine_quantized_alpha_endpoints();
   bool refine_quantized_alpha_selectors();
-  void create_final_debug_image();
   bool create_block_encodings(const params& p);
   bool update_progress(uint phase_index, uint subphase_index, uint subphase_total);
   bool compress_internal(const params& p, uint num_chunks, const pixel_chunk* pChunks);
