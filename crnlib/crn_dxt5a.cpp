@@ -46,6 +46,7 @@ bool dxt5_endpoint_optimizer::compute(const params& p, results& r) {
 
   if (m_unique_values.size() == 1) {
     r.m_block_type = 0;
+    r.m_reordered = false;
     r.m_error = 0;
     r.m_first_endpoint = m_unique_values[0];
     r.m_second_endpoint = m_unique_values[0];
@@ -101,6 +102,7 @@ bool dxt5_endpoint_optimizer::compute(const params& p, results& r) {
     }
   }
 
+  m_pResults->m_reordered = false;
   if (m_pResults->m_first_endpoint == m_pResults->m_second_endpoint) {
     for (uint i = 0; i < m_best_selectors.size(); i++)
       m_best_selectors[i] = 0;
@@ -112,11 +114,13 @@ bool dxt5_endpoint_optimizer::compute(const params& p, results& r) {
 
     if (m_pResults->m_first_endpoint > m_pResults->m_second_endpoint) {
       utils::swap(m_pResults->m_first_endpoint, m_pResults->m_second_endpoint);
+      m_pResults->m_reordered = true;
       for (uint i = 0; i < m_best_selectors.size(); i++)
         m_best_selectors[i] = g_six_alpha_invert_table[m_best_selectors[i]];
     }
   } else if (!(m_pResults->m_first_endpoint > m_pResults->m_second_endpoint)) {
     utils::swap(m_pResults->m_first_endpoint, m_pResults->m_second_endpoint);
+    m_pResults->m_reordered = true;
     for (uint i = 0; i < m_best_selectors.size(); i++)
       m_best_selectors[i] = g_eight_alpha_invert_table[m_best_selectors[i]];
   }

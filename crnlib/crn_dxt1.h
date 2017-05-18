@@ -156,6 +156,10 @@ class dxt1_endpoint_optimizer {
 
     uint8* m_pSelectors;
     bool m_alpha_block;
+    bool m_reordered;
+    bool m_alternate_rounding;
+    bool m_enforce_selector;
+    uint8 m_enforced_selector;
   };
 
   struct solution {
@@ -248,6 +252,9 @@ class dxt1_endpoint_optimizer {
     uint64 m_error;
     bool m_alpha_block;
     bool m_valid;
+    bool m_alternate_rounding;
+    bool m_enforce_selector;
+    uint8 m_enforced_selector;
 
     void clear() {
       m_coords.clear();

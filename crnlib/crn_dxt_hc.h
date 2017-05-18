@@ -45,6 +45,15 @@ class dxt_hc {
     };
   };
 
+  struct chunk_details {
+    uint block_index[2][2];
+  };
+  crnlib::vector<chunk_details> m_chunk_details;
+
+  crnlib::vector<uint64> m_block_selectors[3];
+  crnlib::vector<crnlib::vector<color_quad_u8>> m_blocks;
+  crnlib::vector<endpoint_indices_details> m_endpoint_indices;
+
   struct pixel_chunk {
     pixel_chunk() { clear(); }
 
@@ -206,8 +215,6 @@ class dxt_hc {
     uint m_endpoint_cluster_index;
     uint m_first_endpoint;
     uint m_second_endpoint;
-
-    uint8 m_selectors[cChunkPixelWidth * cChunkPixelHeight];
 
     uint8 m_pixel_width;
     uint8 m_pixel_height;
@@ -377,6 +384,7 @@ class dxt_hc {
   bool refine_quantized_color_selectors();
   bool refine_quantized_alpha_endpoints();
   bool refine_quantized_alpha_selectors();
+  bool initialize_blocks(const params& p);
   bool create_block_encodings(const params& p);
   bool update_progress(uint phase_index, uint subphase_index, uint subphase_total);
   bool compress_internal(const params& p, uint num_chunks, const pixel_chunk* pChunks);

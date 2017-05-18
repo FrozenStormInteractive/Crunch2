@@ -38,6 +38,7 @@ class dxt5_endpoint_optimizer {
     uint8 m_second_endpoint;
 
     uint8 m_block_type;  // 1 if 6-alpha, otherwise 8-alpha
+    bool m_reordered;
   };
 
   bool compute(const params& p, results& r);

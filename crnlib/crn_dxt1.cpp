@@ -341,6 +341,10 @@ void dxt1_endpoint_optimizer::return_solution(results& res, const potential_solu
     invert_selectors = (solution.m_coords.m_low_color < solution.m_coords.m_high_color);
   }
 
+  res.m_alternate_rounding = solution.m_alternate_rounding;
+  res.m_enforce_selector = solution.m_enforce_selector;
+  res.m_enforced_selector = solution.m_enforced_selector;
+  res.m_reordered = invert_selectors;
   if (invert_selectors) {
     res.m_low_color = solution.m_coords.m_high_color;
     res.m_high_color = solution.m_coords.m_low_color;
@@ -1539,11 +1543,13 @@ bool dxt1_endpoint_optimizer::evaluate_solution_uber(
       solution.m_error = trial_error;
       solution.m_alpha_block = (block_type != 0);
       solution.m_selectors = m_trial_selectors;
+      solution.m_alternate_rounding = alternate_rounding;
       solution.m_valid = true;
     }
   }
 
-  if ((!solution.m_alpha_block) && (solution.m_coords.m_low_color == solution.m_coords.m_high_color)) {
+  solution.m_enforce_selector = !solution.m_alpha_block && solution.m_coords.m_low_color == solution.m_coords.m_high_color;
+  if (solution.m_enforce_selector) {
     uint s;
     if ((solution.m_coords.m_low_color & 31) != 31) {
       solution.m_coords.m_low_color++;
@@ -1555,6 +1561,7 @@ bool dxt1_endpoint_optimizer::evaluate_solution_uber(
 
     for (uint i = 0; i < m_unique_colors.size(); i++)
       solution.m_selectors[i] = static_cast<uint8>(s);
+    solution.m_enforced_selector = s;
   }
 
   if ((pBest_solution) && (solution.m_error < pBest_solution->m_error)) {
