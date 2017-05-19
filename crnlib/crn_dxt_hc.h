@@ -50,9 +50,14 @@ class dxt_hc {
   };
   crnlib::vector<chunk_details> m_chunk_details;
 
-  crnlib::vector<uint64> m_block_selectors[3];
   crnlib::vector<crnlib::vector<color_quad_u8>> m_blocks;
+  crnlib::vector<uint64> m_block_selectors[3];
+  crnlib::vector<uint32> m_color_selectors;
+  crnlib::vector<uint64> m_alpha_selectors;
+  crnlib::vector<bool> m_color_selectors_used;
+  crnlib::vector<bool> m_alpha_selectors_used;
   crnlib::vector<endpoint_indices_details> m_endpoint_indices;
+  crnlib::vector<selector_indices_details> m_selector_indices;
 
   struct pixel_chunk {
     pixel_chunk() { clear(); }
@@ -186,9 +191,9 @@ class dxt_hc {
   const crnlib::vector<uint>& get_color_endpoint_vec() const { return m_color_endpoints; }
 
   // Color selectors
-  uint get_color_selector_codebook_size() const { return m_color_selectors.size(); }
-  const selectors& get_color_selectors(uint codebook_index) const { return m_color_selectors[codebook_index]; }
-  const crnlib::vector<selectors>& get_color_selectors_vec() const { return m_color_selectors; }
+  uint get_color_selector_codebook_size() const { return m_color_selectors_vec.size(); }
+  const selectors& get_color_selectors(uint codebook_index) const { return m_color_selectors_vec[codebook_index]; }
+  const crnlib::vector<selectors>& get_color_selectors_vec() const { return m_color_selectors_vec; }
 
   // Alpha endpoints
   inline uint get_alpha_endpoint_codebook_size() const { return m_alpha_endpoints.size(); }
@@ -196,9 +201,9 @@ class dxt_hc {
   const crnlib::vector<uint>& get_alpha_endpoint_vec() const { return m_alpha_endpoints; }
 
   // Alpha selectors
-  uint get_alpha_selector_codebook_size() const { return m_alpha_selectors.size(); }
-  const selectors& get_alpha_selectors(uint codebook_index) const { return m_alpha_selectors[codebook_index]; }
-  const crnlib::vector<selectors>& get_alpha_selectors_vec() const { return m_alpha_selectors; }
+  uint get_alpha_selector_codebook_size() const { return m_alpha_selectors_vec.size(); }
+  const selectors& get_alpha_selectors(uint codebook_index) const { return m_alpha_selectors_vec[codebook_index]; }
+  const crnlib::vector<selectors>& get_alpha_selectors_vec() const { return m_alpha_selectors_vec; }
 
  private:
   params m_params;
@@ -230,7 +235,6 @@ class dxt_hc {
     uint8 m_num_tiles;
 
     compressed_tile m_tiles[cChunkMaxTiles];
-    compressed_tile m_quantized_tiles[cChunkMaxTiles];
 
     uint16 m_endpoint_cluster_index[cChunkMaxTiles];
     uint16 m_selector_cluster_index[cChunkBlockHeight][cChunkBlockWidth];
@@ -265,23 +269,21 @@ class dxt_hc {
 
   struct tile_cluster {
     tile_cluster()
-        : m_first_endpoint(0), m_second_endpoint(0), m_error(0) {}
+        : m_first_endpoint(0), m_second_endpoint(0) {}
 
     // first = chunk, second = tile
     // if an alpha tile, second's upper 16 bits contains the alpha index (0 or 1)
     crnlib::vector<std::pair<uint, uint> > m_tiles;
     crnlib::vector<color_quad_u8> m_pixels;
-    crnlib::vector<uint8> m_selectors;
-    struct {
-      bool result;
-      uint first_endpoint;
-      uint second_endpoint;
-      uint64 error;
-    } m_refined;
 
     uint m_first_endpoint;
     uint m_second_endpoint;
-    uint64 m_error;
+    color_quad_u8 m_color_values[4];
+    uint m_alpha_values[8];
+    bool m_refined_result;
+    uint m_refined_first_endpoint;
+    uint m_refined_second_endpoint;
+    uint m_refined_alpha_values[8];
   };
 
   typedef crnlib::vector<tile_cluster> tile_cluster_vec;
@@ -289,8 +291,8 @@ class dxt_hc {
   tile_cluster_vec m_color_clusters;
   tile_cluster_vec m_alpha_clusters;
 
-  selectors_vec m_color_selectors;
-  selectors_vec m_alpha_selectors;
+  selectors_vec m_alpha_selectors_vec;
+  selectors_vec m_color_selectors_vec;
 
   // For each selector, this array indicates every chunk/tile/tile block that use this color selector.
   struct block_id {
@@ -307,8 +309,6 @@ class dxt_hc {
   };
 
   typedef crnlib::vector<crnlib::vector<block_id> > chunk_blocks_using_selectors_vec;
-  chunk_blocks_using_selectors_vec m_chunk_blocks_using_color_selectors;
-  chunk_blocks_using_selectors_vec m_chunk_blocks_using_alpha_selectors;  // second's upper 16 bits contain alpha index!
 
   crnlib::vector<uint> m_color_endpoints;  // not valid until end, only for user access
   crnlib::vector<uint> m_alpha_endpoints;  // not valid until end, only for user access
@@ -377,17 +377,15 @@ class dxt_hc {
   void determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr);
   bool determine_alpha_endpoint_codebook();
 
-  void create_selector_codebook_task(uint64 data, void* pData_ptr);
-  bool create_selector_codebook(bool alpha_blocks);
+  void create_color_selector_codebook_task(uint64 data, void* pData_ptr);
+  bool create_color_selector_codebook();
 
-  bool refine_quantized_color_endpoints();
-  bool refine_quantized_color_selectors();
-  bool refine_quantized_alpha_endpoints();
-  bool refine_quantized_alpha_selectors();
+  void create_alpha_selector_codebook_task(uint64 data, void* pData_ptr);
+  bool create_alpha_selector_codebook();
+
   bool initialize_blocks(const params& p);
   bool create_block_encodings(const params& p);
   bool update_progress(uint phase_index, uint subphase_index, uint subphase_total);
-  bool compress_internal(const params& p, uint num_chunks, const pixel_chunk* pChunks);
 };
 
 CRNLIB_DEFINE_BITWISE_COPYABLE(dxt_hc::pixel_chunk);
