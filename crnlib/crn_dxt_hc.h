@@ -50,12 +50,25 @@ class dxt_hc {
   };
   crnlib::vector<chunk_details> m_chunk_details;
 
+  struct tile_details {
+    crnlib::vector<color_quad_u8> pixels;
+    uint weight;
+    vec<6, float> color_endpoint;
+    vec<2, float> alpha_endpoints[2];
+    uint16 cluster_indices[3];
+  };
+  crnlib::vector<tile_details> m_tiles;
+  uint m_total_tiles;
+
   crnlib::vector<crnlib::vector<color_quad_u8>> m_blocks;
+  crnlib::vector<float> m_block_weights;
+  crnlib::vector<uint8> m_block_encodings;
   crnlib::vector<uint64> m_block_selectors[3];
   crnlib::vector<uint32> m_color_selectors;
   crnlib::vector<uint64> m_alpha_selectors;
   crnlib::vector<bool> m_color_selectors_used;
   crnlib::vector<bool> m_alpha_selectors_used;
+  crnlib::vector<uint> m_tile_indices;
   crnlib::vector<endpoint_indices_details> m_endpoint_indices;
   crnlib::vector<selector_indices_details> m_selector_indices;
 
@@ -211,48 +224,17 @@ class dxt_hc {
   uint m_num_chunks;
   const pixel_chunk* m_pChunks;
 
-  uint m_num_alpha_blocks;  // 0, 1, or 2
+  uint m_num_alpha_blocks;
   bool m_has_color_blocks;
   bool m_has_alpha0_blocks;
   bool m_has_alpha1_blocks;
 
-  struct compressed_tile {
-    uint m_endpoint_cluster_index;
-    uint m_first_endpoint;
-    uint m_second_endpoint;
-
-    uint8 m_pixel_width;
-    uint8 m_pixel_height;
-
-    uint8 m_layout_index;
-  };
-
-  struct compressed_chunk {
-    compressed_chunk() { utils::zero_object(*this); }
-
-    uint8 m_encoding_index;
-
-    uint8 m_num_tiles;
-
-    compressed_tile m_tiles[cChunkMaxTiles];
-
-    uint16 m_endpoint_cluster_index[cChunkMaxTiles];
-    uint16 m_selector_cluster_index[cChunkBlockHeight][cChunkBlockWidth];
-  };
-
-  typedef crnlib::vector<compressed_chunk> compressed_chunk_vec;
   enum {
     cColorChunks = 0,
     cAlpha0Chunks = 1,
     cAlpha1Chunks = 2,
-
     cNumCompressedChunkVecs = 3
   };
-  compressed_chunk_vec m_compressed_chunks[cNumCompressedChunkVecs];
-
-  volatile atomic32_t m_encoding_hist[cNumChunkEncodings];
-
-  atomic32_t m_total_tiles;
 
   void compress_dxt1_block(
       dxt1_endpoint_optimizer::results& results,
@@ -267,15 +249,10 @@ class dxt_hc {
   void determine_compressed_chunks_task(uint64 data, void* pData_ptr);
   bool determine_compressed_chunks();
 
-  struct tile_cluster {
-    tile_cluster()
-        : m_first_endpoint(0), m_second_endpoint(0) {}
-
-    // first = chunk, second = tile
-    // if an alpha tile, second's upper 16 bits contains the alpha index (0 or 1)
-    crnlib::vector<std::pair<uint, uint> > m_tiles;
+  struct endpoint_cluster {
+    endpoint_cluster() : m_first_endpoint(0), m_second_endpoint(0) {}
+    crnlib::vector<uint> m_blocks[3];
     crnlib::vector<color_quad_u8> m_pixels;
-
     uint m_first_endpoint;
     uint m_second_endpoint;
     color_quad_u8 m_color_values[4];
@@ -285,33 +262,13 @@ class dxt_hc {
     uint m_refined_second_endpoint;
     uint m_refined_alpha_values[8];
   };
-
-  typedef crnlib::vector<tile_cluster> tile_cluster_vec;
-
-  tile_cluster_vec m_color_clusters;
-  tile_cluster_vec m_alpha_clusters;
+  crnlib::vector<endpoint_cluster> m_color_clusters;
+  crnlib::vector<endpoint_cluster> m_alpha_clusters;
 
   selectors_vec m_alpha_selectors_vec;
   selectors_vec m_color_selectors_vec;
-
-  // For each selector, this array indicates every chunk/tile/tile block that use this color selector.
-  struct block_id {
-    block_id() { utils::zero_object(*this); }
-
-    block_id(uint chunk_index, uint alpha_index, uint tile_index, uint block_x, uint block_y)
-        : m_chunk_index(chunk_index), m_alpha_index((uint8)alpha_index), m_tile_index((uint8)tile_index), m_block_x((uint8)block_x), m_block_y((uint8)block_y) {}
-
-    uint m_chunk_index;
-    uint8 m_alpha_index;
-    uint8 m_tile_index;
-    uint8 m_block_x;
-    uint8 m_block_y;
-  };
-
-  typedef crnlib::vector<crnlib::vector<block_id> > chunk_blocks_using_selectors_vec;
-
-  crnlib::vector<uint> m_color_endpoints;  // not valid until end, only for user access
-  crnlib::vector<uint> m_alpha_endpoints;  // not valid until end, only for user access
+  crnlib::vector<uint> m_color_endpoints;
+  crnlib::vector<uint> m_alpha_endpoints;
 
   crn_thread_id_t m_main_thread_id;
   bool m_canceled;
@@ -326,47 +283,8 @@ class dxt_hc {
   typedef tree_clusterizer<vec6F> vec6F_tree_vq;
   typedef tree_clusterizer<vec16F> vec16F_tree_vq;
 
-  struct assign_color_endpoint_clusters_state {
-    CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(assign_color_endpoint_clusters_state);
-
-    assign_color_endpoint_clusters_state(vec6F_tree_vq& vq, crnlib::vector<crnlib::vector<vec6F> >& training_vecs)
-        : m_vq(vq), m_training_vecs(training_vecs) {}
-
-    vec6F_tree_vq& m_vq;
-    crnlib::vector<crnlib::vector<vec6F> >& m_training_vecs;
-  };
-
-  struct create_selector_codebook_state {
-    CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(create_selector_codebook_state);
-
-    create_selector_codebook_state(dxt_hc& hc, bool alpha_blocks, uint comp_index_start, uint comp_index_end, vec16F_tree_vq& selector_vq, chunk_blocks_using_selectors_vec& chunk_blocks_using_selectors, selectors_vec& selectors_cb)
-        : m_hc(hc),
-          m_alpha_blocks(alpha_blocks),
-          m_comp_index_start(comp_index_start),
-          m_comp_index_end(comp_index_end),
-          m_selector_vq(selector_vq),
-          m_chunk_blocks_using_selectors(chunk_blocks_using_selectors),
-          m_selectors_cb(selectors_cb) {
-    }
-
-    dxt_hc& m_hc;
-    bool m_alpha_blocks;
-    uint m_comp_index_start;
-    uint m_comp_index_end;
-    vec16F_tree_vq& m_selector_vq;
-    chunk_blocks_using_selectors_vec& m_chunk_blocks_using_selectors;
-    selectors_vec& m_selectors_cb;
-
-    mutable spinlock m_chunk_blocks_using_selectors_lock;
-  };
-
-  void assign_color_endpoint_clusters_task(uint64 data, void* pData_ptr);
+  void determine_color_endpoint_clusters_task(uint64 data, void* pData_ptr);
   bool determine_color_endpoint_clusters();
-
-  struct determine_alpha_endpoint_clusters_state {
-    vec2F_tree_vq m_vq;
-    crnlib::vector<crnlib::vector<vec2F> > m_training_vecs[2];
-  };
 
   void determine_alpha_endpoint_clusters_task(uint64 data, void* pData_ptr);
   bool determine_alpha_endpoint_clusters();
