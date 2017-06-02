@@ -841,50 +841,6 @@ bool crn_comp::alias_images() {
   return true;
 }
 
-void crn_comp::append_chunks(const image_u8& img, uint num_chunks_x, uint num_chunks_y, dxt_hc::pixel_chunk_vec& chunks, float weight) {
-  for (uint y = 0; y < num_chunks_y; y++) {
-    for (uint legacy_index = chunks.size(), x = 0; x < num_chunks_x; x++) {
-      chunks.resize(chunks.size() + 1);
-
-      dxt_hc::pixel_chunk& chunk = chunks.back();
-      chunk.m_weight = weight;
-      chunk.m_legacy_index = legacy_index + (y & 1 ? num_chunks_x - 1 - x : x);
-
-      for (uint cy = 0; cy < cChunkPixelHeight; cy++) {
-        uint py = y * cChunkPixelHeight + cy;
-        py = math::minimum(py, img.get_height() - 1);
-
-        for (uint cx = 0; cx < cChunkPixelWidth; cx++) {
-          uint px = x * cChunkPixelWidth + cx;
-          px = math::minimum(px, img.get_width() - 1);
-
-          chunk(cx, cy) = img(px, py);
-        }
-      }
-    }
-  }
-}
-
-void crn_comp::create_chunks() {
-  m_chunks.reserve(m_total_chunks);
-  m_chunks.resize(0);
-
-  for (uint level = 0; level < m_pParams->m_levels; level++) {
-    for (uint face = 0; face < m_pParams->m_faces; face++) {
-      if (!face) {
-        CRNLIB_ASSERT(m_levels[level].m_first_chunk == m_chunks.size());
-      }
-
-      float mip_weight = math::minimum(12.0f, powf(1.3f, static_cast<float>(level)));
-      //float mip_weight = 1.0f;
-
-      append_chunks(m_images[face][level], m_levels[level].m_chunk_width, m_levels[level].m_chunk_height, m_chunks, mip_weight);
-    }
-  }
-
-  CRNLIB_ASSERT(m_chunks.size() == m_total_chunks);
-}
-
 void crn_comp::clear() {
   m_pParams = NULL;
 
@@ -902,8 +858,6 @@ void crn_comp::clear() {
   m_selector_indices.clear();
 
   m_total_chunks = 0;
-
-  m_chunks.clear();
 
   utils::zero_object(m_crn_header);
 
@@ -931,7 +885,7 @@ void crn_comp::clear() {
   m_packed_alpha_selectors.clear();
 }
 
-bool crn_comp::quantize_chunks() {
+bool crn_comp::quantize_images() {
   dxt_hc::params params;
 
   params.m_adaptive_tile_alpha_psnr_derating = m_pParams->m_crn_adaptive_tile_alpha_psnr_derating;
@@ -964,10 +918,8 @@ bool crn_comp::quantize_chunks() {
 
     float alpha_endpoint_quality = powf(quality, 2.1f * alpha_quality_power_mul);
     float alpha_selector_quality = powf(quality, 1.65f * alpha_quality_power_mul);
-    params.m_alpha_endpoint_codebook_size = math::clamp<uint>(math::float_to_uint(.5f + math::lerp<float>(math::maximum<float>(24, cCRNMinPaletteSize), (float)max_codebook_entries, alpha_endpoint_quality)), cCRNMinPaletteSize, cCRNMaxPaletteSize);
-    ;
+    params.m_alpha_endpoint_codebook_size = math::clamp<uint>(math::float_to_uint(.5f + math::lerp<float>(math::maximum<float>(24, cCRNMinPaletteSize), (float)max_codebook_entries, alpha_endpoint_quality)), cCRNMinPaletteSize, cCRNMaxPaletteSize);    
     params.m_alpha_selector_codebook_size = math::clamp<uint>(math::float_to_uint(.5f + math::lerp<float>(math::maximum<float>(48, cCRNMinPaletteSize), (float)max_codebook_entries, alpha_selector_quality)), cCRNMinPaletteSize, cCRNMaxPaletteSize);
-    ;
   }
 
   if (m_pParams->m_flags & cCRNCompFlagDebugging) {
@@ -1058,18 +1010,39 @@ bool crn_comp::quantize_chunks() {
 
   params.m_num_levels = m_pParams->m_levels;
   for (uint i = 0; i < m_pParams->m_levels; i++) {
-    params.m_levels[i].m_first_chunk = m_levels[i].m_first_chunk;
-    params.m_levels[i].m_num_chunks = m_levels[i].m_num_chunks;
-    params.m_levels[i].m_chunk_width = m_levels[i].m_chunk_width;
+    params.m_levels[i].m_first_block = m_levels[i].m_first_chunk << 2;
+    params.m_levels[i].m_num_blocks = m_levels[i].m_num_chunks << 2;
+    params.m_levels[i].m_block_width = m_levels[i].m_chunk_width << 1;
+    params.m_levels[i].m_weight = math::minimum(12.0f, powf(1.3f, (float)i));
   }
+  params.m_num_faces = m_pParams->m_faces;
 
   params.m_endpoint_indices = &m_endpoint_indices;
   params.m_selector_indices = &m_selector_indices;
 
-  if (!m_hvq.compress(params, m_total_chunks, &m_chunks[0], m_task_pool))
-    return false;
+  params.m_num_blocks = m_total_chunks << 2;
+  params.m_blocks = (color_quad_u8(*)[16])crnlib_malloc(params.m_num_blocks * 16 * sizeof(color_quad_u8));
+  for (uint b = 0, level = 0; level < m_pParams->m_levels; level++) {
+    for (uint face = 0; face < m_pParams->m_faces; face++) {
+      image_u8& image = m_images[face][level];
+      uint width = image.get_width();
+      uint height = image.get_height();
+      uint blockWidth = (width + 7 & ~7) >> 2;
+      uint blockHeight = (height + 7 & ~7) >> 2;
+      for (uint by = 0; by < blockHeight; by++) {
+        for (uint y0 = by << 2, bx = 0; bx < blockWidth; bx++, b++) {
+          for (uint t = 0, x0 = bx << 2, dy = 0; dy < 4; dy++) {
+            for (uint y = math::minimum<uint>(y0 + dy, height - 1), dx = 0; dx < 4; dx++, t++)
+              params.m_blocks[b][t] = image(math::minimum<uint>(x0 + dx, width - 1), y);
+          }
+        }
+      }
+    }
+  }
+  bool result = m_hvq.compress(params, m_task_pool);
+  crnlib_free(params.m_blocks);
 
-  return true;
+  return result;
 }
 
 struct optimize_color_endpoint_codebook_params {
@@ -1463,10 +1436,7 @@ bool crn_comp::update_progress(uint phase_index, uint subphase_index, uint subph
 bool crn_comp::compress_internal() {
   if (!alias_images())
     return false;
-
-  create_chunks();
-
-  if (!quantize_chunks())
+  if (!quantize_images())
     return false;
 
   crnlib::vector<uint> endpoint_remap[2];

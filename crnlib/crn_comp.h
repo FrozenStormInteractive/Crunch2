@@ -69,7 +69,6 @@ class crn_comp : public itexture_comp {
   crnlib::vector<dxt_hc::selector_indices_details> m_selector_indices;
 
   uint m_total_chunks;
-  dxt_hc::pixel_chunk_vec m_chunks;
 
   crnd::crn_header m_crn_header;
   crnlib::vector<uint8> m_comp_data;
@@ -94,8 +93,6 @@ class crn_comp : public itexture_comp {
 
   void clear();
 
-  void append_chunks(const image_u8& img, uint num_chunks_x, uint num_chunks_y, dxt_hc::pixel_chunk_vec& chunks, float weight);
-
   static float color_endpoint_similarity_func(uint index_a, uint index_b, void* pContext);
   static float alpha_endpoint_similarity_func(uint index_a, uint index_b, void* pContext);
   void sort_color_endpoint_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoints);
@@ -117,8 +114,7 @@ class crn_comp : public itexture_comp {
       uint trial_index);
 
   bool alias_images();
-  void create_chunks();
-  bool quantize_chunks();
+  bool quantize_images();
 
   bool pack_chunks(
       uint group,
