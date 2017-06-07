@@ -1431,44 +1431,6 @@ CRND_DEFINE_BITWISE_MOVABLE(dxt5_block);
 
 }  // namespace crnd
 
-// File: crnd_dxt_hc_common.h
-namespace crnd {
-struct chunk_tile_desc {
-  // These values are in pixels, and always a multiple of cBlockPixelWidth/cBlockPixelHeight.
-  uint32 m_x_ofs;
-  uint32 m_y_ofs;
-  uint32 m_width;
-  uint32 m_height;
-  uint32 m_layout_index;
-};
-
-struct chunk_encoding_desc {
-  uint32 m_num_tiles;
-  chunk_tile_desc m_tiles[4];
-};
-
-const uint32 cChunkPixelWidth = 8;
-const uint32 cChunkPixelHeight = 8;
-const uint32 cChunkBlockWidth = 2;
-const uint32 cChunkBlockHeight = 2;
-
-const uint32 cChunkMaxTiles = 4;
-
-const uint32 cBlockPixelWidthShift = 2;
-const uint32 cBlockPixelHeightShift = 2;
-
-const uint32 cBlockPixelWidth = 4;
-const uint32 cBlockPixelHeight = 4;
-
-const uint32 cNumChunkEncodings = 8;
-extern chunk_encoding_desc g_chunk_encodings[cNumChunkEncodings];
-
-const uint32 cNumChunkTileLayouts = 9;
-const uint32 cFirst4x4ChunkTileLayout = 5;
-extern chunk_tile_desc g_chunk_tile_layouts[cNumChunkTileLayouts];
-
-}  // namespace crnd
-
 // File: crnd_prefix_coding.h
 #ifdef _XBOX
 #define CRND_PREFIX_CODING_USE_FIXED_TABLE_SIZE 1
@@ -2774,44 +2736,6 @@ uint64 symbol_codec::stop_decoding() {
 
 }  // namespace crnd
 
-// File: crnd_dxt_hc_common.cpp
-namespace crnd {
-chunk_encoding_desc g_chunk_encodings[cNumChunkEncodings] =
-    {
-        {1, {{0, 0, 8, 8, 0}}},
-
-        {2, {{0, 0, 8, 4, 1}, {0, 4, 8, 4, 2}}},
-        {2, {{0, 0, 4, 8, 3}, {4, 0, 4, 8, 4}}},
-
-        {3, {{0, 0, 8, 4, 1}, {0, 4, 4, 4, 7}, {4, 4, 4, 4, 8}}},
-        {3, {{0, 4, 8, 4, 2}, {0, 0, 4, 4, 5}, {4, 0, 4, 4, 6}}},
-
-        {3, {{0, 0, 4, 8, 3}, {4, 0, 4, 4, 6}, {4, 4, 4, 4, 8}}},
-        {3, {{4, 0, 4, 8, 4}, {0, 0, 4, 4, 5}, {0, 4, 4, 4, 7}}},
-
-        {4, {{0, 0, 4, 4, 5}, {4, 0, 4, 4, 6}, {0, 4, 4, 4, 7}, {4, 4, 4, 4, 8}}}};
-
-chunk_tile_desc g_chunk_tile_layouts[cNumChunkTileLayouts] =
-    {
-        // 2x2
-        {0, 0, 8, 8, 0},
-
-        // 2x1
-        {0, 0, 8, 4, 1},
-        {0, 4, 8, 4, 2},
-
-        // 1x2
-        {0, 0, 4, 8, 3},
-        {4, 0, 4, 8, 4},
-
-        // 1x1
-        {0, 0, 4, 4, 5},
-        {4, 0, 4, 4, 6},
-        {0, 4, 4, 4, 7},
-        {4, 4, 4, 4, 8}};
-
-}  // namespace crnd
-
 // File: crnd_dxt.cpp
 namespace crnd {
 const uint8 g_dxt1_to_linear[cDXT1SelectorValues] = {0U, 3U, 1U, 2U};
@@ -3096,30 +3020,27 @@ class crn_unpacker {
     if (dst_size_in_bytes < row_pitch_in_bytes * blocks_y)
       return false;
 
-    const uint32 chunks_x = (blocks_x + 1) >> 1;
-    const uint32 chunks_y = (blocks_y + 1) >> 1;
-
     if (!m_codec.start_decoding(static_cast<const crnd::uint8*>(pSrc), src_size_in_bytes))
       return false;
 
     bool status = false;
     switch (m_pHeader->m_format) {
       case cCRNFmtDXT1:
-        status = unpack_dxt1((uint8**)pDst, dst_size_in_bytes, row_pitch_in_bytes, blocks_x, blocks_y, chunks_x, chunks_y);
+        status = unpack_dxt1((uint8**)pDst, row_pitch_in_bytes, blocks_x, blocks_y);
         break;
       case cCRNFmtDXT5:
       case cCRNFmtDXT5_CCxY:
       case cCRNFmtDXT5_xGBR:
       case cCRNFmtDXT5_AGBR:
       case cCRNFmtDXT5_xGxR:
-        status = unpack_dxt5((uint8**)pDst, dst_size_in_bytes, row_pitch_in_bytes, blocks_x, blocks_y, chunks_x, chunks_y);
+        status = unpack_dxt5((uint8**)pDst, row_pitch_in_bytes, blocks_x, blocks_y);
         break;
       case cCRNFmtDXT5A:
-        status = unpack_dxt5a((uint8**)pDst, dst_size_in_bytes, row_pitch_in_bytes, blocks_x, blocks_y, chunks_x, chunks_y);
+        status = unpack_dxt5a((uint8**)pDst, row_pitch_in_bytes, blocks_x, blocks_y);
         break;
       case cCRNFmtDXN_XY:
       case cCRNFmtDXN_YX:
-        status = unpack_dxn((uint8**)pDst, dst_size_in_bytes, row_pitch_in_bytes, blocks_x, blocks_y, chunks_x, chunks_y);
+        status = unpack_dxn((uint8**)pDst, row_pitch_in_bytes, blocks_x, blocks_y);
         break;
       default:
         return false;
@@ -3410,22 +3331,24 @@ class crn_unpacker {
     x = (x & msk) | (v & ~msk);
   }
 
-  bool unpack_dxt1(uint8** pDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes, uint32 blocks_x, uint32 blocks_y, uint32 chunks_x, uint32 chunks_y) {
+  bool unpack_dxt1(uint8** pDst, uint32 output_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_color_endpoints = m_color_endpoints.size();
-    const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (chunks_x << 2);
+    const uint32 width = output_width + 1 & ~1;
+    const uint32 height = output_height + 1 & ~1;
+    const int32 delta_pitch_in_dwords = (output_pitch_in_bytes >> 2) - (width << 1);
 
-    if (m_block_buffer.size() < chunks_x << 1)
-      m_block_buffer.resize(chunks_x << 1);
+    if (m_block_buffer.size() < width)
+      m_block_buffer.resize(width);
 
     uint32 color_endpoint_index = 0;
     uint8 reference_group = 0;
 
     for (uint32 f = 0; f < m_pHeader->m_faces; f++) {
       uint32* pData = (uint32*)pDst[f];
-      for (uint32 y = 0; y < chunks_y << 1; y++, pData += delta_pitch_in_dwords) {
-        bool visible = y < blocks_y;
-        for (uint32 x = 0; x < chunks_x << 1; x++, pData += 2) {
-          visible = visible && x < blocks_x;
+      for (uint32 y = 0; y < height; y++, pData += delta_pitch_in_dwords) {
+        bool visible = y < output_height;
+        for (uint32 x = 0; x < width; x++, pData += 2) {
+          visible = visible && x < output_width;
           if (!(y & 1) && !(x & 1))
             reference_group = m_codec.decode(m_reference_encoding_dm);
           block_buffer_element &buffer = m_block_buffer[x];
@@ -3459,13 +3382,15 @@ class crn_unpacker {
     return true;
   }
 
-  bool unpack_dxt5(uint8** pDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes, uint32 blocks_x, uint32 blocks_y, uint32 chunks_x, uint32 chunks_y) {
+  bool unpack_dxt5(uint8** pDst, uint32 row_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_color_endpoints = m_color_endpoints.size();
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (chunks_x << 3);
+    const uint32 width = output_width + 1 & ~1;
+    const uint32 height = output_height + 1 & ~1;
+    const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (width << 2);
 
-    if (m_block_buffer.size() < chunks_x << 1)
-      m_block_buffer.resize(chunks_x << 1);
+    if (m_block_buffer.size() < width)
+      m_block_buffer.resize(width);
 
     uint32 color_endpoint_index = 0;
     uint32 alpha0_endpoint_index = 0;
@@ -3473,10 +3398,10 @@ class crn_unpacker {
 
     for (uint32 f = 0; f < m_pHeader->m_faces; f++) {
       uint32* pData = (uint32*)pDst[f];
-      for (uint32 y = 0; y < chunks_y << 1; y++, pData += delta_pitch_in_dwords) {
-        bool visible = y < blocks_y;
-        for (uint32 x = 0; x < chunks_x << 1; x++, pData += 4) {
-          visible = visible && x < blocks_x;
+      for (uint32 y = 0; y < height; y++, pData += delta_pitch_in_dwords) {
+        bool visible = y < output_height;
+        for (uint32 x = 0; x < width; x++, pData += 4) {
+          visible = visible && x < output_width;
           if (!(y & 1) && !(x & 1))
             reference_group = m_codec.decode(m_reference_encoding_dm);
           block_buffer_element &buffer = m_block_buffer[x];
@@ -3520,12 +3445,14 @@ class crn_unpacker {
     return true;
   }
 
-  bool unpack_dxn(uint8** pDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes, uint32 blocks_x, uint32 blocks_y, uint32 chunks_x, uint32 chunks_y) {
+  bool unpack_dxn(uint8** pDst, uint32 row_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (chunks_x << 3);
+    const uint32 width = output_width + 1 & ~1;
+    const uint32 height = output_height + 1 & ~1;
+    const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (width << 2);
 
-    if (m_block_buffer.size() < chunks_x << 1)
-      m_block_buffer.resize(chunks_x << 1);
+    if (m_block_buffer.size() < width)
+      m_block_buffer.resize(width);
 
     uint32 alpha0_endpoint_index = 0;
     uint32 alpha1_endpoint_index = 0;
@@ -3533,10 +3460,10 @@ class crn_unpacker {
 
     for (uint32 f = 0; f < m_pHeader->m_faces; f++) {
       uint32* pData = (uint32*)pDst[f];
-      for (uint32 y = 0; y < chunks_y << 1; y++, pData += delta_pitch_in_dwords) {
-        bool visible = y < blocks_y;
-        for (uint32 x = 0; x < chunks_x << 1; x++, pData += 4) {
-          visible = visible && x < blocks_x;
+      for (uint32 y = 0; y < height; y++, pData += delta_pitch_in_dwords) {
+        bool visible = y < output_height;
+        for (uint32 x = 0; x < width; x++, pData += 4) {
+          visible = visible && x < output_width;
           if (!(y & 1) && !(x & 1))
             reference_group = m_codec.decode(m_reference_encoding_dm);
           block_buffer_element &buffer = m_block_buffer[x];
@@ -3581,22 +3508,24 @@ class crn_unpacker {
     return true;
   }
 
-  bool unpack_dxt5a(uint8** pDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes, uint32 blocks_x, uint32 blocks_y, uint32 chunks_x, uint32 chunks_y) {
+  bool unpack_dxt5a(uint8** pDst, uint32 row_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (chunks_x << 2);
+    const uint32 width = output_width + 1 & ~1;
+    const uint32 height = output_height + 1 & ~1;
+    const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (width << 1);
 
-    if (m_block_buffer.size() < chunks_x << 1)
-      m_block_buffer.resize(chunks_x << 1);
+    if (m_block_buffer.size() < width)
+      m_block_buffer.resize(width);
 
     uint32 alpha0_endpoint_index = 0;
     uint8 reference_group = 0;
 
     for (uint32 f = 0; f < m_pHeader->m_faces; f++) {
       uint32* pData = (uint32*)pDst[f];
-      for (uint32 y = 0; y < chunks_y << 1; y++, pData += delta_pitch_in_dwords) {
-        bool visible = y < blocks_y;
-        for (uint32 x = 0; x < chunks_x << 1; x++, pData += 2) {
-          visible = visible && x < blocks_x;
+      for (uint32 y = 0; y < height; y++, pData += delta_pitch_in_dwords) {
+        bool visible = y < output_height;
+        for (uint32 x = 0; x < width; x++, pData += 2) {
+          visible = visible && x < output_width;
           if (!(y & 1) && !(x & 1))
             reference_group = m_codec.decode(m_reference_encoding_dm);
           block_buffer_element &buffer = m_block_buffer[x];

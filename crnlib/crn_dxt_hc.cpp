@@ -6,9 +6,10 @@
 #include "crn_console.h"
 #include "crn_dxt_fast.h"
 
-#define CRNLIB_ENABLE_DEBUG_MESSAGES 0
-
 namespace crnlib {
+
+typedef vec<6, float> vec6F;
+typedef vec<16, float> vec16F;
 
 static uint8 g_tile_map[8][2][2] = {
   {{ 0, 0 }, { 0, 0 }},
@@ -23,10 +24,8 @@ static uint8 g_tile_map[8][2][2] = {
 
 dxt_hc::dxt_hc()
   : m_num_blocks(0),
-    m_num_alpha_blocks(0),
     m_has_color_blocks(false),
-    m_has_alpha0_blocks(false),
-    m_has_alpha1_blocks(false),
+    m_num_alpha_blocks(0),
     m_main_thread_id(crn_get_current_thread_id()),
     m_canceled(false),
     m_pTask_pool(NULL),
@@ -42,16 +41,9 @@ void dxt_hc::clear() {
   m_num_blocks = 0;
   m_num_alpha_blocks = 0;
   m_has_color_blocks = false;
-  m_has_alpha0_blocks = false;
-  m_has_alpha1_blocks = false;
 
   m_color_clusters.clear();
   m_alpha_clusters.clear();
-  m_alpha_selectors_vec.clear();
-  m_color_selectors_vec.clear();
-
-  m_color_endpoints.clear();
-  m_alpha_endpoints.clear();
 
   m_canceled = false;
 
@@ -73,51 +65,39 @@ void dxt_hc::clear() {
   m_num_tiles = 0;
 }
 
-bool dxt_hc::compress(const params& p, task_pool& task_pool) {
+bool dxt_hc::compress(
+    color_quad_u8 (*blocks)[16],
+    crnlib::vector<endpoint_indices_details>& endpoint_indices,
+    crnlib::vector<selector_indices_details>& selector_indices,
+    crnlib::vector<uint32>& color_endpoints,
+    crnlib::vector<uint32>& alpha_endpoints,
+    crnlib::vector<uint32>& color_selectors,
+    crnlib::vector<uint64>& alpha_selectors,
+    const params& p
+  ) {
   clear();
-  m_params = p;
+  m_has_color_blocks = p.m_format == cDXT1 || p.m_format == cDXT5;
+  m_num_alpha_blocks = p.m_format == cDXT5 || p.m_format == cDXT5A ? 1 : p.m_format == cDXN_XY || p.m_format == cDXN_YX ? 2 : 0;
+  if (!m_has_color_blocks && !m_num_alpha_blocks)
+    return false;
+  m_blocks = blocks;
   m_main_thread_id = crn_get_current_thread_id();
-  m_pTask_pool = &task_pool;
+  m_pTask_pool = p.m_pTask_pool;
+  m_params = p;
 
-  switch (m_params.m_format) {
-    case cDXT1: {
-      m_has_color_blocks = true;
-      break;
-    }
-    case cDXT5: {
-      m_has_color_blocks = true;
-      m_has_alpha0_blocks = true;
-      m_num_alpha_blocks = 1;
-      break;
-    }
-    case cDXT5A: {
-      m_has_alpha0_blocks = true;
-      m_num_alpha_blocks = 1;
-      break;
-    }
-    case cDXN_XY:
-    case cDXN_YX: {
-      m_has_alpha0_blocks = true;
-      m_has_alpha1_blocks = true;
-      m_num_alpha_blocks = 2;
-      break;
-    }
-    default: {
-      return false;
-    }
-  }
-
+  uint tile_derating[8] = {0, 1, 1, 2, 2, 2, 2, 3};
   for (uint level = 0; level < p.m_num_levels; level++) {
     float adaptive_tile_color_psnr_derating = p.m_adaptive_tile_color_psnr_derating;
     if (level && adaptive_tile_color_psnr_derating > .25f)
       adaptive_tile_color_psnr_derating = math::maximum(.25f, adaptive_tile_color_psnr_derating / powf(3.0f, static_cast<float>(level)));
     for (uint e = 0; e < 8; e++)
-      m_color_derating[level][e] = math::lerp(0.0f, adaptive_tile_color_psnr_derating, (g_chunk_encodings[e].m_num_tiles - 1) / 3.0f);
+      m_color_derating[level][e] = math::lerp(0.0f, adaptive_tile_color_psnr_derating, tile_derating[e] / 3.0f);
   }
   for (uint e = 0; e < 8; e++)
-    m_alpha_derating[e] = math::lerp(0.0f, m_params.m_adaptive_tile_alpha_psnr_derating, (g_chunk_encodings[e].m_num_tiles - 1) / 3.0f);
+    m_alpha_derating[e] = math::lerp(0.0f, m_params.m_adaptive_tile_alpha_psnr_derating, tile_derating[e] / 3.0f);
+  for (uint i = 0; i < 256; i++)
+    m_uint8_to_float[i] = i * 1.0f / 255.0f;
 
-  m_blocks = m_params.m_blocks;
   m_num_blocks = m_params.m_num_blocks;
   m_block_weights.resize(m_num_blocks);
   m_block_encodings.resize(m_num_blocks);
@@ -156,76 +136,68 @@ bool dxt_hc::compress(const params& p, task_pool& task_pool) {
   if (m_num_alpha_blocks)
     create_alpha_selector_codebook();
 
-  crnlib::vector<uint16> color_endpoint_remap(m_color_clusters.size());
-  m_color_endpoints.reserve(m_color_clusters.size());
-  hash_map<uint, uint> color_clusters_map;
+  color_endpoints.reserve(color_endpoints.size() + m_color_clusters.size());
+  crnlib::vector<uint16> color_endpoints_remap(m_color_clusters.size());
+  hash_map<uint32, uint> color_endpoints_map;
   for (uint i = 0; i < m_color_clusters.size(); i++) {
-    if (m_color_clusters[i].m_pixels.size()) {
-      uint endpoint = dxt1_block::pack_endpoints(m_color_clusters[i].m_refined_first_endpoint, m_color_clusters[i].m_refined_second_endpoint);
-      hash_map<uint, uint>::insert_result insert_result = color_clusters_map.insert(endpoint, m_color_endpoints.size());
+    if (m_color_clusters[i].pixels.size()) {
+      uint32 endpoint = dxt1_block::pack_endpoints(m_color_clusters[i].first_endpoint, m_color_clusters[i].second_endpoint);
+      hash_map<uint32, uint>::insert_result insert_result = color_endpoints_map.insert(endpoint, color_endpoints.size());
       if (insert_result.second) {
-        color_endpoint_remap[i] = m_color_endpoints.size();
-        m_color_endpoints.push_back(endpoint);
+        color_endpoints_remap[i] = color_endpoints.size();
+        color_endpoints.push_back(endpoint);
       } else {
-        color_endpoint_remap[i] = insert_result.first->second;
+        color_endpoints_remap[i] = insert_result.first->second;
       }
     }
   }
 
-  crnlib::vector<uint16> color_selector_remap(m_color_selectors.size());
-  m_color_selectors_vec.reserve(m_color_selectors.size());
-  hash_map<uint32, uint> color_selector_map;
+  alpha_endpoints.reserve(alpha_endpoints.size() + m_alpha_clusters.size());
+  crnlib::vector<uint16> alpha_endpoints_remap(m_alpha_clusters.size());
+  hash_map<uint32, uint> alpha_endpoints_map;
+  for (uint i = 0; i < m_alpha_clusters.size(); i++) {
+    if (m_alpha_clusters[i].pixels.size()) {
+      uint32 endpoint = dxt5_block::pack_endpoints(m_alpha_clusters[i].first_endpoint, m_alpha_clusters[i].second_endpoint);
+      hash_map<uint32, uint>::insert_result insert_result = alpha_endpoints_map.insert(endpoint, alpha_endpoints.size());
+      if (insert_result.second) {
+        alpha_endpoints_remap[i] = alpha_endpoints.size();
+        alpha_endpoints.push_back(endpoint);
+      } else {
+        alpha_endpoints_remap[i] = insert_result.first->second;
+      }
+    }
+  }
+
+  color_selectors.reserve(color_selectors.size() + m_color_selectors.size());
+  crnlib::vector<uint16> color_selectors_remap(m_color_selectors.size());
+  hash_map<uint32, uint> color_selectors_map;
   for (uint i = 0; i < m_color_selectors.size(); i++) {
     if (m_color_selectors_used[i]) {
-      hash_map<uint32, uint>::insert_result insert_result = color_selector_map.insert(m_color_selectors[i], m_color_selectors_vec.size());
+      hash_map<uint32, uint>::insert_result insert_result = color_selectors_map.insert(m_color_selectors[i], color_selectors.size());
       if (insert_result.second) {
-        color_selector_remap[i] = m_color_selectors_vec.size();
-        selectors selector_vec;
-        for (uint32 selector = m_color_selectors[i], s = 0; s < 16; s++, selector >>= 2)
-          selector_vec.set_by_index(s, selector & 3);
-        m_color_selectors_vec.push_back(selector_vec);
+        color_selectors_remap[i] = color_selectors.size();
+        color_selectors.push_back(m_color_selectors[i]);
       } else {
-        color_selector_remap[i] = insert_result.first->second;
+        color_selectors_remap[i] = insert_result.first->second;
       }
     }
   }
 
-  crnlib::vector<uint16> alpha_endpoint_remap(m_alpha_clusters.size());
-  m_alpha_endpoints.reserve(m_alpha_clusters.size());
-  hash_map<uint, uint> alpha_endpoints_map;
-  for (uint i = 0; i < m_alpha_clusters.size(); i++) {
-    if (m_alpha_clusters[i].m_pixels.size()) {
-      uint endpoint = dxt5_block::pack_endpoints(m_alpha_clusters[i].m_refined_first_endpoint, m_alpha_clusters[i].m_refined_second_endpoint);
-      hash_map<uint, uint>::insert_result insert_result = alpha_endpoints_map.insert(endpoint, m_alpha_endpoints.size());
-      if (insert_result.second) {
-        alpha_endpoint_remap[i] = m_alpha_endpoints.size();
-        m_alpha_endpoints.push_back(endpoint);
-      } else {
-        alpha_endpoint_remap[i] = insert_result.first->second;
-      }
-    }
-  }
-
-  crnlib::vector<uint16> alpha_selector_remap(m_alpha_selectors.size());
-  m_alpha_selectors_vec.reserve(m_alpha_selectors.size());
+  alpha_selectors.reserve(alpha_selectors.size() + m_alpha_selectors.size());
+  crnlib::vector<uint16> alpha_selectors_remap(m_alpha_selectors.size());
   hash_map<uint64, uint> alpha_selectors_map;
   for (uint i = 0; i < m_alpha_selectors.size(); i++) {
     if (m_alpha_selectors_used[i]) {
-      hash_map<uint64, uint>::insert_result insert_result = alpha_selectors_map.insert(m_alpha_selectors[i], m_alpha_selectors_vec.size());
+      hash_map<uint64, uint>::insert_result insert_result = alpha_selectors_map.insert(m_alpha_selectors[i], alpha_selectors.size());
       if (insert_result.second) {
-        alpha_selector_remap[i] = m_alpha_selectors_vec.size();
-        selectors selector_vec;
-        for (uint64 selector = m_alpha_selectors[i], s = 0; s < 16; s++, selector >>= 3)
-          selector_vec.set_by_index(s, selector & 7);
-        m_alpha_selectors_vec.push_back(selector_vec);
+        alpha_selectors_remap[i] = alpha_selectors.size();
+        alpha_selectors.push_back(m_alpha_selectors[i]);
       } else {
-        alpha_selector_remap[i] = insert_result.first->second;
+        alpha_selectors_remap[i] = insert_result.first->second;
       }
     }
   }
 
-  crnlib::vector<endpoint_indices_details>& endpoint_indices = *m_params.m_endpoint_indices;
-  crnlib::vector<selector_indices_details>& selector_indices = *m_params.m_selector_indices;
   endpoint_indices.resize(m_num_blocks);
   selector_indices.resize(m_num_blocks);
   for (uint level = 0; level < p.m_num_levels; level++) {
@@ -236,12 +208,12 @@ bool dxt_hc::compress(const params& p, task_pool& task_pool) {
       for (uint bx = 0; bx < block_width; bx++, b++) {
         bool top_match = by != 0;
         bool left_match = top_match || bx;
-        for (uint c = m_has_color_blocks ? 0 : cAlpha0Blocks; c < cAlpha0Blocks + m_num_alpha_blocks; c++) {
-          uint16 endpoint_index = (c ? alpha_endpoint_remap : color_endpoint_remap)[m_endpoint_indices[b].component[c]];
+        for (uint c = m_has_color_blocks ? 0 : cAlpha0; c < cAlpha0 + m_num_alpha_blocks; c++) {
+          uint16 endpoint_index = (c ? alpha_endpoints_remap : color_endpoints_remap)[m_endpoint_indices[b].component[c]];
           left_match = left_match && endpoint_index == endpoint_indices[b - 1].component[c];
           top_match = top_match && endpoint_index == endpoint_indices[b - block_width].component[c];
           endpoint_indices[b].component[c] = endpoint_index;
-          uint16 selector_index = (c ? alpha_selector_remap : color_selector_remap)[m_selector_indices[b].component[c]];
+          uint16 selector_index = (c ? alpha_selectors_remap : color_selectors_remap)[m_selector_indices[b].component[c]];
           selector_indices[b].component[c] = selector_index;
         }
         endpoint_indices[b].reference = left_match ? 1 : top_match ? 2 : 0;
@@ -257,12 +229,15 @@ void dxt_hc::determine_tiles_task(uint64 data, void* pData_ptr) {
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   uint offsets[9] = {0, 16, 32, 48, 0, 32, 64, 96, 64};
   uint8 tiles[8][4] = {{8}, {6, 7}, {4, 5}, {6, 1, 3}, {7, 0, 2}, {4, 2, 3}, {5, 0, 1}, {0, 2, 1, 3}};
-  color_quad_u8 chunkPixels[128];
+  color_quad_u8 tilePixels[128];
   uint8 selectors[64];
   uint tile_error[3][9];
   uint total_error[3][8];
+  tree_clusterizer<vec3F> color_palettizer;
+  tree_clusterizer<vec1F> alpha_palettizer;
 
   for (uint level = 0; level < m_params.m_num_levels; level++) {
+    float weight = m_params.m_levels[level].m_weight;
     uint width = m_params.m_levels[level].m_block_width;
     uint height = m_params.m_levels[level].m_num_blocks / width;
     uint faceHeight = height / m_params.m_num_faces;
@@ -282,12 +257,12 @@ void dxt_hc::determine_tiles_task(uint64 data, void* pData_ptr) {
       }
       for (uint bNext = b + width; b < bNext; b += 2, tile_offset += tile_offset_delta) {
         for (int t = 0; t < 64; t += 16)
-          memcpy(chunkPixels + t, m_blocks[b + (t & 16 ? width : 0) + (t & 32 ? 1 : 0)], 64);
+          memcpy(tilePixels + t, m_blocks[b + (t & 16 ? width : 0) + (t & 32 ? 1 : 0)], 64);
         for (int t = 0; t < 64; t += 4)
-          memcpy(chunkPixels + 64 + t, m_blocks[b + (t & 32 ? width : 0) + (t & 4 ? 1 : 0)] + (t >> 1 & 12), 16);
+          memcpy(tilePixels + 64 + t, m_blocks[b + (t & 32 ? width : 0) + (t & 4 ? 1 : 0)] + (t >> 1 & 12), 16);
 
         for (uint t = 0; t < 9; t++) {
-          color_quad_u8* pixels = chunkPixels + offsets[t];
+          color_quad_u8* pixels = tilePixels + offsets[t];
           uint size = 16 << (t >> 2);
           if (m_has_color_blocks) {
             uint low16, high16;
@@ -301,7 +276,7 @@ void dxt_hc::determine_tiles_task(uint64 data, void* pData_ptr) {
                 error += delta * delta;
               }
             }
-            tile_error[cColorBlocks][t] = error;
+            tile_error[cColor][t] = error;
           }
           for (uint a = 0; a < m_num_alpha_blocks; a++) {
             uint8 component = m_params.m_alpha_component_indices[a];
@@ -317,11 +292,11 @@ void dxt_hc::determine_tiles_task(uint64 data, void* pData_ptr) {
             optimizer.compute(params, results);
             uint block_values[cDXT5SelectorValues];
             dxt5_block::get_block_values8(block_values, results.m_first_endpoint, results.m_second_endpoint);
-            tile_error[cAlpha0Blocks + a][t] = results.m_error;
+            tile_error[cAlpha0 + a][t] = results.m_error;
           }
         }
 
-        for (uint8 c = m_has_color_blocks ? 0 : cAlpha0Blocks; c < cAlpha0Blocks + m_num_alpha_blocks; c++) {
+        for (uint8 c = m_has_color_blocks ? 0 : cAlpha0; c < cAlpha0 + m_num_alpha_blocks; c++) {
           for (uint8 e = 0; e < 8; e++) {
             total_error[c][e] = 0;
             for (uint8 t = 0, s = e + 1; s; s >>= 1, t++)
@@ -334,13 +309,13 @@ void dxt_hc::determine_tiles_task(uint64 data, void* pData_ptr) {
         for (uint e = 0; e < 8; e++) {
           float quality = 0;
           if (m_has_color_blocks) {
-            double peakSNR = total_error[cColorBlocks][e] ? log10(255.0f / sqrt(total_error[cColorBlocks][e] / 192.0)) * 20.0f : 999999.0f;
+            double peakSNR = total_error[cColor][e] ? log10(255.0f / sqrt(total_error[cColor][e] / 192.0)) * 20.0f : 999999.0f;
             quality = (float)math::maximum<double>(peakSNR - m_color_derating[level][e], 0.0f);
             if (m_num_alpha_blocks)
               quality *= m_params.m_adaptive_tile_color_alpha_weighting_ratio;
           }
           for (uint a = 0; a < m_num_alpha_blocks; a++) {
-            double peakSNR = total_error[cAlpha0Blocks + a][e] ? log10(255.0f / sqrt(total_error[cAlpha0Blocks + a][e] / 64.0)) * 20.0f : 999999.0f;
+            double peakSNR = total_error[cAlpha0 + a][e] ? log10(255.0f / sqrt(total_error[cAlpha0 + a][e] / 64.0)) * 20.0f : 999999.0f;
             quality += (float)math::maximum<double>(peakSNR - m_alpha_derating[e], 0.0f);
           }
           if (quality > best_quality) {
@@ -352,56 +327,34 @@ void dxt_hc::determine_tiles_task(uint64 data, void* pData_ptr) {
         for (uint tile_index = 0, s = best_encoding + 1; s; s >>= 1, tile_index++) {
           tile_details& tile = m_tiles[tile_offset | tile_index];
           uint t = tiles[best_encoding][tile_index];
-          tile.pixels.append(chunkPixels + offsets[t], 16 << (t >> 2));
-          tile.weight = m_block_weights[b];
+          tile.pixels.append(tilePixels + offsets[t], 16 << (t >> 2));
+          tile.weight = weight;
 
           if (m_has_color_blocks) {
-            tree_clusterizer<vec3F> palettizer;
+            color_palettizer.clear();
             for (uint p = 0; p < tile.pixels.size(); p++) {
-              const color_quad_u8& c = tile.pixels[p];
-              vec3F v(c[0] * 1.0f / 255.0f, c[1] * 1.0f / 255.0f, c[2] * 1.0f / 255.0f);
-              if (m_params.m_perceptual) {
-                v[0] *= 0.5f;
-                v[2] *= 0.25f;
-              }
-              palettizer.add_training_vec(v, 1);
+              const color_quad_u8& pixel = tile.pixels[p];
+              vec3F v(m_uint8_to_float[pixel[0]], m_uint8_to_float[pixel[1]], m_uint8_to_float[pixel[2]]);
+              color_palettizer.add_training_vec(m_params.m_perceptual ? vec3F(v[0] * 0.5f, v[1], v[2] * 0.25f): v, 1);
             }
-            palettizer.generate_codebook(2);
-            vec3F v[2];
-            utils::zero_object(v);
-            for (uint i = 0; i < palettizer.get_codebook_size(); i++)
-              v[i] = palettizer.get_codebook_entry(i);
-            if (palettizer.get_codebook_size() == 1)
-              v[1] = v[0];
-            if (v[0].length() > v[1].length())
-              utils::swap(v[0], v[1]);
-            vec6F vv;
-            for (uint i = 0; i < 2; i++) {
-              vv[i * 3 + 0] = v[i][0];
-              vv[i * 3 + 1] = v[i][1];
-              vv[i * 3 + 2] = v[i][2];
+            color_palettizer.generate_codebook(2);
+            bool single = color_palettizer.get_codebook_size() == 1;
+            bool reorder = !single && color_palettizer.get_codebook_entry(0).length() > color_palettizer.get_codebook_entry(1).length();
+            for (uint t = 0, i = 0; i < 2; i++) {
+              vec3F v = color_palettizer.get_codebook_entry(single ? 0 : reorder ? 1 - i : i);
+              for (uint c = 0; c < 3; c++, t++)
+                tile.color_endpoint[t] = v[c];
             }
-            tile.color_endpoint = vv;
           }
 
           for (uint a = 0; a < m_num_alpha_blocks; a++) {
-            uint component_index = m_params.m_alpha_component_indices[a];
-            tree_clusterizer<vec1F> palettizer;
-            for (uint p = 0; p < tile.pixels.size(); p++) {
-              vec1F v(tile.pixels[p][component_index] * 1.0f / 255.0f);
-              palettizer.add_training_vec(v, 1);
-            }
-            palettizer.generate_codebook(2);
-            vec1F v[2];
-            utils::zero_object(v);
-            for (uint i = 0; i < palettizer.get_codebook_size(); i++)
-              v[i] = palettizer.get_codebook_entry(i);
-            if (palettizer.get_codebook_size() == 1)
-              v[1] = v[0];
-            if (v[0] > v[1])
-              utils::swap(v[0], v[1]);
-            vec2F vv(v[0][0], v[1][0]);
-            tile.alpha_endpoints[a] = vv;
+            alpha_palettizer.clear();
+            for (uint c = m_params.m_alpha_component_indices[a], p = 0; p < tile.pixels.size(); p++)
+              alpha_palettizer.add_training_vec(vec1F(m_uint8_to_float[tile.pixels[p][c]]), 1);
+            alpha_palettizer.generate_codebook(2);
+            float v[2] = {alpha_palettizer.get_codebook_entry(0)[0], alpha_palettizer.get_codebook_entry(alpha_palettizer.get_codebook_size() - 1)[0]};
+            tile.alpha_endpoints[a][0] = math::minimum(v[0], v[1]);
+            tile.alpha_endpoints[a][1] = math::maximum(v[0], v[1]);
           }
         }
 
@@ -439,16 +392,16 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
         continue;
     }
 
-    endpoint_cluster& cluster = m_color_clusters[cluster_index];
-    if (cluster.m_pixels.empty())
+    color_cluster& cluster = m_color_clusters[cluster_index];
+    if (cluster.pixels.empty())
       continue;
 
-    crnlib::vector<uint8> selectors(cluster.m_pixels.size());
+    crnlib::vector<uint8> selectors(cluster.pixels.size());
 
     dxt1_endpoint_optimizer::params params;
     params.m_block_index = cluster_index;
-    params.m_pPixels = cluster.m_pixels.get_ptr();
-    params.m_num_pixels = cluster.m_pixels.size();
+    params.m_pPixels = cluster.pixels.get_ptr();
+    params.m_num_pixels = cluster.pixels.size();
     params.m_pixels_have_alpha = false;
     params.m_use_alpha_blocks = false;
     params.m_perceptual = m_params.m_perceptual;
@@ -460,28 +413,23 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
 
     dxt1_endpoint_optimizer optimizer;
     optimizer.compute(params, results);
-    cluster.m_first_endpoint = results.m_low_color;
-    cluster.m_second_endpoint = results.m_high_color;
-    dxt1_block::get_block_colors4(cluster.m_color_values, cluster.m_first_endpoint, cluster.m_second_endpoint);
-
-    color_quad_u8 color_values[4];
-    color_values[0] = dxt1_block::unpack_color(results.m_low_color, true);
-    color_values[3] = dxt1_block::unpack_color(results.m_high_color, true);
-    for (uint c = 0; c < 3; c++) {
-      color_values[1].c[c] = ((color_values[0].c[c] << 1) + color_values[3].c[c] + (results.m_alternate_rounding ? 1 : 0)) / 3;
-      color_values[2].c[c] = ((color_values[3].c[c] << 1) + color_values[0].c[c] + (results.m_alternate_rounding ? 1 : 0)) / 3;
+    cluster.first_endpoint = results.m_low_color;
+    cluster.second_endpoint = results.m_high_color;
+    color_quad_u8 block_values[4], color_values[4];
+    dxt1_block::get_block_colors4(block_values, cluster.first_endpoint, cluster.second_endpoint);
+    for (uint i = 0; i < 4; i++)
+      color_values[i] = cluster.color_values[i] = block_values[g_dxt1_from_linear[i]];
+    for (uint c = 0; results.m_alternate_rounding && c < 3; c++) {
+      color_values[1].c[c] = ((color_values[0].c[c] << 1) + color_values[3].c[c] + 1) / 3;
+      color_values[2].c[c] = ((color_values[3].c[c] << 1) + color_values[0].c[c] + 1) / 3;
     }
 
-    uint8 color_order[4];
-    for (uint8 i = 0; i < 4; i++)
-      color_order[i] = results.m_reordered ? 3 - g_dxt1_to_linear[i] : g_dxt1_to_linear[i];
-    
     uint endpoint_weight = color::color_distance(m_params.m_perceptual, color_values[0], color_values[3], false) / 2000;
     float encoding_weight[8];
     for (uint i = 0; i < 8; i++)
       encoding_weight[i] = math::lerp(1.15f, 1.0f, i / 7.0f);
 
-    crnlib::vector<uint>& blocks = cluster.m_blocks[cColorBlocks];
+    crnlib::vector<uint>& blocks = cluster.blocks[cColor];
     for (uint i = 0; i < blocks.size(); i++) {
       uint b = blocks[i];
       uint weight = (uint)(math::clamp<uint>(endpoint_weight * m_block_weights[b], 1, 2048) * encoding_weight[m_block_encodings[b]]);
@@ -490,7 +438,7 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
         uint error_best = cUINT32_MAX;
         uint8 s_best = 0;
         for (uint8 t = 0; t < 4; t++) {
-          uint8 s = color_order[t];
+          uint8 s = results.m_reordered ? 3 - g_dxt1_to_linear[t] : g_dxt1_to_linear[t];
           uint error = color::color_distance(m_params.m_perceptual, (color_quad_u8&)m_blocks[b][p], color_values[s], false);
           if (error < error_best) {
             s_best = s;
@@ -499,7 +447,7 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
         }
         selector |= s_best << sh;
       }
-      m_block_selectors[cColorBlocks][b] = selector | (uint64)weight << 32;
+      m_block_selectors[cColor][b] = selector | (uint64)weight << 32;
     }
 
     dxt_endpoint_refiner refiner;
@@ -507,33 +455,29 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
     dxt_endpoint_refiner::results refinerResults;
     refinerParams.m_perceptual = m_params.m_perceptual;
     refinerParams.m_pSelectors = selectors.get_ptr();
-    refinerParams.m_pPixels = cluster.m_pixels.get_ptr();
-    refinerParams.m_num_pixels = cluster.m_pixels.size();
+    refinerParams.m_pPixels = cluster.pixels.get_ptr();
+    refinerParams.m_num_pixels = cluster.pixels.size();
     refinerParams.m_dxt1_selectors = true;
     refinerParams.m_error_to_beat = results.m_error;
     refinerParams.m_block_index = cluster_index;
-    cluster.m_refined_result = refiner.refine(refinerParams, refinerResults);
-    if (cluster.m_refined_result) {
-      cluster.m_refined_first_endpoint = refinerResults.m_low_color;
-      cluster.m_refined_second_endpoint = refinerResults.m_high_color;
-    } else {
-      cluster.m_refined_first_endpoint = cluster.m_first_endpoint;
-      cluster.m_refined_second_endpoint = cluster.m_second_endpoint;
+    if (refiner.refine(refinerParams, refinerResults)) {
+      cluster.first_endpoint = refinerResults.m_low_color;
+      cluster.second_endpoint = refinerResults.m_high_color;
     }
   }
 }
 
 void dxt_hc::determine_color_endpoint_clusters_task(uint64 data, void* pData_ptr) {
-  vec6F_tree_vq* vq = (vec6F_tree_vq*)pData_ptr;
+  tree_clusterizer<vec6F>* vq = (tree_clusterizer<vec6F>*)pData_ptr;
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   for (uint t = m_tiles.size() * data / num_tasks, tEnd = m_tiles.size() * (data + 1) / num_tasks; t < tEnd; t++) {
     if (m_tiles[t].pixels.size())
-      m_tiles[t].cluster_indices[cColorBlocks] = vq->find_best_codebook_entry_fs(m_tiles[t].color_endpoint);
+      m_tiles[t].cluster_indices[cColor] = vq->find_best_codebook_entry_fs(m_tiles[t].color_endpoint);
   }
 }
 
 void dxt_hc::determine_color_endpoints() {
-  vec6F_tree_vq vq;
+  tree_clusterizer<vec6F> vq;
   for (uint t = 0; t < m_tiles.size(); t++) {
     if (m_tiles[t].pixels.size())
       vq.add_training_vec(m_tiles[t].color_endpoint, (uint)(m_tiles[t].pixels.size() * m_tiles[t].weight));
@@ -548,13 +492,13 @@ void dxt_hc::determine_color_endpoints() {
 
   for (uint t = 0; t < m_num_blocks; t++) {
     if (m_tiles[t].pixels.size())
-      m_color_clusters[m_tiles[t].cluster_indices[cColorBlocks]].m_pixels.append(m_tiles[t].pixels);
+      m_color_clusters[m_tiles[t].cluster_indices[cColor]].pixels.append(m_tiles[t].pixels);
   }
 
   for (uint b = 0; b < m_num_blocks; b++) {
-    uint cluster_index = m_tiles[m_tile_indices[b]].cluster_indices[cColorBlocks];
-    m_endpoint_indices[b].component[cColorBlocks] = cluster_index;
-    m_color_clusters[cluster_index].m_blocks[cColorBlocks].push_back(b);
+    uint cluster_index = m_tiles[m_tile_indices[b]].cluster_indices[cColor];
+    m_endpoint_indices[b].component[cColor] = cluster_index;
+    m_color_clusters[cluster_index].blocks[cColor].push_back(b);
   }
 
   for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
@@ -580,15 +524,15 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr
         continue;
     }
 
-    endpoint_cluster& cluster = m_alpha_clusters[cluster_index];
-    if (cluster.m_pixels.empty())
+    alpha_cluster& cluster = m_alpha_clusters[cluster_index];
+    if (cluster.pixels.empty())
       continue;
 
-    crnlib::vector<uint8> selectors(cluster.m_pixels.size());
+    crnlib::vector<uint8> selectors(cluster.pixels.size());
 
     dxt5_endpoint_optimizer::params params;
-    params.m_pPixels = cluster.m_pixels.get_ptr();
-    params.m_num_pixels = cluster.m_pixels.size();
+    params.m_pPixels = cluster.pixels.get_ptr();
+    params.m_num_pixels = cluster.pixels.size();
     params.m_comp_index = 0;
     params.m_quality = cCRNDXTQualityUber;
     params.m_use_both_block_types = false;
@@ -598,25 +542,21 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr
 
     dxt5_endpoint_optimizer optimizer;
     optimizer.compute(params, results);
-    cluster.m_first_endpoint = results.m_first_endpoint;
-    cluster.m_second_endpoint = results.m_second_endpoint;
-    dxt5_block::get_block_values(cluster.m_alpha_values, cluster.m_first_endpoint, cluster.m_second_endpoint);
+    cluster.first_endpoint = results.m_first_endpoint;
+    cluster.second_endpoint = results.m_second_endpoint;
+    uint block_values[8], alpha_values[8];
+    dxt5_block::get_block_values(block_values, cluster.first_endpoint, cluster.second_endpoint);
+    for (uint i = 0; i < 8; i++)
+      alpha_values[i] = cluster.alpha_values[i] = block_values[g_dxt5_from_linear[i]];
 
-    int delta = cluster.m_second_endpoint - cluster.m_first_endpoint;
-    uint8 alpha_values[8];
-    uint8 alpha_order[8];
-    for (uint sum = cluster.m_first_endpoint * 7, i = 0; i < 8; i++, sum += delta) {
-      alpha_values[i] = (uint8)(sum / 7);
-      alpha_order[i] = results.m_reordered ? 7 - g_dxt5_to_linear[i] : g_dxt5_to_linear[i];
-    }
-
+    int delta = cluster.second_endpoint - cluster.first_endpoint;
     uint encoding_weight[8];
     for (uint endpoint_weight = math::clamp<uint>(delta * delta >> 3, 1, 2048), i = 0; i < 8; i++)
       encoding_weight[i] = (uint)(endpoint_weight * math::lerp(1.15f, 1.0f, i / 7.0f));
 
     for (uint a = 0; a < m_num_alpha_blocks; a++) {
       uint component_index = m_params.m_alpha_component_indices[a];
-      crnlib::vector<uint>& blocks = cluster.m_blocks[cAlpha0Blocks + a];
+      crnlib::vector<uint>& blocks = cluster.blocks[cAlpha0 + a];
       for (uint i = 0; i < blocks.size(); i++) {
         uint b = blocks[i];
         uint weight = encoding_weight[m_block_encodings[b]];
@@ -625,7 +565,7 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr
           uint error_best = cUINT32_MAX;
           uint8 s_best = 0;
           for (uint8 t = 0; t < 8; t++) {
-            uint8 s = alpha_order[t];
+            uint8 s = results.m_reordered ? 7 - g_dxt5_to_linear[t] : g_dxt5_to_linear[t];
             int delta = m_blocks[b][p][component_index] - alpha_values[s];
             uint error = delta >= 0 ? delta : -delta;
             if (error < error_best) {
@@ -635,7 +575,7 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr
           }
           selector |= (uint64)s_best << sh;
         }
-        m_block_selectors[cAlpha0Blocks + a][b] = selector | (uint64)weight << 48;
+        m_block_selectors[cAlpha0 + a][b] = selector | (uint64)weight << 48;
       }
     }
 
@@ -644,37 +584,37 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr
     dxt_endpoint_refiner::results refinerResults;
     refinerParams.m_perceptual = m_params.m_perceptual;
     refinerParams.m_pSelectors = selectors.get_ptr();
-    refinerParams.m_pPixels = cluster.m_pixels.get_ptr();
-    refinerParams.m_num_pixels = cluster.m_pixels.size();
+    refinerParams.m_pPixels = cluster.pixels.get_ptr();
+    refinerParams.m_num_pixels = cluster.pixels.size();
     refinerParams.m_dxt1_selectors = false;
     refinerParams.m_error_to_beat = results.m_error;
     refinerParams.m_block_index = cluster_index;
-    cluster.m_refined_result = refiner.refine(refinerParams, refinerResults);
-    if (cluster.m_refined_result) {
-      cluster.m_refined_first_endpoint = refinerResults.m_low_color;
-      cluster.m_refined_second_endpoint = refinerResults.m_high_color;
-      dxt5_block::get_block_values(cluster.m_refined_alpha_values, cluster.m_refined_first_endpoint, cluster.m_refined_second_endpoint);
+    cluster.refined_alpha = refiner.refine(refinerParams, refinerResults);
+    if (cluster.refined_alpha) {
+      cluster.first_endpoint = refinerResults.m_low_color;
+      cluster.second_endpoint = refinerResults.m_high_color;
+      dxt5_block::get_block_values(block_values, cluster.first_endpoint, cluster.second_endpoint);
+      for (uint i = 0; i < 8; i++)
+        cluster.refined_alpha_values[i] = block_values[g_dxt5_from_linear[i]];
     } else {
-      cluster.m_refined_first_endpoint = cluster.m_first_endpoint;
-      cluster.m_refined_second_endpoint = cluster.m_second_endpoint;
-      memcpy(cluster.m_refined_alpha_values, cluster.m_alpha_values, sizeof(cluster.m_refined_alpha_values));
+      memcpy(cluster.refined_alpha_values, cluster.alpha_values, sizeof(cluster.refined_alpha_values));
     }
   }
 }
 
 void dxt_hc::determine_alpha_endpoint_clusters_task(uint64 data, void* pData_ptr) {
-  vec2F_tree_vq* vq = (vec2F_tree_vq*)pData_ptr;
+  tree_clusterizer<vec2F>* vq = (tree_clusterizer<vec2F>*)pData_ptr;
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   for (uint t = m_tiles.size() * data / num_tasks, tEnd = m_tiles.size() * (data + 1) / num_tasks; t < tEnd; t++) {
     if (m_tiles[t].pixels.size()) {
       for (uint a = 0; a < m_num_alpha_blocks; a++)
-        m_tiles[t].cluster_indices[cAlpha0Blocks + a] = vq->find_best_codebook_entry_fs(m_tiles[t].alpha_endpoints[a]);
+        m_tiles[t].cluster_indices[cAlpha0 + a] = vq->find_best_codebook_entry_fs(m_tiles[t].alpha_endpoints[a]);
     }
   }
 }
 
 void dxt_hc::determine_alpha_endpoints() {
-  vec2F_tree_vq vq;
+  tree_clusterizer<vec2F> vq;
   for (uint a = 0; a < m_num_alpha_blocks; a++) {
     for (uint t = 0; t < m_tiles.size(); t++) {
       if (m_tiles[t].pixels.size())
@@ -694,7 +634,7 @@ void dxt_hc::determine_alpha_endpoints() {
     for (uint t = 0; t < m_num_blocks; t++) {
       crnlib::vector<color_quad_u8>& source = m_tiles[t].pixels;
       if (source.size()) {
-        crnlib::vector<color_quad_u8>& destination = m_alpha_clusters[m_tiles[t].cluster_indices[cAlpha0Blocks + a]].m_pixels;
+        crnlib::vector<color_quad_u8>& destination = m_alpha_clusters[m_tiles[t].cluster_indices[cAlpha0 + a]].pixels;
         for (uint p = 0; p < source.size(); p++)
           destination.push_back(color_quad_u8(source[p][component_index]));
       }
@@ -703,9 +643,9 @@ void dxt_hc::determine_alpha_endpoints() {
 
   for (uint b = 0; b < m_num_blocks; b++) {
     for (uint a = 0; a < m_num_alpha_blocks; a++) {
-      uint cluster_index = m_tiles[m_tile_indices[b]].cluster_indices[cAlpha0Blocks + a];
-      m_endpoint_indices[b].component[cAlpha0Blocks + a] = cluster_index;
-      m_alpha_clusters[cluster_index].m_blocks[cAlpha0Blocks + a].push_back(b);
+      uint cluster_index = m_tiles[m_tile_indices[b]].cluster_indices[cAlpha0 + a];
+      m_endpoint_indices[b].component[cAlpha0 + a] = cluster_index;
+      m_alpha_clusters[cluster_index].blocks[cAlpha0 + a].push_back(b);
     }
   }
 
@@ -725,8 +665,8 @@ void dxt_hc::create_color_selector_codebook_task(uint64 data, void* pData_ptr) {
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   uint errors[16][4];
   for (uint b = m_num_blocks * data / num_tasks, bEnd = m_num_blocks * (data + 1) / num_tasks; b < bEnd; b++) {
-    endpoint_cluster& cluster = m_color_clusters[m_endpoint_indices[b].color];
-    color_quad_u8* endpoint_colors = cluster.m_color_values;
+    color_cluster& cluster = m_color_clusters[m_endpoint_indices[b].color];
+    color_quad_u8* endpoint_colors = cluster.color_values;
     for (uint p = 0; p < 16; p++) {
       for (uint s = 0; s < 4; s++)
         errors[p][s] = color::color_distance(m_params.m_perceptual, m_blocks[b][p], endpoint_colors[s], false);
@@ -766,10 +706,10 @@ void dxt_hc::create_color_selector_codebook_task(uint64 data, void* pData_ptr) {
 }
 
 void dxt_hc::create_color_selector_codebook() {
-  vec16F_tree_vq selector_vq;
+  tree_clusterizer<vec16F> selector_vq;
   vec16F v;
   for (uint b = 0; b < m_num_blocks; b++) {
-    uint64 selector = m_block_selectors[cColorBlocks][b];
+    uint64 selector = m_block_selectors[cColor][b];
     for (uint8 p = 0; p < 16; p++, selector >>= 2)
       v[p] = ((selector & 3) + 0.5f) * 0.25f;
     selector_vq.add_training_vec(v, selector);
@@ -780,10 +720,8 @@ void dxt_hc::create_color_selector_codebook() {
   for (uint i = 0; i < selector_vq.get_codebook_size(); i++) {
     const vec16F& v = selector_vq.get_codebook_entry(i);
     m_color_selectors[i] = 0;
-    for (uint sh = 0, j = 0; j < 16; j++, sh += 2) {
-      uint8 s = g_dxt1_from_linear[(int)(v[j] * 4.0f)];
-      m_color_selectors[i] |= s << sh;
-    }
+    for (uint sh = 0, j = 0; j < 16; j++, sh += 2)
+      m_color_selectors[i] |= (uint)(v[j] * 4.0f) << sh;
   }
 
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
@@ -809,16 +747,10 @@ void dxt_hc::create_color_selector_codebook() {
     uint (&errors)[16][4] = selector_details[0][i].error;
     m_color_selectors[i] = 0;
     for (uint sh = 0, p = 0; p < 16; p++, sh += 2) {
-      uint best_error = errors[p][0];
-      uint8 best_s = 0;
-      for (uint8 s = 1; s < 4; s++) {
-        uint error = errors[p][s];
-        if (error < best_error) {
-          best_s = s;
-          best_error = error;
-        }
-      }
-      m_color_selectors[i] |= best_s << sh;
+      uint* e = errors[p];
+      uint8 s03 = e[3] < e[0] ? 3 : 0;
+      uint8 s12 = e[2] < e[1] ? 2 : 1;
+      m_color_selectors[i] |= (e[s12] < e[s03] ? s12 : s03) << sh;
     }
   }
 }
@@ -834,10 +766,10 @@ void dxt_hc::create_alpha_selector_codebook_task(uint64 data, void* pData_ptr) {
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   uint errors[16][8];
   for (uint b = m_num_blocks * data / num_tasks, bEnd = m_num_blocks * (data + 1) / num_tasks; b < bEnd; b++) {
-    for (uint c = cAlpha0Blocks; c < cAlpha0Blocks + m_num_alpha_blocks; c++) {
-      const uint alpha_pixel_comp = m_params.m_alpha_component_indices[c - cAlpha0Blocks];
-      endpoint_cluster& cluster = m_alpha_clusters[m_endpoint_indices[b].component[c]];
-      uint* block_values = cluster.m_alpha_values;
+    for (uint c = cAlpha0; c < cAlpha0 + m_num_alpha_blocks; c++) {
+      const uint alpha_pixel_comp = m_params.m_alpha_component_indices[c - cAlpha0];
+      alpha_cluster& cluster = m_alpha_clusters[m_endpoint_indices[b].component[c]];
+      uint* block_values = cluster.alpha_values;
       for (uint p = 0; p < 16; p++) {
         for (uint s = 0; s < 8; s++) {
           int delta = m_blocks[b][p][alpha_pixel_comp] - block_values[s];
@@ -868,8 +800,8 @@ void dxt_hc::create_alpha_selector_codebook_task(uint64 data, void* pData_ptr) {
           best_index = s;
         }
       }
-      if (cluster.m_refined_result) {
-        block_values = cluster.m_refined_alpha_values;
+      if (cluster.refined_alpha) {
+        block_values = cluster.refined_alpha_values;
         for (uint p = 0; p < 16; p++) {
           for (uint s = 0; s < 8; s++) {
             int delta = m_blocks[b][p][alpha_pixel_comp] - block_values[s];
@@ -889,9 +821,9 @@ void dxt_hc::create_alpha_selector_codebook_task(uint64 data, void* pData_ptr) {
 }
 
 void dxt_hc::create_alpha_selector_codebook() {
-  vec16F_tree_vq selector_vq;
+  tree_clusterizer<vec16F> selector_vq;
   vec16F v;
-  for (uint c = cAlpha0Blocks; c < cAlpha0Blocks + m_num_alpha_blocks; c++) {
+  for (uint c = cAlpha0; c < cAlpha0 + m_num_alpha_blocks; c++) {
     for (uint b = 0; b < m_num_blocks; b++) {
       uint64 selector = m_block_selectors[c][b];
       for (uint8 p = 0; p < 16; p++, selector >>= 3)
@@ -905,10 +837,8 @@ void dxt_hc::create_alpha_selector_codebook() {
   for (uint i = 0; i < selector_vq.get_codebook_size(); i++) {
     const vec16F& v = selector_vq.get_codebook_entry(i);
     m_alpha_selectors[i] = 0;
-    for (uint sh = 0, j = 0; j < 16; j++, sh += 3) {
-      uint8 s = g_dxt5_from_linear[(int)(v[j] * 8.0f)];
-      m_alpha_selectors[i] |= (uint64)s << sh;
-    }
+    for (uint sh = 0, j = 0; j < 16; j++, sh += 3)
+      m_alpha_selectors[i] |= (uint64)(v[j] * 8.0f) << sh;
   }
 
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
@@ -934,16 +864,14 @@ void dxt_hc::create_alpha_selector_codebook() {
     uint (&errors)[16][8] = selector_details[0][i].error;
     m_alpha_selectors[i] = 0;
     for (uint sh = 0, p = 0; p < 16; p++, sh += 3) {
-      uint best_error = errors[p][0];
-      uint8 best_s = 0;
-      for (uint8 s = 1; s < 8; s++) {
-        uint error = errors[p][s];
-        if (error < best_error) {
-          best_s = s;
-          best_error = error;
-        }
-      }
-      m_alpha_selectors[i] |= (uint64)best_s << sh;
+      uint* e = errors[p];
+      uint8 s07 = e[7] < e[0] ? 7 : 0;
+      uint8 s12 = e[2] < e[1] ? 2 : 1;
+      uint8 s34 = e[4] < e[3] ? 4 : 3;
+      uint8 s56 = e[6] < e[5] ? 6 : 5;
+      uint8 s02 = e[s12] < e[s07] ? s12 : s07;
+      uint8 s36 = e[s56] < e[s34] ? s56 : s34;
+      m_alpha_selectors[i] |= (uint64)(e[s36] < e[s02] ? s36 : s02) << sh;
     }
   }
 }

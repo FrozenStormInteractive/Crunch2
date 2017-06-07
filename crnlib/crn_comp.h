@@ -37,25 +37,6 @@ class crn_comp : public itexture_comp {
 
   image_u8 m_images[cCRNMaxFaces][cCRNMaxLevels];
 
-  struct level_tag {
-    uint m_width, m_height;
-    uint m_chunk_width, m_chunk_height;
-    uint m_group_index;
-    uint m_num_chunks;
-    uint m_first_chunk;
-    uint m_group_first_chunk;
-  } m_levels[cCRNMaxLevels];
-
-  struct mip_group {
-    mip_group()
-        : m_first_chunk(0), m_num_chunks(0) {}
-
-    uint m_first_chunk;
-    uint m_num_chunks;
-    uint m_chunk_width;
-  };
-  crnlib::vector<mip_group> m_mip_groups;
-
   enum comp {
     cColor,
     cAlpha0,
@@ -65,18 +46,28 @@ class crn_comp : public itexture_comp {
 
   bool m_has_comp[cNumComps];
 
+  struct level_details {
+    uint first_block;
+    uint num_blocks;
+    uint block_width;
+  };
+  crnlib::vector<level_details> m_levels;
+
+  uint m_total_blocks;
+  crnlib::vector<uint32> m_color_endpoints;
+  crnlib::vector<uint32> m_alpha_endpoints;
+  crnlib::vector<uint32> m_color_selectors;
+  crnlib::vector<uint64> m_alpha_selectors;
   crnlib::vector<dxt_hc::endpoint_indices_details> m_endpoint_indices;
   crnlib::vector<dxt_hc::selector_indices_details> m_selector_indices;
-
-  uint m_total_chunks;
 
   crnd::crn_header m_crn_header;
   crnlib::vector<uint8> m_comp_data;
 
   dxt_hc m_hvq;
 
-  symbol_histogram m_chunk_encoding_hist;
-  static_huffman_data_model m_reference_encoding_dm;
+  symbol_histogram m_reference_hist;
+  static_huffman_data_model m_reference_dm;
 
   symbol_histogram m_endpoint_index_hist[2];
   static_huffman_data_model m_endpoint_index_dm[2];  // color, alpha
@@ -84,7 +75,7 @@ class crn_comp : public itexture_comp {
   symbol_histogram m_selector_index_hist[2];
   static_huffman_data_model m_selector_index_dm[2];  // color, alpha
 
-  crnlib::vector<uint8> m_packed_chunks[cCRNMaxLevels];
+  crnlib::vector<uint8> m_packed_blocks[cCRNMaxLevels];
   crnlib::vector<uint8> m_packed_data_models;
   crnlib::vector<uint8> m_packed_color_endpoints;
   crnlib::vector<uint8> m_packed_color_selectors;
@@ -101,22 +92,16 @@ class crn_comp : public itexture_comp {
   bool pack_color_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping, uint trial_index);
   bool pack_alpha_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping, uint trial_index);
 
-  static float color_selector_similarity_func(uint index_a, uint index_b, void* pContext);
-  static float alpha_selector_similarity_func(uint index_a, uint index_b, void* pContext);
-  void sort_selector_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<dxt_hc::selectors>& selectors, const uint8* pTo_linear);
+  void sort_color_selectors(crnlib::vector<uint>& remapping);
+  void sort_alpha_selectors(crnlib::vector<uint>& remapping);
 
-  bool pack_selectors(
-      crnlib::vector<uint8>& packed_data,
-      const crnlib::vector<dxt_hc::selectors>& selectors,
-      const crnlib::vector<uint>& remapping,
-      uint max_selector_value,
-      const uint8* pTo_linear,
-      uint trial_index);
+  bool pack_color_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint>& remapping);
+  bool pack_alpha_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint>& remapping);
 
   bool alias_images();
   bool quantize_images();
 
-  bool pack_chunks(
+  bool pack_blocks(
       uint group,
       bool clear_histograms,
       symbol_codec* pCodec,
