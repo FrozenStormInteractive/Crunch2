@@ -403,7 +403,6 @@
     <ClCompile Include="crn_rg_etc1.cpp" />
     <ClCompile Include="crn_ryg_dxt.cpp" />
     <ClCompile Include="crn_symbol_codec.cpp" />
-    <ClCompile Include="crn_zeng.cpp" />
     <ClCompile Include="crn_dynamic_string.cpp" />
     <ClCompile Include="crn_strutils.cpp" />
     <ClCompile Include="crn_arealist.cpp" />
@@ -497,7 +496,6 @@
     <ClInclude Include="crn_symbol_codec.h" />
     <ClInclude Include="crn_threaded_clusterizer.h" />
     <ClInclude Include="crn_tree_clusterizer.h" />
-    <ClInclude Include="crn_zeng.h" />
     <ClInclude Include="crn_dynamic_string.h" />
     <ClInclude Include="crn_strutils.h" />
     <ClInclude Include="crn_arealist.h" />

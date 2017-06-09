@@ -157,9 +157,6 @@
     <ClCompile Include="crn_symbol_codec.cpp">
       <Filter>Source Files\comp</Filter>
     </ClCompile>
-    <ClCompile Include="crn_zeng.cpp">
-      <Filter>Source Files\comp</Filter>
-    </ClCompile>
     <ClCompile Include="crn_dynamic_string.cpp">
       <Filter>Source Files\string</Filter>
     </ClCompile>
@@ -433,9 +430,6 @@
       <Filter>Source Files\comp</Filter>
     </ClInclude>
     <ClInclude Include="crn_tree_clusterizer.h">
-      <Filter>Source Files\comp</Filter>
-    </ClInclude>
-    <ClInclude Include="crn_zeng.h">
       <Filter>Source Files\comp</Filter>
     </ClInclude>
     <ClInclude Include="crn_dynamic_string.h">

@@ -84,13 +84,11 @@ class crn_comp : public itexture_comp {
 
   void clear();
 
-  static float color_endpoint_similarity_func(uint index_a, uint index_b, void* pContext);
-  static float alpha_endpoint_similarity_func(uint index_a, uint index_b, void* pContext);
   void sort_color_endpoint_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoints);
   void sort_alpha_endpoint_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoints);
 
-  bool pack_color_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping, uint trial_index);
-  bool pack_alpha_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping, uint trial_index);
+  bool pack_color_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping);
+  bool pack_alpha_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping);
 
   void sort_color_selectors(crnlib::vector<uint>& remapping);
   void sort_alpha_selectors(crnlib::vector<uint>& remapping);
@@ -110,15 +108,15 @@ class crn_comp : public itexture_comp {
       const crnlib::vector<uint>* pAlpha_endpoint_remap,
       const crnlib::vector<uint>* pAlpha_selector_remap);
 
-  void optimize_color_endpoint_codebook_task(uint64 data, void* pData_ptr);
-  bool optimize_color_endpoint_codebook(crnlib::vector<uint>& remapping);
+  void optimize_color_endpoints_task(uint64 data, void* pData_ptr);
+  bool optimize_color_endpoints(crnlib::vector<uint>& remapping);
 
-  bool optimize_color_selector_codebook(crnlib::vector<uint>& remapping);
+  bool optimize_color_selectors(crnlib::vector<uint>& remapping);
 
-  void optimize_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr);
-  bool optimize_alpha_endpoint_codebook(crnlib::vector<uint>& remapping);
+  void optimize_alpha_endpoints_task(uint64 data, void* pData_ptr);
+  bool optimize_alpha_endpoints(crnlib::vector<uint>& remapping);
 
-  bool optimize_alpha_selector_codebook(crnlib::vector<uint>& remapping);
+  bool optimize_alpha_selectors(crnlib::vector<uint>& remapping);
 
   bool create_comp_data();
 
