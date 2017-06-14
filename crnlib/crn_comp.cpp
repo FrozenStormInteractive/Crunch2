@@ -17,119 +17,7 @@ crn_comp::crn_comp()
 crn_comp::~crn_comp() {
 }
 
-void crn_comp::sort_color_endpoint_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoints) {
-  remapping.resize(endpoints.size());
-
-  uint lowest_energy = UINT_MAX;
-  uint lowest_energy_index = 0;
-
-  for (uint i = 0; i < endpoints.size(); i++) {
-    color_quad_u8 a(dxt1_block::unpack_color(static_cast<uint16>(endpoints[i] & 0xFFFF), true));
-    color_quad_u8 b(dxt1_block::unpack_color(static_cast<uint16>((endpoints[i] >> 16) & 0xFFFF), true));
-
-    uint total = a.r + a.g + a.b + b.r + b.g + b.b;
-
-    if (total < lowest_energy) {
-      lowest_energy = total;
-      lowest_energy_index = i;
-    }
-  }
-
-  uint cur_index = lowest_energy_index;
-
-  crnlib::vector<bool> chosen_flags(endpoints.size());
-
-  uint n = 0;
-  for (;;) {
-    chosen_flags[cur_index] = true;
-
-    remapping[cur_index] = n;
-    n++;
-    if (n == endpoints.size())
-      break;
-
-    uint lowest_error = UINT_MAX;
-    uint lowest_error_index = 0;
-
-    color_quad_u8 a(dxt1_block::unpack_endpoint(endpoints[cur_index], 0, true));
-    color_quad_u8 b(dxt1_block::unpack_endpoint(endpoints[cur_index], 1, true));
-
-    for (uint i = 0; i < endpoints.size(); i++) {
-      if (chosen_flags[i])
-        continue;
-
-      color_quad_u8 c(dxt1_block::unpack_endpoint(endpoints[i], 0, true));
-      color_quad_u8 d(dxt1_block::unpack_endpoint(endpoints[i], 1, true));
-
-      uint total = color::elucidian_distance(a, c, false) + color::elucidian_distance(b, d, false);
-
-      if (total < lowest_error) {
-        lowest_error = total;
-        lowest_error_index = i;
-      }
-    }
-
-    cur_index = lowest_error_index;
-  }
-}
-
-void crn_comp::sort_alpha_endpoint_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoints) {
-  remapping.resize(endpoints.size());
-
-  uint lowest_energy = UINT_MAX;
-  uint lowest_energy_index = 0;
-
-  for (uint i = 0; i < endpoints.size(); i++) {
-    uint a = dxt5_block::unpack_endpoint(endpoints[i], 0);
-    uint b = dxt5_block::unpack_endpoint(endpoints[i], 1);
-
-    uint total = a + b;
-
-    if (total < lowest_energy) {
-      lowest_energy = total;
-      lowest_energy_index = i;
-    }
-  }
-
-  uint cur_index = lowest_energy_index;
-
-  crnlib::vector<bool> chosen_flags(endpoints.size());
-
-  uint n = 0;
-  for (;;) {
-    chosen_flags[cur_index] = true;
-
-    remapping[cur_index] = n;
-    n++;
-    if (n == endpoints.size())
-      break;
-
-    uint lowest_error = UINT_MAX;
-    uint lowest_error_index = 0;
-
-    const int a = dxt5_block::unpack_endpoint(endpoints[cur_index], 0);
-    const int b = dxt5_block::unpack_endpoint(endpoints[cur_index], 1);
-
-    for (uint i = 0; i < endpoints.size(); i++) {
-      if (chosen_flags[i])
-        continue;
-
-      const int c = dxt5_block::unpack_endpoint(endpoints[i], 0);
-      const int d = dxt5_block::unpack_endpoint(endpoints[i], 1);
-
-      uint total = math::square(a - c) + math::square(b - d);
-
-      if (total < lowest_error) {
-        lowest_error = total;
-        lowest_error_index = i;
-      }
-    }
-
-    cur_index = lowest_error_index;
-  }
-}
-
-bool crn_comp::pack_color_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping) {
+bool crn_comp::pack_color_endpoints(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping) {
   crnlib::vector<uint> remapped_endpoints(m_color_endpoints.size());
 
   for (uint i = 0; i < m_color_endpoints.size(); i++)
@@ -197,12 +85,12 @@ bool crn_comp::pack_color_endpoints(crnlib::vector<uint8>& data, const crnlib::v
 
   codec.stop_encoding(false);
 
-  data.swap(codec.get_encoding_buf());
+  packed_data.swap(codec.get_encoding_buf());
 
   return true;
 }
 
-bool crn_comp::pack_alpha_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping) {
+bool crn_comp::pack_alpha_endpoints(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping) {
   crnlib::vector<uint> remapped_endpoints(m_alpha_endpoints.size());
 
   for (uint i = 0; i < m_alpha_endpoints.size(); i++)
@@ -263,101 +151,15 @@ bool crn_comp::pack_alpha_endpoints(crnlib::vector<uint8>& data, const crnlib::v
 
   codec.stop_encoding(false);
 
-  data.swap(codec.get_encoding_buf());
+  packed_data.swap(codec.get_encoding_buf());
 
   return true;
 }
 
-void crn_comp::sort_color_selectors(crnlib::vector<uint>& remapping) {
-  remapping.resize(m_color_selectors.size());
-  uint lowest_energy = UINT_MAX;
-  uint lowest_energy_index = 0;
-  for (uint i = 0; i < m_color_selectors.size(); i++) {
-    uint total = 0;
-    for (uint32 selector = m_color_selectors[i], j = 0; j < 16; j++, selector >>= 2) {
-      int a = selector & 3;
-      total += a * a;
-    }
-    if (total < lowest_energy) {
-      lowest_energy = total;
-      lowest_energy_index = i;
-    }
-  }
-  uint cur_index = lowest_energy_index;
-  crnlib::vector<bool> chosen_flags(m_color_selectors.size());
-  uint n = 0;
-  for (;;) {
-    chosen_flags[cur_index] = true;
-    remapping[cur_index] = n;
-    n++;
-    if (n == m_color_selectors.size())
-      break;
-    uint lowest_error = UINT_MAX;
-    uint lowest_error_index = 0;
-    for (uint i = 0; i < m_color_selectors.size(); i++) {
-      if (chosen_flags[i])
-        continue;
-      uint total = 0;
-      for (uint32 cur_selector = m_color_selectors[cur_index], selector = m_color_selectors[i], j = 0; j < 16; j++, cur_selector >>= 2, selector >>= 2) {
-        int delta = (cur_selector & 3) - (selector & 3);
-        total += delta * delta;
-      }
-      if (total < lowest_error) {
-        lowest_error = total;
-        lowest_error_index = i;
-      }
-    }
-    cur_index = lowest_error_index;
-  }
-}
-
-void crn_comp::sort_alpha_selectors(crnlib::vector<uint>& remapping) {
-  remapping.resize(m_alpha_selectors.size());
-  uint lowest_energy = UINT_MAX;
-  uint lowest_energy_index = 0;
-  for (uint i = 0; i < m_alpha_selectors.size(); i++) {
-    uint total = 0;
-    for (uint64 selector = m_alpha_selectors[i], j = 0; j < 16; j++, selector >>= 3) {
-      int a = selector & 7;
-      total += a * a;
-    }
-    if (total < lowest_energy) {
-      lowest_energy = total;
-      lowest_energy_index = i;
-    }
-  }
-  uint cur_index = lowest_energy_index;
-  crnlib::vector<bool> chosen_flags(m_alpha_selectors.size());
-  uint n = 0;
-  for (;;) {
-    chosen_flags[cur_index] = true;
-    remapping[cur_index] = n;
-    n++;
-    if (n == m_alpha_selectors.size())
-      break;
-    uint lowest_error = UINT_MAX;
-    uint lowest_error_index = 0;
-    for (uint i = 0; i < m_alpha_selectors.size(); i++) {
-      if (chosen_flags[i])
-        continue;
-      uint total = 0;
-      for (uint64 cur_selector = m_alpha_selectors[cur_index], selector = m_alpha_selectors[i], j = 0; j < 16; j++, cur_selector >>= 3, selector >>= 3) {
-        int delta = (cur_selector & 7) - (selector & 7);
-        total += delta * delta;
-      }
-      if (total < lowest_error) {
-        lowest_error = total;
-        lowest_error_index = i;
-      }
-    }
-    cur_index = lowest_error_index;
-  }
-}
-
-bool crn_comp::pack_color_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint>& remapping) {
+bool crn_comp::pack_color_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping) {
   crnlib::vector<uint32> remapped_selectors(m_color_selectors.size());
   for (uint i = 0; i < m_color_selectors.size(); i++)
-    remapped_selectors[remapping[i]] = m_color_selectors[i];  
+    remapped_selectors[remapping[i]] = m_color_selectors[i];
   crnlib::vector<uint> residual_syms;
   residual_syms.reserve(m_color_selectors.size() * 8);
   symbol_histogram hist(49);
@@ -394,7 +196,7 @@ bool crn_comp::pack_color_selectors(crnlib::vector<uint8>& packed_data, const cr
   return true;
 }
 
-bool crn_comp::pack_alpha_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint>& remapping) {
+bool crn_comp::pack_alpha_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping) {
   crnlib::vector<uint64> remapped_selectors(m_alpha_selectors.size());
   for (uint i = 0; i < m_alpha_selectors.size(); i++)
     remapped_selectors[remapping[i]] = m_alpha_selectors[i];
@@ -439,10 +241,10 @@ bool crn_comp::pack_blocks(
     uint group,
     bool clear_histograms,
     symbol_codec* pCodec,
-    const crnlib::vector<uint>* pColor_endpoint_remap,
-    const crnlib::vector<uint>* pColor_selector_remap,
-    const crnlib::vector<uint>* pAlpha_endpoint_remap,
-    const crnlib::vector<uint>* pAlpha_selector_remap
+    const crnlib::vector<uint16>* pColor_endpoint_remap,
+    const crnlib::vector<uint16>* pColor_selector_remap,
+    const crnlib::vector<uint16>* pAlpha_endpoint_remap,
+    const crnlib::vector<uint16>* pAlpha_selector_remap
   ) {
   if (!pCodec) {
     m_reference_hist.resize(256);
@@ -475,8 +277,8 @@ bool crn_comp::pack_blocks(
   }
 
   uint endpoint_index[cNumComps] = {};
-  const crnlib::vector<uint>* endpoint_remap[cNumComps] = {};
-  const crnlib::vector<uint>* selector_remap[cNumComps] = {};
+  const crnlib::vector<uint16>* endpoint_remap[cNumComps] = {};
+  const crnlib::vector<uint16>* selector_remap[cNumComps] = {};
   for (uint c = 0; c < cNumComps; c++) {
     if (m_has_comp[c]) {
       endpoint_remap[c] = c ? pAlpha_endpoint_remap : pColor_endpoint_remap;
@@ -522,24 +324,6 @@ bool crn_comp::pack_blocks(
     }
   }
   return true;
-}
-
-void crn_comp::append_vec(crnlib::vector<uint8>& a, const void* p, uint size) {
-  if (size) {
-    uint ofs = a.size();
-    a.resize(ofs + size);
-
-    memcpy(&a[ofs], p, size);
-  }
-}
-
-void crn_comp::append_vec(crnlib::vector<uint8>& a, const crnlib::vector<uint8>& b) {
-  if (!b.empty()) {
-    uint ofs = a.size();
-    a.resize(ofs + b.size());
-
-    memcpy(&a[ofs], &b[0], b.size());
-  }
 }
 
 bool crn_comp::alias_images() {
@@ -605,8 +389,10 @@ void crn_comp::clear() {
   m_reference_hist.clear();
   m_reference_dm.clear();
   for (uint i = 0; i < 2; i++) {
+    m_endpoint_remaping[i].clear();
     m_endpoint_index_hist[i].clear();
     m_endpoint_index_dm[i].clear();
+    m_selector_remaping[i].clear();
     m_selector_index_hist[i].clear();
     m_selector_index_dm[i].clear();
   }
@@ -779,41 +565,69 @@ bool crn_comp::quantize_images() {
   return result;
 }
 
-struct optimize_color_endpoints_params {
+struct optimize_color_params {
   struct unpacked_endpoint {
     color_quad_u8 low, high;
   };
   const unpacked_endpoint* unpacked_endpoints;
   const uint* hist;
-  uint n;
-  uint selected;
+  uint16 n;
+  uint16 selected;
   float weight;
   struct result {
-    crnlib::vector<uint> remapping;
+    crnlib::vector<uint16> endpoint_remapping;
     crnlib::vector<uint8> packed_endpoints;
     uint total_bits;
   } *pResult;
 };
 
-static void remap_color_endpoints(uint* remapping, const optimize_color_endpoints_params::unpacked_endpoint* unpacked_endpoints, const uint* hist, uint n, uint selected, float weight) {
+static void sort_color_endpoints(crnlib::vector<uint16>& remapping, const optimize_color_params::unpacked_endpoint* unpacked_endpoints, uint16 n) {
+  remapping.resize(n);
+  crnlib::vector<optimize_color_params::unpacked_endpoint> endpoints(n);
+  crnlib::vector<uint16> indices(n);
+  for (uint16 i = 0; i < n; i++) {
+    endpoints[i] = unpacked_endpoints[i];
+    indices[i] = i;
+  }
+  optimize_color_params::unpacked_endpoint selected_endpoint = {color_quad_u8(0), color_quad_u8(0)};
+  for (uint16 left = n; left;) {
+    uint16 selected_index = 0;
+    uint min_error = cUINT32_MAX;
+    for (uint16 i = 0; i < left; i++) {
+      optimize_color_params::unpacked_endpoint& endpoint = endpoints[i];
+      uint error = color::elucidian_distance(endpoint.low, selected_endpoint.low, false) + color::elucidian_distance(endpoint.high, selected_endpoint.high, false);
+      if (error < min_error) {
+        min_error = error;
+        selected_index = i;
+      }
+    }
+    selected_endpoint = endpoints[selected_index];
+    remapping[indices[selected_index]] = n - left;
+    left--;
+    endpoints[selected_index] = endpoints[left];
+    indices[selected_index] = indices[left];
+  }
+}
+
+static void remap_color_endpoints(uint16* remapping, const optimize_color_params::unpacked_endpoint* unpacked_endpoints, const uint* hist, uint16 n, uint16 selected, float weight) {
   const uint* frequency = hist + selected * n;
   crnlib::vector<uint16> chosen, remaining;
   crnlib::vector<uint> total_frequency(n);
   chosen.push_back(selected);
-  for (uint i = 0; i < n; i++) {
+  for (uint16 i = 0; i < n; i++) {
     if (i != selected) {
       remaining.push_back(i);
       total_frequency[i] = frequency[i];
     }
   }
   for (uint similarity_base = (uint)(4000 * (1.0f + weight)), total_frequency_normalizer = 0; remaining.size();) {
-    const optimize_color_endpoints_params::unpacked_endpoint& e_front = unpacked_endpoints[chosen.front()];
-    const optimize_color_endpoints_params::unpacked_endpoint& e_back = unpacked_endpoints[chosen.back()];
-    uint selected_index;
+    const optimize_color_params::unpacked_endpoint& e_front = unpacked_endpoints[chosen.front()];
+    const optimize_color_params::unpacked_endpoint& e_back = unpacked_endpoints[chosen.back()];
+    uint16 selected_index;
     uint64 best_value = 0, selected_similarity_front, selected_similarity_back;
-    for (uint i = 0; i < remaining.size(); i++) {
+    for (uint16 i = 0; i < remaining.size(); i++) {
       uint remaining_index = remaining[i];
-      const optimize_color_endpoints_params::unpacked_endpoint& e_remaining = unpacked_endpoints[remaining_index];
+      const optimize_color_params::unpacked_endpoint& e_remaining = unpacked_endpoints[remaining_index];
       uint error_front = color::elucidian_distance(e_remaining.low, e_front.low, false) + color::elucidian_distance(e_remaining.high, e_front.high, false);
       uint error_back = color::elucidian_distance(e_remaining.low, e_back.low, false) + color::elucidian_distance(e_remaining.high, e_back.high, false);
       uint64 similarity_front = similarity_base - math::minimum<uint>(error_front, 4000);
@@ -840,23 +654,24 @@ static void remap_color_endpoints(uint* remapping, const optimize_color_endpoint
       chosen.push_back(selected);
     }
     remaining.erase(remaining.begin() + selected_index);
-    for (uint i = 0; i < remaining.size(); i++)
+    for (uint16 i = 0; i < remaining.size(); i++)
       total_frequency[remaining[i]] += frequency[remaining[i]];
   }
-  for (uint i = 0; i < n; i++)
+  for (uint16 i = 0; i < n; i++)
     remapping[chosen[i]] = i;
 }
 
 void crn_comp::optimize_color_endpoints_task(uint64 data, void* pData_ptr) {
-  optimize_color_endpoints_params* pParams = reinterpret_cast<optimize_color_endpoints_params*>(pData_ptr);
-  crnlib::vector<uint>& remapping = pParams->pResult->remapping;
-  uint n = pParams->n;
+  optimize_color_params* pParams = reinterpret_cast<optimize_color_params*>(pData_ptr);
+  crnlib::vector<uint16>& remapping = pParams->pResult->endpoint_remapping;
+  uint16 n = pParams->n;
   remapping.resize(n);
 
   if (data) {
     remap_color_endpoints(remapping.get_ptr(), pParams->unpacked_endpoints, pParams->hist, n, pParams->selected, pParams->weight);
   } else {
-    sort_color_endpoint_codebook(remapping, m_color_endpoints);
+    sort_color_endpoints(remapping, pParams->unpacked_endpoints, n);
+    optimize_color_selectors();
   }
 
   pack_color_endpoints(pParams->pResult->packed_endpoints, remapping);
@@ -877,7 +692,7 @@ void crn_comp::optimize_color_endpoints_task(uint64 data, void* pData_ptr) {
   static_huffman_data_model dm;
   dm.init(true, n, hist.get_ptr(), 16);
   const uint8* code_sizes = dm.get_code_sizes();
-  for (uint s = 0; s < n; s++)
+  for (uint16 s = 0; s < n; s++)
     total_bits += hist[s] * code_sizes[s];
 
   symbol_codec codec;
@@ -892,15 +707,55 @@ void crn_comp::optimize_color_endpoints_task(uint64 data, void* pData_ptr) {
   crnlib_delete(pParams);
 }
 
-bool crn_comp::optimize_color_endpoints(crnlib::vector<uint>& remapping) {
-  if (m_pParams->m_flags & cCRNCompFlagQuick) {
-    remapping.resize(m_color_endpoints.size());
-    for (uint i = 0; i < m_color_endpoints.size(); i++)
-      remapping[i] = i;
-    return pack_color_endpoints(m_packed_color_endpoints, remapping);
+void crn_comp::optimize_color_selectors() {
+  crnlib::vector<uint16>& remapping = m_selector_remaping[cColor];
+  uint16 n = m_color_selectors.size();
+  remapping.resize(n);
+
+  uint8 D4[0x100];
+  for (uint16 i = 0; i < 0x100; i++) {
+    int d0 = (i & 3) - (i >> 4 & 3);
+    int d1 = (i >> 2 & 3) - (i >> 6 & 3);
+    D4[i] = d0 * d0 + d1 * d1;
+  }
+  uint8 D8[0x10000];
+  for (uint32 i = 0; i < 0x10000; i++)
+    D8[i] = D4[i >> 8 & 0xF0 | i >> 4 & 0xF] + D4[i >> 4 & 0xF0 | i & 0xF];
+
+  crnlib::vector<uint32> selectors(n);
+  crnlib::vector<uint16> indices(n);
+  for (uint16 i = 0; i < n; i++) {
+    selectors[i] = m_color_selectors[i];
+    indices[i] = i;
+  }
+  uint32 selected_selector = 0;
+  for (uint16 left = n; left;) {
+    uint16 selected_index = 0;
+    uint min_error = cUINT32_MAX;
+    for (uint16 i = 0; i < left; i++) {
+      uint32 selector = selectors[i];
+      uint8 d0 = D8[selector >> 16 & 0xFF00 | selected_selector >> 24 & 0xFF];
+      uint8 d1 = D8[selector >> 8 & 0xFF00 | selected_selector >> 16 & 0xFF];
+      uint8 d2 = D8[selector & 0xFF00 | selected_selector >> 8 & 0xFF];
+      uint8 d3 = D8[selector << 8 & 0xFF00 | selected_selector & 0xFF];
+      uint error = d0 + d1 + d2 + d3;
+      if (error < min_error) {
+        min_error = error;
+        selected_index = i;
+      }
+    }
+    selected_selector = selectors[selected_index];
+    remapping[indices[selected_index]] = n - left;
+    left--;
+    selectors[selected_index] = selectors[left];
+    indices[selected_index] = indices[left];
   }
 
-  uint n = m_color_endpoints.size();
+  pack_color_selectors(m_packed_color_selectors, remapping);
+}
+
+void crn_comp::optimize_color() {
+  uint16 n = m_color_endpoints.size();
   crnlib::vector<uint> hist(n * n);
   crnlib::vector<uint> sum(n);
   for (uint i, i_prev = 0, b = 0; b < m_endpoint_indices.size(); b++, i_prev = i) {
@@ -912,23 +767,24 @@ bool crn_comp::optimize_color_endpoints(crnlib::vector<uint>& remapping) {
       sum[i_prev]++;
     }
   }
-  uint selected = 0;
-  for (uint best_sum = 0, i = 0; i < n; i++) {
+  uint16 selected = 0;
+  uint best_sum = 0;
+  for (uint16 i = 0; i < n; i++) {
     if (best_sum < sum[i]) {
       best_sum = sum[i];
       selected = i;
     }
   }
-  crnlib::vector<optimize_color_endpoints_params::unpacked_endpoint> unpacked_endpoints(n);
-  for (uint i = 0; i < n; i++) {
+  crnlib::vector<optimize_color_params::unpacked_endpoint> unpacked_endpoints(n);
+  for (uint16 i = 0; i < n; i++) {
     unpacked_endpoints[i].low = dxt1_block::unpack_color(m_color_endpoints[i] & 0xFFFF, true);
     unpacked_endpoints[i].high = dxt1_block::unpack_color(m_color_endpoints[i] >> 16, true);
   }
 
-  optimize_color_endpoints_params::result remapping_trial[4];
+  optimize_color_params::result remapping_trial[4];
   float weights[4] = {0, 0, 1.0f / 6.0f, 0.5f};
   for (uint i = 0; i < 4; i++) {
-    optimize_color_endpoints_params* pParams = crnlib_new<optimize_color_endpoints_params>();
+    optimize_color_params* pParams = crnlib_new<optimize_color_params>();
     pParams->unpacked_endpoints = unpacked_endpoints.get_ptr();
     pParams->hist = hist.get_ptr();
     pParams->n = n;
@@ -942,59 +798,75 @@ bool crn_comp::optimize_color_endpoints(crnlib::vector<uint>& remapping) {
   for (uint best_bits = cUINT32_MAX, i = 0; i < 4; i++) {
     if (remapping_trial[i].total_bits < best_bits) {
       m_packed_color_endpoints.swap(remapping_trial[i].packed_endpoints);
-      remapping.swap(remapping_trial[i].remapping);
+      m_endpoint_remaping[cColor].swap(remapping_trial[i].endpoint_remapping);
       best_bits = remapping_trial[i].total_bits;
     }
   }
-  return true;
 }
 
-bool crn_comp::optimize_color_selectors(crnlib::vector<uint>& remapping) {
-  if (m_pParams->m_flags & cCRNCompFlagQuick) {
-    remapping.resize(m_color_selectors.size());
-    for (uint i = 0; i < m_color_selectors.size(); i++)
-      remapping[i] = i;
-  } else {
-    sort_color_selectors(remapping);
-  }
-  return pack_color_selectors(m_packed_color_selectors, remapping);
-}
-
-struct optimize_alpha_endpoints_params {
+struct optimize_alpha_params {
   struct unpacked_endpoint {
     uint8 low, high;
   };
   const unpacked_endpoint* unpacked_endpoints;
   const uint* hist;
-  uint n;
-  uint selected;
+  uint16 n;
+  uint16 selected;
   float weight;
   struct result {
-    crnlib::vector<uint> remapping;
+    crnlib::vector<uint16> endpoint_remapping;
     crnlib::vector<uint8> packed_endpoints;
     uint total_bits;
   } *pResult;
 };
 
-static void remap_alpha_endpoints(uint* remapping, const optimize_alpha_endpoints_params::unpacked_endpoint* unpacked_endpoints, const uint* hist, uint n, uint selected, float weight) {
+static void sort_alpha_endpoints(crnlib::vector<uint16>& remapping, const optimize_alpha_params::unpacked_endpoint* unpacked_endpoints, uint16 n) {
+  remapping.resize(n);
+  crnlib::vector<optimize_alpha_params::unpacked_endpoint> endpoints(n);
+  crnlib::vector<uint16> indices(n);
+  for (uint16 i = 0; i < n; i++) {
+    endpoints[i] = unpacked_endpoints[i];
+    indices[i] = i;
+  }
+  optimize_alpha_params::unpacked_endpoint selected_endpoint = {0, 0};
+  for (uint16 left = n; left;) {
+    uint16 selected_index = 0;
+    uint min_error = cUINT32_MAX;
+    for (uint16 i = 0; i < left; i++) {
+      optimize_alpha_params::unpacked_endpoint& endpoint = endpoints[i];
+      uint error = math::square(endpoint.low - selected_endpoint.low) + math::square(endpoint.high - selected_endpoint.high);
+      if (error < min_error) {
+        min_error = error;
+        selected_index = i;
+      }
+    }
+    selected_endpoint = endpoints[selected_index];
+    remapping[indices[selected_index]] = n - left;
+    left--;
+    endpoints[selected_index] = endpoints[left];
+    indices[selected_index] = indices[left];
+  }
+}
+
+static void remap_alpha_endpoints(uint16* remapping, const optimize_alpha_params::unpacked_endpoint* unpacked_endpoints, const uint* hist, uint16 n, uint16 selected, float weight) {
   const uint* frequency = hist + selected * n;
   crnlib::vector<uint16> chosen, remaining;
   crnlib::vector<uint> total_frequency(n);
   chosen.push_back(selected);
-  for (uint i = 0; i < n; i++) {
+  for (uint16 i = 0; i < n; i++) {
     if (i != selected) {
       remaining.push_back(i);
       total_frequency[i] = frequency[i];
     }
   }
   for (uint similarity_base = (uint)(1000 * (1.0f + weight)), total_frequency_normalizer = 0; remaining.size();) {
-    const optimize_alpha_endpoints_params::unpacked_endpoint& e_front = unpacked_endpoints[chosen.front()];
-    const optimize_alpha_endpoints_params::unpacked_endpoint& e_back = unpacked_endpoints[chosen.back()];
-    uint selected_index;
+    const optimize_alpha_params::unpacked_endpoint& e_front = unpacked_endpoints[chosen.front()];
+    const optimize_alpha_params::unpacked_endpoint& e_back = unpacked_endpoints[chosen.back()];
+    uint16 selected_index;
     uint64 best_value = 0, selected_similarity_front, selected_similarity_back;
-    for (uint i = 0; i < remaining.size(); i++) {
+    for (uint16 i = 0; i < remaining.size(); i++) {
       uint remaining_index = remaining[i];
-      const optimize_alpha_endpoints_params::unpacked_endpoint& e_remaining = unpacked_endpoints[remaining_index];
+      const optimize_alpha_params::unpacked_endpoint& e_remaining = unpacked_endpoints[remaining_index];
       uint error_front = math::square(e_remaining.low - e_front.low) + math::square(e_remaining.high - e_front.high);
       uint error_back = math::square(e_remaining.low - e_back.low) + math::square(e_remaining.high - e_back.high);
       uint64 similarity_front = similarity_base - math::minimum<uint>(error_front, 1000);
@@ -1021,23 +893,24 @@ static void remap_alpha_endpoints(uint* remapping, const optimize_alpha_endpoint
       chosen.push_back(selected);
     }
     remaining.erase(remaining.begin() + selected_index);
-    for (uint i = 0; i < remaining.size(); i++)
+    for (uint16 i = 0; i < remaining.size(); i++)
       total_frequency[remaining[i]] += frequency[remaining[i]];
   }
-  for (uint i = 0; i < n; i++)
+  for (uint16 i = 0; i < n; i++)
     remapping[chosen[i]] = i;
 }
 
 void crn_comp::optimize_alpha_endpoints_task(uint64 data, void* pData_ptr) {
-  optimize_alpha_endpoints_params* pParams = reinterpret_cast<optimize_alpha_endpoints_params*>(pData_ptr);
-  crnlib::vector<uint>& remapping = pParams->pResult->remapping;
-  uint n = pParams->n;
+  optimize_alpha_params* pParams = reinterpret_cast<optimize_alpha_params*>(pData_ptr);
+  crnlib::vector<uint16>& remapping = pParams->pResult->endpoint_remapping;
+  uint16 n = pParams->n;
   remapping.resize(n);
 
   if (data) {
     remap_alpha_endpoints(remapping.get_ptr(), pParams->unpacked_endpoints, pParams->hist, n, pParams->selected, pParams->weight);
   } else {
-    sort_alpha_endpoint_codebook(remapping, m_alpha_endpoints);
+    sort_alpha_endpoints(remapping, pParams->unpacked_endpoints, n);
+    optimize_alpha_selectors();
   }
 
   pack_alpha_endpoints(pParams->pResult->packed_endpoints, remapping);
@@ -1069,7 +942,7 @@ void crn_comp::optimize_alpha_endpoints_task(uint64 data, void* pData_ptr) {
   static_huffman_data_model dm;
   dm.init(true, n, hist.get_ptr(), 16);
   const uint8* code_sizes = dm.get_code_sizes();
-  for (uint s = 0; s < n; s++)
+  for (uint16 s = 0; s < n; s++)
     total_bits += hist[s] * code_sizes[s];
 
   symbol_codec codec;
@@ -1084,15 +957,49 @@ void crn_comp::optimize_alpha_endpoints_task(uint64 data, void* pData_ptr) {
   crnlib_delete(pParams);
 }
 
-bool crn_comp::optimize_alpha_endpoints(crnlib::vector<uint>& remapping) {
-  if (m_pParams->m_flags & cCRNCompFlagQuick) {
-    remapping.resize(m_alpha_endpoints.size());
-    for (uint i = 0; i < m_alpha_endpoints.size(); i++)
-      remapping[i] = i;
-    return pack_alpha_endpoints(m_packed_alpha_endpoints, remapping);
+void crn_comp::optimize_alpha_selectors() {
+  crnlib::vector<uint16>& remapping = m_selector_remaping[cAlpha0];
+  uint16 n = m_alpha_selectors.size();
+  remapping.resize(n);
+
+  uint8 D6[0x1000];
+  for (uint16 i = 0; i < 0x1000; i++) {
+    int d0 = (i & 7) - (i >> 6 & 7);
+    int d1 = (i >> 3 & 7) - (i >> 9 & 7);
+    D6[i] = d0 * d0 + d1 * d1;
   }
 
-  uint n = m_alpha_endpoints.size();
+  crnlib::vector<uint64> selectors(n);
+  crnlib::vector<uint16> indices(n);
+  for (uint16 i = 0; i < n; i++) {
+    selectors[i] = m_alpha_selectors[i];
+    indices[i] = i;
+  }
+  uint64 selected_selector = 0;
+  for (uint16 left = n; left;) {
+    uint16 selected_index = 0;
+    uint min_error = cUINT32_MAX;
+    for (uint16 i = 0; i < left; i++) {
+      uint error = 0;
+      for (uint64 selector = selectors[i] << 6, delta_selector = selected_selector, j = 0; j < 8; j++, selector >>= 6, delta_selector >>= 6)
+        error += D6[selector & 0xFC0 | delta_selector & 0x3F];
+      if (error < min_error) {
+        min_error = error;
+        selected_index = i;
+      }
+    }
+    selected_selector = selectors[selected_index];
+    remapping[indices[selected_index]] = n - left;
+    left--;
+    selectors[selected_index] = selectors[left];
+    indices[selected_index] = indices[left];
+  }
+
+  pack_alpha_selectors(m_packed_alpha_selectors, remapping);
+}
+
+void crn_comp::optimize_alpha() {
+  uint16 n = m_alpha_endpoints.size();
   crnlib::vector<uint> hist(n * n);
   crnlib::vector<uint> sum(n);
   bool hasAlpha0 = m_has_comp[cAlpha0], hasAlpha1 = m_has_comp[cAlpha1];
@@ -1114,23 +1021,24 @@ bool crn_comp::optimize_alpha_endpoints(crnlib::vector<uint>& remapping) {
       }
     }
   }
-  uint selected = 0;
-  for (uint best_sum = 0, i = 0; i < n; i++) {
+  uint16 selected = 0;
+  uint best_sum = 0;
+  for (uint16 i = 0; i < n; i++) {
     if (best_sum < sum[i]) {
       best_sum = sum[i];
       selected = i;
     }
   }
-  crnlib::vector<optimize_alpha_endpoints_params::unpacked_endpoint> unpacked_endpoints(n);
-  for (uint i = 0; i < n; i++) {
+  crnlib::vector<optimize_alpha_params::unpacked_endpoint> unpacked_endpoints(n);
+  for (uint16 i = 0; i < n; i++) {
     unpacked_endpoints[i].low = dxt5_block::unpack_endpoint(m_alpha_endpoints[i], 0);
     unpacked_endpoints[i].high = dxt5_block::unpack_endpoint(m_alpha_endpoints[i], 1);
   }
 
-  optimize_alpha_endpoints_params::result remapping_trial[4];
+  optimize_alpha_params::result remapping_trial[4];
   float weights[4] = {0, 0, 1.0f / 6.0f, 0.5f};
   for (uint i = 0; i < 4; i++) {
-    optimize_alpha_endpoints_params* pParams = crnlib_new<optimize_alpha_endpoints_params>();
+    optimize_alpha_params* pParams = crnlib_new<optimize_alpha_params>();
     pParams->unpacked_endpoints = unpacked_endpoints.get_ptr();
     pParams->hist = hist.get_ptr();
     pParams->n = n;
@@ -1144,22 +1052,10 @@ bool crn_comp::optimize_alpha_endpoints(crnlib::vector<uint>& remapping) {
   for (uint best_bits = cUINT32_MAX, i = 0; i < 4; i++) {
     if (remapping_trial[i].total_bits < best_bits) {
       m_packed_alpha_endpoints.swap(remapping_trial[i].packed_endpoints);
-      remapping.swap(remapping_trial[i].remapping);
+      m_endpoint_remaping[cAlpha0].swap(remapping_trial[i].endpoint_remapping);
       best_bits = remapping_trial[i].total_bits;
     }
   }
-  return true;
-}
-
-bool crn_comp::optimize_alpha_selectors(crnlib::vector<uint>& remapping) {
-  if (m_pParams->m_flags & cCRNCompFlagQuick) {
-    remapping.resize(m_alpha_selectors.size());
-    for (uint i = 0; i < m_alpha_selectors.size(); i++)
-      remapping[i] = i;
-  } else {
-    sort_alpha_selectors(remapping);
-  }
-  return pack_alpha_selectors(m_packed_alpha_selectors, remapping);
 }
 
 bool crn_comp::pack_data_models() {
@@ -1186,6 +1082,24 @@ bool crn_comp::pack_data_models() {
   m_packed_data_models.swap(codec.get_encoding_buf());
 
   return true;
+}
+
+void crn_comp::append_vec(crnlib::vector<uint8>& a, const void* p, uint size) {
+  if (size) {
+    uint ofs = a.size();
+    a.resize(ofs + size);
+
+    memcpy(&a[ofs], p, size);
+  }
+}
+
+void crn_comp::append_vec(crnlib::vector<uint8>& a, const crnlib::vector<uint8>& b) {
+  if (!b.empty()) {
+    uint ofs = a.size();
+    a.resize(ofs + b.size());
+
+    memcpy(&a[ofs], &b[0], b.size());
+  }
 }
 
 bool crn_comp::create_comp_data() {
@@ -1282,30 +1196,21 @@ bool crn_comp::compress_internal() {
   if (!quantize_images())
     return false;
 
-  crnlib::vector<uint> endpoint_remap[2];
-  crnlib::vector<uint> selector_remap[2];
-
-  if (m_has_comp[cColor]) {
-    if (!optimize_color_endpoints(endpoint_remap[0]))
-      return false;
-    if (!optimize_color_selectors(selector_remap[0]))
-      return false;
-  }
-
-  if (m_has_comp[cAlpha0]) {
-    if (!optimize_alpha_endpoints(endpoint_remap[1]))
-      return false;
-    if (!optimize_alpha_selectors(selector_remap[1]))
-      return false;
-  }
-
   m_reference_hist.clear();
   for (uint i = 0; i < 2; i++) {
+    m_endpoint_remaping[i].clear();
     m_endpoint_index_hist[i].clear();
     m_endpoint_index_dm[i].clear();
+    m_selector_remaping[i].clear();
     m_selector_index_hist[i].clear();
     m_selector_index_dm[i].clear();
   }
+
+  if (m_has_comp[cColor])
+    optimize_color();
+
+  if (m_has_comp[cAlpha0])
+    optimize_alpha();
 
   for (uint pass = 0; pass < 2; pass++) {
     for (uint level = 0; level < m_levels.size(); level++) {
@@ -1315,8 +1220,8 @@ bool crn_comp::compress_internal() {
       if (!pack_blocks(
           level,
           !pass && !level, pass ? &codec : NULL,
-          m_has_comp[cColor] ? &endpoint_remap[0] : NULL, m_has_comp[cColor] ? &selector_remap[0] : NULL,
-          m_has_comp[cAlpha0] ? &endpoint_remap[1] : NULL, m_has_comp[cAlpha0] ? &selector_remap[1] : NULL)) {
+          m_has_comp[cColor] ? &m_endpoint_remaping[cColor] : NULL, m_has_comp[cColor] ? &m_selector_remaping[cColor] : NULL,
+          m_has_comp[cAlpha0] ? &m_endpoint_remaping[cAlpha0] : NULL, m_has_comp[cAlpha0] ? &m_selector_remaping[cAlpha0] : NULL)) {
         return false;
       }
 

@@ -69,11 +69,13 @@ class crn_comp : public itexture_comp {
   symbol_histogram m_reference_hist;
   static_huffman_data_model m_reference_dm;
 
+  crnlib::vector<uint16> m_endpoint_remaping[2];
   symbol_histogram m_endpoint_index_hist[2];
-  static_huffman_data_model m_endpoint_index_dm[2];  // color, alpha
+  static_huffman_data_model m_endpoint_index_dm[2];
 
+  crnlib::vector<uint16> m_selector_remaping[2];
   symbol_histogram m_selector_index_hist[2];
-  static_huffman_data_model m_selector_index_dm[2];  // color, alpha
+  static_huffman_data_model m_selector_index_dm[2];
 
   crnlib::vector<uint8> m_packed_blocks[cCRNMaxLevels];
   crnlib::vector<uint8> m_packed_data_models;
@@ -82,52 +84,39 @@ class crn_comp : public itexture_comp {
   crnlib::vector<uint8> m_packed_alpha_endpoints;
   crnlib::vector<uint8> m_packed_alpha_selectors;
 
-  void clear();
-
-  void sort_color_endpoint_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoints);
-  void sort_alpha_endpoint_codebook(crnlib::vector<uint>& remapping, const crnlib::vector<uint>& endpoints);
-
-  bool pack_color_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping);
-  bool pack_alpha_endpoints(crnlib::vector<uint8>& data, const crnlib::vector<uint>& remapping);
-
-  void sort_color_selectors(crnlib::vector<uint>& remapping);
-  void sort_alpha_selectors(crnlib::vector<uint>& remapping);
-
-  bool pack_color_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint>& remapping);
-  bool pack_alpha_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint>& remapping);
+  bool pack_color_endpoints(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping);
+  bool pack_color_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping);
+  bool pack_alpha_endpoints(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping);
+  bool pack_alpha_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping);
+  bool pack_blocks(
+    uint group,
+    bool clear_histograms,
+    symbol_codec* pCodec,
+    const crnlib::vector<uint16>* pColor_endpoint_remap,
+    const crnlib::vector<uint16>* pColor_selector_remap,
+    const crnlib::vector<uint16>* pAlpha_endpoint_remap,
+    const crnlib::vector<uint16>* pAlpha_selector_remap
+  );
 
   bool alias_images();
+  void clear();
   bool quantize_images();
 
-  bool pack_blocks(
-      uint group,
-      bool clear_histograms,
-      symbol_codec* pCodec,
-      const crnlib::vector<uint>* pColor_endpoint_remap,
-      const crnlib::vector<uint>* pColor_selector_remap,
-      const crnlib::vector<uint>* pAlpha_endpoint_remap,
-      const crnlib::vector<uint>* pAlpha_selector_remap);
-
   void optimize_color_endpoints_task(uint64 data, void* pData_ptr);
-  bool optimize_color_endpoints(crnlib::vector<uint>& remapping);
-
-  bool optimize_color_selectors(crnlib::vector<uint>& remapping);
+  void optimize_color_selectors();
+  void optimize_color();
 
   void optimize_alpha_endpoints_task(uint64 data, void* pData_ptr);
-  bool optimize_alpha_endpoints(crnlib::vector<uint>& remapping);
-
-  bool optimize_alpha_selectors(crnlib::vector<uint>& remapping);
-
-  bool create_comp_data();
+  void optimize_alpha_selectors();
+  void optimize_alpha();
 
   bool pack_data_models();
-
-  bool update_progress(uint phase_index, uint subphase_index, uint subphase_total);
-
-  bool compress_internal();
-
   static void append_vec(crnlib::vector<uint8>& a, const void* p, uint size);
   static void append_vec(crnlib::vector<uint8>& a, const crnlib::vector<uint8>& b);
+  bool create_comp_data();
+
+  bool update_progress(uint phase_index, uint subphase_index, uint subphase_total);
+  bool compress_internal();
 };
 
 }  // namespace crnlib
