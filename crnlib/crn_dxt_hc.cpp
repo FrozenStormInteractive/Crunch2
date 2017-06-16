@@ -663,33 +663,28 @@ struct color_selector_details {
 void dxt_hc::create_color_selector_codebook_task(uint64 data, void* pData_ptr) {
   crnlib::vector<color_selector_details>& selector_details = *static_cast<crnlib::vector<color_selector_details>*>(pData_ptr);
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
-  uint errors[16][4];
+  uint E2[16][4];
+  uint E4[8][16];
+  uint E8[4][256];
   for (uint b = m_num_blocks * data / num_tasks, bEnd = m_num_blocks * (data + 1) / num_tasks; b < bEnd; b++) {
     color_cluster& cluster = m_color_clusters[m_endpoint_indices[b].color];
     color_quad_u8* endpoint_colors = cluster.color_values;
     for (uint p = 0; p < 16; p++) {
       for (uint s = 0; s < 4; s++)
-        errors[p][s] = color::color_distance(m_params.m_perceptual, m_blocks[b][p], endpoint_colors[s], false);
+        E2[p][s] = color::color_distance(m_params.m_perceptual, m_blocks[b][p], endpoint_colors[s], false);
+    }
+    for (uint p = 0; p < 8; p++) {
+      for (uint s = 0; s < 16; s++)
+        E4[p][s] = E2[p << 1][s & 3] + E2[p << 1 | 1][s >> 2];
+    }
+    for (uint p = 0; p < 4; p++) {
+      for (uint s = 0; s < 256; s++)
+        E8[p][s] = E4[p << 1][s & 15] + E4[p << 1 | 1][s >> 4];
     }
     uint best_index = 0;
     for (uint best_error = cUINT32_MAX, s = 0; s < m_color_selectors.size(); s++) {
       uint32 selector = m_color_selectors[s];
-      uint error = errors[0][selector & 3];
-      error += errors[ 1][(selector >>  2) & 3];
-      error += errors[ 2][(selector >>  4) & 3];
-      error += errors[ 3][(selector >>  6) & 3];
-      error += errors[ 4][(selector >>  8) & 3];
-      error += errors[ 5][(selector >> 10) & 3];
-      error += errors[ 6][(selector >> 12) & 3];
-      error += errors[ 7][(selector >> 14) & 3];
-      error += errors[ 8][(selector >> 16) & 3];
-      error += errors[ 9][(selector >> 18) & 3];
-      error += errors[10][(selector >> 20) & 3];
-      error += errors[11][(selector >> 22) & 3];
-      error += errors[12][(selector >> 24) & 3];
-      error += errors[13][(selector >> 26) & 3];
-      error += errors[14][(selector >> 28) & 3];
-      error += errors[15][(selector >> 30) & 3];
+      uint error = E8[0][selector & 255] + E8[1][selector >> 8 & 255] + E8[2][selector >> 16 & 255] + E8[3][selector >> 24 & 255];
       if (error < best_error) {
         best_error = error;
         best_index = s;
@@ -698,7 +693,7 @@ void dxt_hc::create_color_selector_codebook_task(uint64 data, void* pData_ptr) {
     uint (&total_errors)[16][4] = selector_details[best_index].error;
     for (uint p = 0; p < 16; p++) {
       for (uint s = 0; s < 4; s++)
-        total_errors[p][s] += errors[p][s];
+        total_errors[p][s] += E2[p][s];
     }
     selector_details[best_index].used = true;
     m_selector_indices[b].color = best_index;
@@ -764,7 +759,8 @@ struct alpha_selector_details {
 void dxt_hc::create_alpha_selector_codebook_task(uint64 data, void* pData_ptr) {
   crnlib::vector<alpha_selector_details>& selector_details = *static_cast<crnlib::vector<alpha_selector_details>*>(pData_ptr);
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
-  uint errors[16][8];
+  uint E3[16][8];
+  uint E6[8][64];
   for (uint b = m_num_blocks * data / num_tasks, bEnd = m_num_blocks * (data + 1) / num_tasks; b < bEnd; b++) {
     for (uint c = cAlpha0; c < cAlpha0 + m_num_alpha_blocks; c++) {
       const uint alpha_pixel_comp = m_params.m_alpha_component_indices[c - cAlpha0];
@@ -773,28 +769,24 @@ void dxt_hc::create_alpha_selector_codebook_task(uint64 data, void* pData_ptr) {
       for (uint p = 0; p < 16; p++) {
         for (uint s = 0; s < 8; s++) {
           int delta = m_blocks[b][p][alpha_pixel_comp] - block_values[s];
-          errors[p][s] = delta * delta;
+          E3[p][s] = delta * delta;
         }
+      }
+      for (uint p = 0; p < 8; p++) {
+        for (uint s = 0; s < 64; s++)
+          E6[p][s] = E3[p << 1][s & 7] + E3[p << 1 | 1][s >> 3];
       }
       uint best_index = 0;
       for (uint best_error = cUINT32_MAX, s = 0; s < m_alpha_selectors.size(); s++) {
         uint64 selector = m_alpha_selectors[s];
-        uint error = errors[0][selector & 7];
-        error += errors[ 1][(selector >>  3) & 7];
-        error += errors[ 2][(selector >>  6) & 7];
-        error += errors[ 3][(selector >>  9) & 7];
-        error += errors[ 4][(selector >> 12) & 7];
-        error += errors[ 5][(selector >> 15) & 7];
-        error += errors[ 6][(selector >> 18) & 7];
-        error += errors[ 7][(selector >> 21) & 7];
-        error += errors[ 8][(selector >> 24) & 7];
-        error += errors[ 9][(selector >> 27) & 7];
-        error += errors[10][(selector >> 30) & 7];
-        error += errors[11][(selector >> 33) & 7];
-        error += errors[12][(selector >> 36) & 7];
-        error += errors[13][(selector >> 39) & 7];
-        error += errors[14][(selector >> 42) & 7];
-        error += errors[15][(selector >> 45) & 7];
+        uint error = E6[0][selector & 63];
+        error += E6[1][selector >> 6 & 63];
+        error += E6[2][selector >> 12 & 63];
+        error += E6[3][selector >> 18 & 63];
+        error += E6[4][selector >> 24 & 63];
+        error += E6[5][selector >> 30 & 63];
+        error += E6[6][selector >> 36 & 63];
+        error += E6[7][selector >> 42 & 63];
         if (error < best_error) {
           best_error = error;
           best_index = s;
@@ -805,14 +797,14 @@ void dxt_hc::create_alpha_selector_codebook_task(uint64 data, void* pData_ptr) {
         for (uint p = 0; p < 16; p++) {
           for (uint s = 0; s < 8; s++) {
             int delta = m_blocks[b][p][alpha_pixel_comp] - block_values[s];
-            errors[p][s] = delta * delta;
+            E3[p][s] = delta * delta;
           }
         }
       }
       uint (&total_errors)[16][8] = selector_details[best_index].error;
       for (uint p = 0; p < 16; p++) {
         for (uint s = 0; s < 8; s++)
-         total_errors[p][s] += errors[p][s];
+         total_errors[p][s] += E3[p][s];
       }
       selector_details[best_index].used = true;
       m_selector_indices[b].component[c] = best_index;
