@@ -560,11 +560,6 @@ bool process(convert_params& params, convert_stats& stats) {
   else if (dst_format == PIXEL_FMT_DXT1A)
     comp_params.set_flag(cCRNCompFlagDXT1AForTransparency, true);
 
-  if ((dst_format == PIXEL_FMT_ETC1) && (params.m_dst_file_type == texture_file_types::cFormatCRN)) {
-    console::warning("CRN file format does not support ETC1 compressed textures - converting to DXT1 instead.");
-    dst_format = PIXEL_FMT_DXT1;
-  }
-
   if ((dst_format == PIXEL_FMT_DXT1A) && (params.m_dst_file_type == texture_file_types::cFormatCRN)) {
     console::warning("CRN file format does not support DXT1A compressed textures - converting to DXT5 instead.");
     dst_format = PIXEL_FMT_DXT5;

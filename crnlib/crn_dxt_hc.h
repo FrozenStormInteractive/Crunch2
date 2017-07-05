@@ -184,8 +184,10 @@ class dxt_hc {
   int m_prev_percentage_complete;
 
   void determine_tiles_task(uint64 data, void* pData_ptr);
+  void determine_tiles_task_etc(uint64 data, void* pData_ptr);
 
   void determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr);
+  void determine_color_endpoint_codebook_task_etc(uint64 data, void* pData_ptr);
   void determine_color_endpoint_clusters_task(uint64 data, void* pData_ptr);
   void determine_color_endpoints();
 

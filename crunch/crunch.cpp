@@ -478,8 +478,11 @@ class crunch {
         } else {
           texture_file_types::format input_file_type = texture_file_types::determine_file_format(in_filename.get_ptr());
           if (input_file_type == texture_file_types::cFormatCRN) {
-            // Automatically transcode CRN->DXTc and write to DDS files, unless the user specifies either the /fileformat or /split options.
             out_file_type = texture_file_types::cFormatDDS;
+            cfile_stream in_stream;
+            crnd::crn_header in_header;
+            if (in_stream.open(in_filename.get_ptr()) && in_stream.read(&in_header, sizeof(in_header)) == sizeof(in_header) && in_header.m_format == cCRNFmtETC1)
+              out_file_type = texture_file_types::cFormatKTX;
           } else if (input_file_type == texture_file_types::cFormatKTX) {
             // Default to converting KTX files to PNG
             out_file_type = texture_file_types::cFormatPNG;

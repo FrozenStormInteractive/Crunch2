@@ -85,6 +85,7 @@ class crn_comp : public itexture_comp {
   crnlib::vector<uint8> m_packed_alpha_selectors;
 
   bool pack_color_endpoints(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping);
+  bool pack_color_endpoints_etc(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping);
   bool pack_color_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping);
   bool pack_alpha_endpoints(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping);
   bool pack_alpha_selectors(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping);

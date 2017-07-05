@@ -90,6 +90,30 @@ bool crn_comp::pack_color_endpoints(crnlib::vector<uint8>& packed_data, const cr
   return true;
 }
 
+bool crn_comp::pack_color_endpoints_etc(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping) {
+  crnlib::vector<uint32> remapped_endpoints(m_color_endpoints.size());
+  for (uint i = 0; i < m_color_endpoints.size(); i++)
+    remapped_endpoints[remapping[i]] = m_color_endpoints[i] & 0x07000000 | m_color_endpoints[i] >> 3 & 0x001F1F1F;
+
+  symbol_histogram hist(32);
+  for (uint32 prev_endpoint = 0, p = 0; p < remapped_endpoints.size(); p++) {
+    for (uint32 _e = prev_endpoint, e = prev_endpoint = remapped_endpoints[p], c = 0; c < 4; c++, _e >>= 8, e >>= 8)
+      hist.inc_freq(e - _e & 0x1F);
+  }
+  static_huffman_data_model dm;
+  dm.init(true, hist, 15);
+  symbol_codec codec;
+  codec.start_encoding(1024 * 1024);
+  codec.encode_transmit_static_huffman_data_model(dm, false);
+  for (uint32 prev_endpoint = 0, p = 0; p < remapped_endpoints.size(); p++) {
+    for (uint32 _e = prev_endpoint, e = prev_endpoint = remapped_endpoints[p], c = 0; c < 4; c++, _e >>= 8, e >>= 8)
+      codec.encode(e - _e & 0x1F, dm);
+  }
+  codec.stop_encoding(false);
+  packed_data.swap(codec.get_encoding_buf());
+  return true;
+}
+
 bool crn_comp::pack_alpha_endpoints(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping) {
   crnlib::vector<uint> remapped_endpoints(m_alpha_endpoints.size());
 
@@ -167,7 +191,7 @@ bool crn_comp::pack_color_selectors(crnlib::vector<uint8>& packed_data, const cr
   for (uint selector_index = 0; selector_index < m_color_selectors.size(); selector_index++) {
     uint32 cur_selector = remapped_selectors[selector_index];
     uint prev_sym = 0;
-    for (uint32 selector = cur_selector, i = 0; i < 16; i++, selector >>= 2, prev_selector >>= 2) {
+    for (uint32 selector = cur_selector, s = m_pParams->m_format == cCRNFmtETC1 ? 8 : 16, i = 0; i < s; i++, selector >>= 2, prev_selector >>= 2) {
       int sym = 3 + (selector & 3) - (prev_selector & 3);
       if (i & 1) {
         uint paired_sym = 7 * sym + prev_sym;
@@ -300,7 +324,7 @@ bool crn_comp::pack_blocks(
       for (uint c = 0; c < cNumComps; c++) {
         if (endpoint_remap[c]) {
           uint index = (*endpoint_remap[c])[m_endpoint_indices[b].component[c]];
-          if (!m_endpoint_indices[b].reference) {
+          if (m_pParams->m_format == cCRNFmtETC1 ? !(bx & 1) || m_endpoint_indices[b].reference : !m_endpoint_indices[b].reference) {
             int sym = index - endpoint_index[c];
             if (sym < 0)
               sym += endpoint_remap[c]->size();
@@ -352,7 +376,7 @@ bool crn_comp::alias_images() {
   m_total_blocks = 0;
   for (uint level = 0; level < m_pParams->m_levels; level++) {
     uint blockHeight = (math::maximum(1U, m_pParams->m_height >> level) + 7 & ~7) >> 2;
-    m_levels[level].block_width = (math::maximum(1U, m_pParams->m_width >> level) + 7 & ~7) >> 2;
+    m_levels[level].block_width = (math::maximum(1U, m_pParams->m_width >> level) + 7 & ~7) >> (m_pParams->m_format == cCRNFmtETC1 ? 1 : 2);
     m_levels[level].first_block = m_total_blocks;
     m_levels[level].num_blocks = m_pParams->m_faces * m_levels[level].block_width * blockHeight;
     m_total_blocks += m_levels[level].num_blocks;
@@ -431,11 +455,15 @@ bool crn_comp::quantize_images() {
       color_quality_power_mul = 3.5f;
       alpha_quality_power_mul = .35f;
       params.m_adaptive_tile_color_psnr_derating = 5.0f;
-    } else if (m_pParams->m_format == cCRNFmtDXT5)
+    } else if (m_pParams->m_format == cCRNFmtDXT5) {
       color_quality_power_mul = .75f;
+    } else if (m_pParams->m_format == cCRNFmtETC1) {
+      color_quality_power_mul = 1.6f;
+      params.m_adaptive_tile_color_psnr_derating = 5.0f;
+    }
 
     float color_endpoint_quality = powf(quality, 1.8f * color_quality_power_mul);
-    float color_selector_quality = powf(quality, 1.65f * color_quality_power_mul);
+    float color_selector_quality = powf(quality, 1.65f * color_quality_power_mul * (m_pParams->m_format == cCRNFmtETC1 ? 2 : 1));
     params.m_color_endpoint_codebook_size = math::clamp<uint>(math::float_to_uint(.5f + math::lerp<float>(math::maximum<float>(64, cCRNMinPaletteSize), (float)max_codebook_entries, color_endpoint_quality)), cCRNMinPaletteSize, cCRNMaxPaletteSize);
     params.m_color_selector_codebook_size = math::clamp<uint>(math::float_to_uint(.5f + math::lerp<float>(math::maximum<float>(96, cCRNMinPaletteSize), (float)max_codebook_entries, color_selector_quality)), cCRNMinPaletteSize, cCRNMaxPaletteSize);
 
@@ -522,8 +550,9 @@ bool crn_comp::quantize_images() {
       break;
     }
     case cCRNFmtETC1: {
-      console::warning("crn_comp::quantize_images: This class does not support ETC1");
-      return false;
+      params.m_format = cETC1;
+      m_has_comp[cColor] = true;
+      break;
     }
     default: {
       return false;
@@ -674,7 +703,7 @@ void crn_comp::optimize_color_endpoints_task(uint64 data, void* pData_ptr) {
     optimize_color_selectors();
   }
 
-  pack_color_endpoints(pParams->pResult->packed_endpoints, remapping);
+  m_pParams->m_format == cCRNFmtETC1 ? pack_color_endpoints_etc(pParams->pResult->packed_endpoints, remapping) : pack_color_endpoints(pParams->pResult->packed_endpoints, remapping);
   uint total_bits = pParams->pResult->packed_endpoints.size() << 3;
 
   crnlib::vector<uint> hist(n);
@@ -760,7 +789,7 @@ void crn_comp::optimize_color() {
   crnlib::vector<uint> sum(n);
   for (uint i, i_prev = 0, b = 0; b < m_endpoint_indices.size(); b++, i_prev = i) {
     i = m_endpoint_indices[b].color;
-    if (!m_endpoint_indices[b].reference && i != i_prev) {
+    if ((!m_endpoint_indices[b].reference || m_pParams->m_format == cCRNFmtETC1) && i != i_prev) {
       hist[i * n + i_prev]++;
       hist[i_prev * n + i]++;
       sum[i]++;
@@ -777,8 +806,8 @@ void crn_comp::optimize_color() {
   }
   crnlib::vector<optimize_color_params::unpacked_endpoint> unpacked_endpoints(n);
   for (uint16 i = 0; i < n; i++) {
-    unpacked_endpoints[i].low = dxt1_block::unpack_color(m_color_endpoints[i] & 0xFFFF, true);
-    unpacked_endpoints[i].high = dxt1_block::unpack_color(m_color_endpoints[i] >> 16, true);
+    unpacked_endpoints[i].low.m_u32 = m_pParams->m_format == cCRNFmtETC1 ? m_color_endpoints[i] & 0xFFFFFF : dxt1_block::unpack_color(m_color_endpoints[i] & 0xFFFF, true).m_u32;
+    unpacked_endpoints[i].high.m_u32 = m_pParams->m_format == cCRNFmtETC1 ? m_color_endpoints[i] >> 24 : dxt1_block::unpack_color(m_color_endpoints[i] >> 16, true).m_u32;
   }
 
   optimize_color_params::result remapping_trial[4];

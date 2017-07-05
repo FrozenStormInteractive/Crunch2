@@ -5,6 +5,7 @@
 #include "crn_image_utils.h"
 #include "crn_console.h"
 #include "crn_dxt_fast.h"
+#include "crn_etc.h"
 
 namespace crnlib {
 
@@ -76,7 +77,7 @@ bool dxt_hc::compress(
     const params& p
   ) {
   clear();
-  m_has_color_blocks = p.m_format == cDXT1 || p.m_format == cDXT5;
+  m_has_color_blocks = p.m_format == cDXT1 || p.m_format == cDXT5 || p.m_format == cETC1;
   m_num_alpha_blocks = p.m_format == cDXT5 || p.m_format == cDXT5A ? 1 : p.m_format == cDXN_XY || p.m_format == cDXN_YX ? 2 : 0;
   if (!m_has_color_blocks && !m_num_alpha_blocks)
     return false;
@@ -115,7 +116,7 @@ bool dxt_hc::compress(
   }
 
   for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
-    m_pTask_pool->queue_object_task(this, &dxt_hc::determine_tiles_task, i);
+    m_pTask_pool->queue_object_task(this, m_params.m_format == cETC1 ? &dxt_hc::determine_tiles_task_etc : &dxt_hc::determine_tiles_task, i);
   m_pTask_pool->join();
 
   m_num_tiles = 0;
@@ -141,7 +142,8 @@ bool dxt_hc::compress(
   hash_map<uint32, uint> color_endpoints_map;
   for (uint i = 0; i < m_color_clusters.size(); i++) {
     if (m_color_clusters[i].pixels.size()) {
-      uint32 endpoint = dxt1_block::pack_endpoints(m_color_clusters[i].first_endpoint, m_color_clusters[i].second_endpoint);
+      uint32 endpoint = m_params.m_format == cETC1 ? m_color_clusters[i].first_endpoint :
+        dxt1_block::pack_endpoints(m_color_clusters[i].first_endpoint, m_color_clusters[i].second_endpoint);
       hash_map<uint32, uint>::insert_result insert_result = color_endpoints_map.insert(endpoint, color_endpoints.size());
       if (insert_result.second) {
         color_endpoints_remap[i] = color_endpoints.size();
@@ -216,7 +218,7 @@ bool dxt_hc::compress(
           uint16 selector_index = (c ? alpha_selectors_remap : color_selectors_remap)[m_selector_indices[b].component[c]];
           selector_indices[b].component[c] = selector_index;
         }
-        endpoint_indices[b].reference = left_match ? 1 : top_match ? 2 : 0;
+        endpoint_indices[b].reference = m_params.m_format == cETC1 ? m_endpoint_indices[b].reference : left_match ? 1 : top_match ? 2 : 0;
       }
     }
   }
@@ -370,6 +372,99 @@ void dxt_hc::determine_tiles_task(uint64 data, void* pData_ptr) {
   }
 }
 
+void dxt_hc::determine_tiles_task_etc(uint64 data, void* pData_ptr) {
+  uint num_tasks = m_pTask_pool->get_num_threads() + 1;
+  uint offsets[5] = {0, 8, 16, 24, 16};
+  uint8 tiles[3][2] = {{4}, {2, 3}, {0, 1}};
+  uint8 tile_map[3][2] = {{ 0, 0 }, { 0, 1 }, { 0, 1 }};
+  color_quad_u8 tilePixels[32];
+  uint8 selectors[32];
+  uint tile_error[5];
+  uint total_error[3];
+  tree_clusterizer<vec3F> color_palettizer;
+
+  etc1_optimizer optimizer;
+  etc1_optimizer::params params;
+  params.m_use_color4 = false;
+  params.m_constrain_against_base_color5 = false;
+  etc1_optimizer::results results;
+  results.m_pSelectors = selectors;
+  int scan[] = {-1, 0, 1};
+  int refine[] = {-3, -2, 2, 3};
+
+  for (uint level = 0; level < m_params.m_num_levels; level++) {
+    float weight = m_params.m_levels[level].m_weight;
+    uint b = m_params.m_levels[level].m_first_block + m_params.m_levels[level].m_num_blocks * data / num_tasks & ~1;
+    uint bEnd = m_params.m_levels[level].m_first_block + m_params.m_levels[level].m_num_blocks * (data + 1) / num_tasks & ~1;
+    for (; b < bEnd; b += 2) {
+      for (uint p = 0; p < 16; p++)
+        tilePixels[p] = m_blocks[b >> 1][p << 2 & 12 | p >> 2];
+      memcpy(tilePixels + 16, m_blocks[b >> 1], 64);
+      for (uint t = 0; t < 5; t++) {
+        params.m_pSrc_pixels = tilePixels + offsets[t];
+        params.m_num_src_pixels = results.m_n = 8 << (t >> 2);
+        optimizer.init(params, results);
+        params.m_pScan_deltas = scan;
+        params.m_scan_delta_size = sizeof(scan) / sizeof(*scan);
+        optimizer.compute();
+        if (results.m_error > 375 * params.m_num_src_pixels) {
+          params.m_pScan_deltas = refine;
+          params.m_scan_delta_size = sizeof(refine) / sizeof(*refine);
+          optimizer.compute();
+        }
+        tile_error[t] = results.m_error;
+      }
+
+      for (uint8 e = 0; e < 3; e++) {
+        total_error[e] = 0;
+        for (uint8 t = 0, s = e + 1; s; s >>= 1, t++)
+          total_error[e] += tile_error[tiles[e][t]];
+      }
+
+      float best_quality = 0.0f;
+      uint best_encoding = 0;
+      for (uint e = 0; e < 3; e++) {
+        float quality = 0;
+        double peakSNR = total_error[e] ? log10(255.0f / sqrt(total_error[e] / 48.0)) * 20.0f : 999999.0f;
+        quality = (float)math::maximum<double>(peakSNR - m_color_derating[level][e], 0.0f);
+        if (quality > best_quality) {
+          best_quality = quality;
+          best_encoding = e;
+        }
+      }
+
+      for (uint tile_index = 0, s = best_encoding + 1; s; s >>= 1, tile_index++) {
+        tile_details& tile = m_tiles[b | tile_index];
+        uint t = tiles[best_encoding][tile_index];
+        tile.pixels.append(tilePixels + offsets[t], 8 << (t >> 2));
+        tile.weight = weight;
+        color_palettizer.clear();
+        for (uint p = 0; p < tile.pixels.size(); p++) {
+          const color_quad_u8& pixel = tile.pixels[p];
+          vec3F v(m_uint8_to_float[pixel[0]], m_uint8_to_float[pixel[1]], m_uint8_to_float[pixel[2]]);
+          color_palettizer.add_training_vec(m_params.m_perceptual ? vec3F(v[0] * 0.5f, v[1], v[2] * 0.25f) : v, 1);
+        }
+        color_palettizer.generate_codebook(2);
+        bool single = color_palettizer.get_codebook_size() == 1;
+        bool reorder = !single && color_palettizer.get_codebook_entry(0).length() > color_palettizer.get_codebook_entry(1).length();
+        for (uint t = 0, i = 0; i < 2; i++) {
+          vec3F v = color_palettizer.get_codebook_entry(single ? 0 : reorder ? 1 - i : i);
+          for (uint c = 0; c < 3; c++, t++)
+            tile.color_endpoint[t] = v[c];
+        }
+      }
+
+      for (uint bx = 0; bx < 2; bx++) {
+        m_block_encodings[b | bx] = best_encoding;
+        m_tile_indices[b | bx] = b | tile_map[best_encoding][bx];
+        m_endpoint_indices[b | bx].reference = bx ? best_encoding : 0;
+      }
+      if (best_encoding >> 1)
+        memcpy(m_blocks[b >> 1], tilePixels, 64);
+    }
+  }
+}
+
 void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr) {
   pData_ptr;
   const uint thread_index = static_cast<uint>(data);
@@ -467,6 +562,75 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
   }
 }
 
+void dxt_hc::determine_color_endpoint_codebook_task_etc(uint64 data, void* pData_ptr) {
+  uint num_tasks = m_pTask_pool->get_num_threads() + 1;
+  uint8 delta[8][2] = { {2, 8}, {5, 17}, {9, 29}, {13, 42}, {18, 60}, {24, 80}, {33, 106}, {47, 183} };
+  int scan[] = {-1, 0, 1};
+  int refine[] = {-3, -2, 2, 3};
+  for (uint iCluster = m_color_clusters.size() * data / num_tasks, iEnd = m_color_clusters.size() * (data + 1) / num_tasks; iCluster < iEnd; iCluster++) {
+    color_cluster& cluster = m_color_clusters[iCluster];
+    if (cluster.pixels.size()) {
+      etc1_optimizer optimizer;
+      etc1_optimizer::params params;
+      params.m_use_color4 = false;
+      params.m_constrain_against_base_color5 = false;
+      etc1_optimizer::results results;
+      crnlib::vector<uint8> selectors(cluster.pixels.size());
+      params.m_pSrc_pixels = cluster.pixels.get_ptr();
+      results.m_pSelectors = selectors.get_ptr();
+      results.m_n = params.m_num_src_pixels = cluster.pixels.size();
+      optimizer.init(params, results);
+      params.m_pScan_deltas = scan;
+      params.m_scan_delta_size = sizeof(scan) / sizeof(*scan);
+      optimizer.compute();
+      if (results.m_error > 375 * params.m_num_src_pixels) {
+        params.m_pScan_deltas = refine;
+        params.m_scan_delta_size = sizeof(refine) / sizeof(*refine);
+        optimizer.compute();
+      }
+      color_quad_u8 endpoint;
+      for (int c = 0; c < 3; c++)
+        endpoint.c[c] = results.m_block_color_unscaled.c[c] << 3 | results.m_block_color_unscaled.c[c] >> 2;
+      endpoint.c[3] = results.m_block_inten_table;
+      cluster.first_endpoint = endpoint.m_u32;
+      for (uint8 d0 = delta[endpoint.c[3]][0], d1 = delta[endpoint.c[3]][1], c = 0; c < 3; c++) {
+        uint8 q = endpoint.c[c];
+        cluster.color_values[0].c[c] = q <= d1 ? 0 : q - d1;
+        cluster.color_values[1].c[c] = q <= d0 ? 0 : q - d0;
+        cluster.color_values[2].c[c] = q >= 255 - d0 ? 255 : q + d0;
+        cluster.color_values[3].c[c] = q >= 255 - d1 ? 255 : q + d1;
+      }
+      for (int t = 0; t < 4; t++)
+        cluster.color_values[t].c[3] = 0xFF;
+      uint endpoint_weight = color::color_distance(m_params.m_perceptual, cluster.color_values[0], cluster.color_values[3], false) / 2000;
+
+      float encoding_weight[8];
+      for (uint i = 0; i < 8; i++)
+        encoding_weight[i] = math::lerp(1.15f, 1.0f, i / 7.0f);
+
+      crnlib::vector<uint>& blocks = cluster.blocks[cColor];
+      for (uint i = 0; i < blocks.size(); i++) {
+        uint b = blocks[i];
+        uint weight = (uint)(math::clamp<uint>(endpoint_weight * m_block_weights[b], 1, 2048) * encoding_weight[m_block_encodings[b]]);
+        uint32 selector = 0;
+        for (uint sh = 0, p = 0; p < 8; p++, sh += 2) {
+          uint error_best = cUINT32_MAX;
+          uint8 s_best = 0;
+          for (uint8 s = 0; s < 4; s++) {
+            uint error = color::color_distance(m_params.m_perceptual, ((color_quad_u8(*)[8])m_blocks)[b][p], cluster.color_values[s], false);
+            if (error < error_best) {
+              s_best = s;
+              error_best = error;
+            }
+          }
+          selector |= s_best << sh;
+        }
+        m_block_selectors[cColor][b] = selector | (uint64)weight << 32;
+      }
+    }
+  }
+}
+
 void dxt_hc::determine_color_endpoint_clusters_task(uint64 data, void* pData_ptr) {
   tree_clusterizer<vec6F>* vq = (tree_clusterizer<vec6F>*)pData_ptr;
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
@@ -499,10 +663,19 @@ void dxt_hc::determine_color_endpoints() {
     uint cluster_index = m_tiles[m_tile_indices[b]].cluster_indices[cColor];
     m_endpoint_indices[b].component[cColor] = cluster_index;
     m_color_clusters[cluster_index].blocks[cColor].push_back(b);
+    if (m_params.m_format == cETC1 && m_endpoint_indices[b].reference && cluster_index == m_endpoint_indices[b - 1].component[cColor]) {
+      if (m_endpoint_indices[b].reference >> 1) {
+        color_quad_u8 mirror[16];
+        for (uint p = 0; p < 16; p++)
+          mirror[p] = m_blocks[b >> 1][p << 2 & 12 | p >> 2];
+        memcpy(m_blocks[b >> 1], mirror, 64);
+      }
+      m_endpoint_indices[b].reference = 0;
+    }
   }
 
   for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
-    m_pTask_pool->queue_object_task(this, &dxt_hc::determine_color_endpoint_codebook_task, i, NULL);
+    m_pTask_pool->queue_object_task(this, m_params.m_format == cETC1 ? &dxt_hc::determine_color_endpoint_codebook_task_etc : &dxt_hc::determine_color_endpoint_codebook_task, i, NULL);
   m_pTask_pool->join();
 }
 
@@ -671,7 +844,8 @@ void dxt_hc::create_color_selector_codebook_task(uint64 data, void* pData_ptr) {
     color_quad_u8* endpoint_colors = cluster.color_values;
     for (uint p = 0; p < 16; p++) {
       for (uint s = 0; s < 4; s++)
-        E2[p][s] = color::color_distance(m_params.m_perceptual, m_blocks[b][p], endpoint_colors[s], false);
+        E2[p][s] = m_params.m_format == cETC1 ? p & 8 ? 0 : color::color_distance(m_params.m_perceptual, ((color_quad_u8(*)[8])m_blocks)[b][p], endpoint_colors[s], false) :
+          color::color_distance(m_params.m_perceptual, m_blocks[b][p], endpoint_colors[s], false);
     }
     for (uint p = 0; p < 8; p++) {
       for (uint s = 0; s < 16; s++)
