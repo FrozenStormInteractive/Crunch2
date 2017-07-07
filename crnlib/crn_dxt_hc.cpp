@@ -839,12 +839,12 @@ void dxt_hc::create_color_selector_codebook_task(uint64 data, void* pData_ptr) {
   uint E2[16][4];
   uint E4[8][16];
   uint E8[4][256];
-  for (uint b = m_num_blocks * data / num_tasks, bEnd = m_num_blocks * (data + 1) / num_tasks; b < bEnd; b++) {
+  for (uint n = m_params.m_format == cETC1 ? m_num_blocks >> 1 : m_num_blocks, b = n * data / num_tasks, bEnd = n * (data + 1) / num_tasks; b < bEnd; b++) {
     color_cluster& cluster = m_color_clusters[m_endpoint_indices[b].color];
     color_quad_u8* endpoint_colors = cluster.color_values;
     for (uint p = 0; p < 16; p++) {
       for (uint s = 0; s < 4; s++)
-        E2[p][s] = m_params.m_format == cETC1 ? p & 8 ? 0 : color::color_distance(m_params.m_perceptual, ((color_quad_u8(*)[8])m_blocks)[b][p], endpoint_colors[s], false) :
+        E2[p][s] = m_params.m_format == cETC1 ? color::color_distance(m_params.m_perceptual, m_blocks[b][p], m_color_clusters[m_endpoint_indices[b << 1 | p >> 3].color].color_values[s], false) :
           color::color_distance(m_params.m_perceptual, m_blocks[b][p], endpoint_colors[s], false);
     }
     for (uint p = 0; p < 8; p++) {
@@ -870,18 +870,18 @@ void dxt_hc::create_color_selector_codebook_task(uint64 data, void* pData_ptr) {
         total_errors[p][s] += E2[p][s];
     }
     selector_details[best_index].used = true;
-    m_selector_indices[b].color = best_index;
+    m_selector_indices[m_params.m_format == cETC1 ? b << 1 : b].color = best_index;
   }
 }
 
 void dxt_hc::create_color_selector_codebook() {
   tree_clusterizer<vec16F> selector_vq;
   vec16F v;
-  for (uint b = 0; b < m_num_blocks; b++) {
-    uint64 selector = m_block_selectors[cColor][b];
+  for (uint n = m_params.m_format == cETC1 ? m_num_blocks >> 1 : m_num_blocks, b = 0; b < n; b++) {
+    uint64 selector = m_params.m_format == cETC1 ? m_block_selectors[cColor][b << 1] | m_block_selectors[cColor][b << 1 | 1] << 16 : m_block_selectors[cColor][b];
     for (uint8 p = 0; p < 16; p++, selector >>= 2)
       v[p] = ((selector & 3) + 0.5f) * 0.25f;
-    selector_vq.add_training_vec(v, selector);
+    selector_vq.add_training_vec(v, m_params.m_format == cETC1 ? (selector & 0xFFFF) + (selector >> 16) : selector);
   }
   selector_vq.generate_codebook(m_params.m_color_selector_codebook_size);
   m_color_selectors.resize(selector_vq.get_codebook_size());

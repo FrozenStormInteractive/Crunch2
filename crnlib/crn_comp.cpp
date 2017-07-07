@@ -191,7 +191,7 @@ bool crn_comp::pack_color_selectors(crnlib::vector<uint8>& packed_data, const cr
   for (uint selector_index = 0; selector_index < m_color_selectors.size(); selector_index++) {
     uint32 cur_selector = remapped_selectors[selector_index];
     uint prev_sym = 0;
-    for (uint32 selector = cur_selector, s = m_pParams->m_format == cCRNFmtETC1 ? 8 : 16, i = 0; i < s; i++, selector >>= 2, prev_selector >>= 2) {
+    for (uint32 selector = cur_selector, i = 0; i < 16; i++, selector >>= 2, prev_selector >>= 2) {
       int sym = 3 + (selector & 3) - (prev_selector & 3);
       if (i & 1) {
         uint paired_sym = 7 * sym + prev_sym;
@@ -337,7 +337,7 @@ bool crn_comp::pack_blocks(
         }
       }
       for (uint c = 0; c < cNumComps; c++) {
-        if (selector_remap[c]) {
+        if (selector_remap[c] && (m_pParams->m_format != cCRNFmtETC1 || !(bx & 1))) {
           uint index = (*selector_remap[c])[m_selector_indices[b].component[c]];
           if (!pCodec)
             m_selector_index_hist[c ? 1 : 0].inc_freq(index);
@@ -458,12 +458,12 @@ bool crn_comp::quantize_images() {
     } else if (m_pParams->m_format == cCRNFmtDXT5) {
       color_quality_power_mul = .75f;
     } else if (m_pParams->m_format == cCRNFmtETC1) {
-      color_quality_power_mul = 1.6f;
+      color_quality_power_mul = 1.28f;
       params.m_adaptive_tile_color_psnr_derating = 5.0f;
     }
 
     float color_endpoint_quality = powf(quality, 1.8f * color_quality_power_mul);
-    float color_selector_quality = powf(quality, 1.65f * color_quality_power_mul * (m_pParams->m_format == cCRNFmtETC1 ? 2 : 1));
+    float color_selector_quality = powf(quality, 1.65f * color_quality_power_mul);
     params.m_color_endpoint_codebook_size = math::clamp<uint>(math::float_to_uint(.5f + math::lerp<float>(math::maximum<float>(64, cCRNMinPaletteSize), (float)max_codebook_entries, color_endpoint_quality)), cCRNMinPaletteSize, cCRNMaxPaletteSize);
     params.m_color_selector_codebook_size = math::clamp<uint>(math::float_to_uint(.5f + math::lerp<float>(math::maximum<float>(96, cCRNMinPaletteSize), (float)max_codebook_entries, color_selector_quality)), cCRNMinPaletteSize, cCRNMaxPaletteSize);
 
