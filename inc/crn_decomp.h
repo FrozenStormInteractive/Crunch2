@@ -3188,19 +3188,6 @@ class crn_unpacker {
     if (!m_codec.decode_receive_static_data_model(dm))
       return false;
 
-    int32 delta0[cMaxUniqueSelectorDeltas * cMaxUniqueSelectorDeltas];
-    int32 delta1[cMaxUniqueSelectorDeltas * cMaxUniqueSelectorDeltas];
-    int32 l = -(int32)cMaxSelectorValue, m = -(int32)cMaxSelectorValue;
-    for (uint32 i = 0; i < (cMaxUniqueSelectorDeltas * cMaxUniqueSelectorDeltas); i++) {
-      delta0[i] = l;
-      delta1[i] = m;
-
-      if (++l > (int32)cMaxSelectorValue) {
-        l = -(int32)cMaxSelectorValue;
-        m++;
-      }
-    }
-
     uint32 cur[16];
     utils::zero_object(cur);
 
@@ -3214,8 +3201,8 @@ class crn_unpacker {
     for (uint32 i = 0; i < num_color_selectors; i++) {
       for (uint32 j = 0; j < 8; j++) {
         int32 sym = m_codec.decode(dm);
-        cur[j * 2 + 0] = (delta0[sym] + cur[j * 2 + 0]) & 3;
-        cur[j * 2 + 1] = (delta1[sym] + cur[j * 2 + 1]) & 3;
+        cur[j * 2 + 0] = cur[j * 2 + 0] + (sym & 3) & 3;
+        cur[j * 2 + 1] = cur[j * 2 + 1] + (sym >> 2) & 3;
       }
 
       *pDst++ =
@@ -3270,19 +3257,6 @@ class crn_unpacker {
     if (!m_codec.decode_receive_static_data_model(dm))
       return false;
 
-    int32 delta0[cMaxUniqueSelectorDeltas * cMaxUniqueSelectorDeltas];
-    int32 delta1[cMaxUniqueSelectorDeltas * cMaxUniqueSelectorDeltas];
-    int32 l = -(int32)cMaxSelectorValue, m = -(int32)cMaxSelectorValue;
-    for (uint32 i = 0; i < (cMaxUniqueSelectorDeltas * cMaxUniqueSelectorDeltas); i++) {
-      delta0[i] = l;
-      delta1[i] = m;
-
-      if (++l > (int32)cMaxSelectorValue) {
-        l = -(int32)cMaxSelectorValue;
-        m++;
-      }
-    }
-
     uint32 cur[16];
     utils::zero_object(cur);
 
@@ -3296,8 +3270,8 @@ class crn_unpacker {
     for (uint32 i = 0; i < num_alpha_selectors; i++) {
       for (uint32 j = 0; j < 8; j++) {
         int32 sym = m_codec.decode(dm);
-        cur[j * 2 + 0] = (delta0[sym] + cur[j * 2 + 0]) & 7;
-        cur[j * 2 + 1] = (delta1[sym] + cur[j * 2 + 1]) & 7;
+        cur[j * 2 + 0] = cur[j * 2 + 0] + (sym & 7) & 7;
+        cur[j * 2 + 1] = cur[j * 2 + 1] + (sym >> 3) & 7;
       }
 
       *pDst++ = (uint16)((pFrom_linear[cur[0]]) | (pFrom_linear[cur[1]] << 3) | (pFrom_linear[cur[2]] << 6) | (pFrom_linear[cur[3]] << 9) |
