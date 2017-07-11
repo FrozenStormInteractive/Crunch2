@@ -218,7 +218,7 @@ bool dxt_hc::compress(
           uint16 selector_index = (c ? alpha_selectors_remap : color_selectors_remap)[m_selector_indices[b].component[c]];
           selector_indices[b].component[c] = selector_index;
         }
-        endpoint_indices[b].reference = m_params.m_format == cETC1 ? m_endpoint_indices[b].reference : left_match ? 1 : top_match ? 2 : 0;
+        endpoint_indices[b].reference = m_params.m_format == cETC1 && (b & 1) ? m_endpoint_indices[b].reference : left_match ? 1 : top_match ? 2 : 0;
       }
     }
   }

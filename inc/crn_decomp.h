@@ -3567,15 +3567,21 @@ class crn_unpacker {
           if (y & 1) {
             endpoint_reference = buffer.endpoint_reference;
           } else {
-            reference_group = m_codec.decode(m_reference_encoding_dm) >> 4;
-            endpoint_reference = reference_group & 3;
-            reference_group >>= 2;
-            buffer.endpoint_reference = reference_group & 3;
-            reference_group >>= 2;
+            reference_group = m_codec.decode(m_reference_encoding_dm);
+            endpoint_reference = reference_group & 3 | reference_group >> 2 & 12;
+            buffer.endpoint_reference = reference_group >> 2 & 3 | reference_group >> 4 & 12;
           }
-          color_endpoint_index += m_codec.decode(m_endpoint_delta_dm[0]);
-          if (color_endpoint_index >= num_color_endpoints)
-            color_endpoint_index -= num_color_endpoints;
+          if (!(endpoint_reference & 3)) {
+            color_endpoint_index += m_codec.decode(m_endpoint_delta_dm[0]);
+            if (color_endpoint_index >= num_color_endpoints)
+              color_endpoint_index -= num_color_endpoints;
+            buffer.color_endpoint_index = color_endpoint_index;
+          } else if ((endpoint_reference & 3) == 1) {
+            buffer.color_endpoint_index = color_endpoint_index;
+          } else {
+            color_endpoint_index = buffer.color_endpoint_index;
+          }
+          endpoint_reference >>= 2;
           *(uint32*)&e0 = m_color_endpoints[color_endpoint_index];
           uint32 selector = m_color_selectors[m_codec.decode(m_selector_delta_dm[0])];
           if (endpoint_reference) {

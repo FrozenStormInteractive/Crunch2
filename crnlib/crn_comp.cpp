@@ -324,7 +324,7 @@ bool crn_comp::pack_blocks(
       for (uint c = 0; c < cNumComps; c++) {
         if (endpoint_remap[c]) {
           uint index = (*endpoint_remap[c])[m_endpoint_indices[b].component[c]];
-          if (m_pParams->m_format == cCRNFmtETC1 ? !(bx & 1) || m_endpoint_indices[b].reference : !m_endpoint_indices[b].reference) {
+          if (m_pParams->m_format == cCRNFmtETC1 && (b & 1) ? m_endpoint_indices[b].reference : !m_endpoint_indices[b].reference) {
             int sym = index - endpoint_index[c];
             if (sym < 0)
               sym += endpoint_remap[c]->size();
@@ -710,7 +710,7 @@ void crn_comp::optimize_color_endpoints_task(uint64 data, void* pData_ptr) {
   for (uint level = 0; level < m_levels.size(); level++) {
     for (uint endpoint_index = 0, b = m_levels[level].first_block, bEnd = b + m_levels[level].num_blocks; b < bEnd; b++) {
       uint index = remapping[m_endpoint_indices[b].component[cColor]];
-      if (!m_endpoint_indices[b].reference) {
+      if (m_pParams->m_format == cCRNFmtETC1 && (b & 1) ? m_endpoint_indices[b].reference : !m_endpoint_indices[b].reference) {
         int sym = index - endpoint_index;
         hist[sym < 0 ? sym + n : sym]++;
       }
@@ -787,7 +787,7 @@ void crn_comp::optimize_color() {
   crnlib::vector<uint> sum(n);
   for (uint i, i_prev = 0, b = 0; b < m_endpoint_indices.size(); b++, i_prev = i) {
     i = m_endpoint_indices[b].color;
-    if ((!m_endpoint_indices[b].reference || m_pParams->m_format == cCRNFmtETC1) && i != i_prev) {
+    if ((m_pParams->m_format == cCRNFmtETC1 && (b & 1) ? m_endpoint_indices[b].reference : !m_endpoint_indices[b].reference) && i != i_prev) {
       hist[i * n + i_prev]++;
       hist[i_prev * n + i]++;
       sum[i]++;
