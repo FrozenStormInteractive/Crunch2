@@ -210,15 +210,17 @@ bool dxt_hc::compress(
       for (uint bx = 0; bx < block_width; bx++, b++) {
         bool top_match = by != 0;
         bool left_match = top_match || bx;
+        bool diag_match = m_params.m_format == cETC1 && top_match && bx;
         for (uint c = m_has_color_blocks ? 0 : cAlpha0; c < cAlpha0 + m_num_alpha_blocks; c++) {
           uint16 endpoint_index = (c ? alpha_endpoints_remap : color_endpoints_remap)[m_endpoint_indices[b].component[c]];
           left_match = left_match && endpoint_index == endpoint_indices[b - 1].component[c];
           top_match = top_match && endpoint_index == endpoint_indices[b - block_width].component[c];
+          diag_match = diag_match && endpoint_index == endpoint_indices[b - block_width - 1].component[c];
           endpoint_indices[b].component[c] = endpoint_index;
           uint16 selector_index = (c ? alpha_selectors_remap : color_selectors_remap)[m_selector_indices[b].component[c]];
           selector_indices[b].component[c] = selector_index;
         }
-        endpoint_indices[b].reference = m_params.m_format == cETC1 && (b & 1) ? m_endpoint_indices[b].reference : left_match ? 1 : top_match ? 2 : 0;
+        endpoint_indices[b].reference = m_params.m_format == cETC1 && (b & 1) ? m_endpoint_indices[b].reference : left_match ? 1 : top_match ? 2 : diag_match ? 3 : 0;
       }
     }
   }

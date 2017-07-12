@@ -3550,10 +3550,10 @@ class crn_unpacker {
     const uint32 height = output_height + 1 & ~1;
     const int32 delta_pitch_in_dwords = (output_pitch_in_bytes >> 2) - (width << 1);
 
-    if (m_block_buffer.size() < width)
-      m_block_buffer.resize(width);
+    if (m_block_buffer.size() < width << 1)
+      m_block_buffer.resize(width << 1);
 
-    uint32 color_endpoint_index = 0;
+    uint32 color_endpoint_index = 0, diagonal_color_endpoint_index = 0;
     uint8 reference_group = 0;
 
     for (uint32 f = 0; f < m_pHeader->m_faces; f++) {
@@ -3562,7 +3562,7 @@ class crn_unpacker {
         bool visible = y < output_height;
         for (uint32 x = 0; x < width; x++, pData += 2) {
           visible = visible && x < output_width;
-          block_buffer_element &buffer = m_block_buffer[x];
+          block_buffer_element &buffer = m_block_buffer[x << 1];
           uint8 endpoint_reference, block_endpoint[4], e0[4], e1[4];
           if (y & 1) {
             endpoint_reference = buffer.endpoint_reference;
@@ -3578,6 +3578,8 @@ class crn_unpacker {
             buffer.color_endpoint_index = color_endpoint_index;
           } else if ((endpoint_reference & 3) == 1) {
             buffer.color_endpoint_index = color_endpoint_index;
+          } else if ((endpoint_reference & 3) == 3) {
+            buffer.color_endpoint_index = color_endpoint_index = diagonal_color_endpoint_index;
           } else {
             color_endpoint_index = buffer.color_endpoint_index;
           }
@@ -3589,6 +3591,8 @@ class crn_unpacker {
             if (color_endpoint_index >= num_color_endpoints)
               color_endpoint_index -= num_color_endpoints;
           }
+          diagonal_color_endpoint_index = m_block_buffer[x << 1 | 1].color_endpoint_index;
+          m_block_buffer[x << 1 | 1].color_endpoint_index = color_endpoint_index;
           *(uint32*)&e1 = m_color_endpoints[color_endpoint_index];
           if (visible) {
             uint32 block_selector = 0, flip = endpoint_reference >> 1 ^ 1, diff = 1;
