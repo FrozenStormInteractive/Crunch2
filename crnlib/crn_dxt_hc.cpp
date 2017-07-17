@@ -604,16 +604,12 @@ void dxt_hc::determine_color_endpoint_codebook_task_etc(uint64 data, void* pData
       }
       for (int t = 0; t < 4; t++)
         cluster.color_values[t].c[3] = 0xFF;
-      uint endpoint_weight = color::color_distance(m_params.m_perceptual, cluster.color_values[0], cluster.color_values[3], false) / 2000;
-
-      float encoding_weight[8];
-      for (uint i = 0; i < 8; i++)
-        encoding_weight[i] = math::lerp(1.15f, 1.0f, i / 7.0f);
+      float endpoint_weight = powf(math::minimum((cluster.color_values[3].get_luma() - cluster.color_values[0].get_luma()) / 100.0f, 1.0f), 2.7f);
 
       crnlib::vector<uint>& blocks = cluster.blocks[cColor];
       for (uint i = 0; i < blocks.size(); i++) {
         uint b = blocks[i];
-        uint weight = (uint)(math::clamp<uint>(endpoint_weight * m_block_weights[b], 1, 2048) * encoding_weight[m_block_encodings[b]]);
+        uint weight = (uint)(math::clamp<uint>(0x8000 * endpoint_weight * m_block_weights[b] * (m_block_encodings[b] ? 0.972f : 1.0f), 1, 0xFFFF));
         uint32 selector = 0;
         for (uint sh = 0, p = 0; p < 8; p++, sh += 2) {
           uint error_best = cUINT32_MAX;

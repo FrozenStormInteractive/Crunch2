@@ -458,7 +458,7 @@ bool crn_comp::quantize_images() {
     } else if (m_pParams->m_format == cCRNFmtDXT5) {
       color_quality_power_mul = .75f;
     } else if (m_pParams->m_format == cCRNFmtETC1) {
-      color_quality_power_mul = 1.28f;
+      color_quality_power_mul = 1.31f;
       params.m_adaptive_tile_color_psnr_derating = 5.0f;
     }
 
