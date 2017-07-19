@@ -3176,44 +3176,27 @@ class crn_unpacker {
   }
 
   bool decode_color_selectors() {
-    const uint32 cMaxSelectorValue = 3U;
-    const uint32 cMaxUniqueSelectorDeltas = cMaxSelectorValue * 2U + 1U;
-
-    const uint32 num_color_selectors = m_pHeader->m_color_selectors.m_num;
-
-    if (!m_codec.start_decoding(m_pData + m_pHeader->m_color_selectors.m_ofs, m_pHeader->m_color_selectors.m_size))
-      return false;
-
+    m_codec.start_decoding(m_pData + m_pHeader->m_color_selectors.m_ofs, m_pHeader->m_color_selectors.m_size);
     static_huffman_data_model dm;
-    if (!m_codec.decode_receive_static_data_model(dm))
-      return false;
-
-    uint32 cur[16];
-    utils::zero_object(cur);
-
-    if (!m_color_selectors.resize(num_color_selectors))
-      return false;
-
-    uint32* CRND_RESTRICT pDst = &m_color_selectors[0];
-
-    const uint8* pFrom_linear = m_pHeader->m_format == cCRNFmtETC1 ? g_etc1_from_linear : g_dxt1_from_linear;
-
-    for (uint32 i = 0; i < num_color_selectors; i++) {
-      for (uint32 j = 0; j < 8; j++) {
-        int32 sym = m_codec.decode(dm);
-        cur[j * 2 + 0] = cur[j * 2 + 0] + (sym & 3) & 3;
-        cur[j * 2 + 1] = cur[j * 2 + 1] + (sym >> 2) & 3;
+    m_codec.decode_receive_static_data_model(dm);
+    m_color_selectors.resize(m_pHeader->m_color_selectors.m_num << (m_pHeader->m_format == cCRNFmtETC1 ? 1 : 0));
+    for (uint32 s = 0, i = 0; i < m_pHeader->m_color_selectors.m_num; i++) {
+      for (uint32 j = 0; j < 32; j += 4)
+        s ^= m_codec.decode(dm) << j;
+      if (m_pHeader->m_format == cCRNFmtETC1) {
+        for (uint32 selector = ~s & 0xAAAAAAAA | ~(s ^ s >> 1) & 0x55555555, t = 8, h = 0; h < 4; h++, t -= 15) {
+          for (uint32 w = 0; w < 4; w++, t += 4) {
+            uint32 s0 = selector >> (w << 3 | h << 1);
+            m_color_selectors[i << 1] |= (s0 >> 1 & 1 | (s0 & 1) << 16) << (t & 15);
+            uint32 s1 = selector >> (h << 3 | w << 1);
+            m_color_selectors[i << 1 | 1] |= (s1 >> 1 & 1 | (s1 & 1) << 16) << (t & 15);
+          }
+        }
+      } else {
+        m_color_selectors[i] = (s ^ s << 1) & 0xAAAAAAAA | s >> 1 & 0x55555555;
       }
-
-      *pDst++ =
-          (pFrom_linear[cur[0]]) | (pFrom_linear[cur[1]] << 2) | (pFrom_linear[cur[2]] << 4) | (pFrom_linear[cur[3]] << 6) |
-          (pFrom_linear[cur[4]] << 8) | (pFrom_linear[cur[5]] << 10) | (pFrom_linear[cur[6]] << 12) | (pFrom_linear[cur[7]] << 14) |
-          (pFrom_linear[cur[8]] << 16) | (pFrom_linear[cur[9]] << 18) | (pFrom_linear[cur[10]] << 20) | (pFrom_linear[cur[11]] << 22) |
-          (pFrom_linear[cur[12]] << 24) | (pFrom_linear[cur[13]] << 26) | (pFrom_linear[cur[14]] << 28) | (pFrom_linear[cur[15]] << 30);
     }
-
     m_codec.stop_decoding();
-
     return true;
   }
 
@@ -3245,47 +3228,24 @@ class crn_unpacker {
   }
 
   bool decode_alpha_selectors() {
-    const uint32 cMaxSelectorValue = 7U;
-    const uint32 cMaxUniqueSelectorDeltas = cMaxSelectorValue * 2U + 1U;
-
-    const uint32 num_alpha_selectors = m_pHeader->m_alpha_selectors.m_num;
-
-    if (!m_codec.start_decoding(m_pData + m_pHeader->m_alpha_selectors.m_ofs, m_pHeader->m_alpha_selectors.m_size))
-      return false;
-
+    m_codec.start_decoding(m_pData + m_pHeader->m_alpha_selectors.m_ofs, m_pHeader->m_alpha_selectors.m_size);
     static_huffman_data_model dm;
-    if (!m_codec.decode_receive_static_data_model(dm))
-      return false;
-
-    uint32 cur[16];
-    utils::zero_object(cur);
-
-    if (!m_alpha_selectors.resize(num_alpha_selectors * 3))
-      return false;
-
-    uint16* CRND_RESTRICT pDst = &m_alpha_selectors[0];
-
-    const uint8* pFrom_linear = g_dxt5_from_linear;
-
-    for (uint32 i = 0; i < num_alpha_selectors; i++) {
-      for (uint32 j = 0; j < 8; j++) {
-        int32 sym = m_codec.decode(dm);
-        cur[j * 2 + 0] = cur[j * 2 + 0] + (sym & 7) & 7;
-        cur[j * 2 + 1] = cur[j * 2 + 1] + (sym >> 3) & 7;
-      }
-
-      *pDst++ = (uint16)((pFrom_linear[cur[0]]) | (pFrom_linear[cur[1]] << 3) | (pFrom_linear[cur[2]] << 6) | (pFrom_linear[cur[3]] << 9) |
-                         (pFrom_linear[cur[4]] << 12) | (pFrom_linear[cur[5]] << 15));
-
-      *pDst++ = (uint16)((pFrom_linear[cur[5]] >> 1) | (pFrom_linear[cur[6]] << 2) | (pFrom_linear[cur[7]] << 5) |
-                         (pFrom_linear[cur[8]] << 8) | (pFrom_linear[cur[9]] << 11) | (pFrom_linear[cur[10]] << 14));
-
-      *pDst++ = (uint16)((pFrom_linear[cur[10]] >> 2) | (pFrom_linear[cur[11]] << 1) | (pFrom_linear[cur[12]] << 4) |
-                         (pFrom_linear[cur[13]] << 7) | (pFrom_linear[cur[14]] << 10) | (pFrom_linear[cur[15]] << 13));
+    m_codec.decode_receive_static_data_model(dm);
+    m_alpha_selectors.resize(m_pHeader->m_alpha_selectors.m_num * 3);
+    uint8 dxt5_from_linear[64];
+    for (uint32 i = 0; i < 64; i++)
+      dxt5_from_linear[i] = g_dxt5_from_linear[i & 7] | g_dxt5_from_linear[i >> 3] << 3;
+    for (uint32 s0_linear = 0, s1_linear = 0, i = 0; i < m_alpha_selectors.size();) {
+      uint32 s0 = 0, s1 = 0;
+      for (uint32 j = 0; j < 24; s0 |= dxt5_from_linear[s0_linear >> j & 0x3F] << j, j += 6)
+        s0_linear ^= m_codec.decode(dm) << j;
+      for (uint32 j = 0; j < 24; s1 |= dxt5_from_linear[s1_linear >> j & 0x3F] << j, j += 6)
+        s1_linear ^= m_codec.decode(dm) << j;
+      m_alpha_selectors[i++] = s0;
+      m_alpha_selectors[i++] = s0 >> 16 | s1 << 8;
+      m_alpha_selectors[i++] = s1 >> 8;
     }
-
     m_codec.stop_decoding();
-
     return true;
   }
 
@@ -3585,7 +3545,7 @@ class crn_unpacker {
           }
           endpoint_reference >>= 2;
           *(uint32*)&e0 = m_color_endpoints[color_endpoint_index];
-          uint32 selector = m_color_selectors[m_codec.decode(m_selector_delta_dm[0])];
+          uint32 selector_index = m_codec.decode(m_selector_delta_dm[0]);
           if (endpoint_reference) {
             color_endpoint_index += m_codec.decode(m_endpoint_delta_dm[0]);
             if (color_endpoint_index >= num_color_endpoints)
@@ -3595,20 +3555,14 @@ class crn_unpacker {
           m_block_buffer[x << 1 | 1].color_endpoint_index = color_endpoint_index;
           *(uint32*)&e1 = m_color_endpoints[color_endpoint_index];
           if (visible) {
-            uint32 block_selector = 0, flip = endpoint_reference >> 1 ^ 1, diff = 1;
-            for (uint32 t = 8, i = 0; i < 4; i++, t -= 15) {
-              for (uint32 j = 0; j < 4; j++, t += 4) {
-                uint32 s = selector >> (flip ? i << 3 | j << 1 : j << 3 | i << 1);
-                block_selector |= (s >> 1 & 1 | (s & 1) << 16) << (t & 15);
-              }
-            }
+            uint32 flip = endpoint_reference >> 1 ^ 1, diff = 1;
             for (uint c = 0; diff && c < 3; c++)
               diff = e0[c] + 3 >= e1[c] && e1[c] + 4 >= e0[c] ? diff : 0;
             for (uint c = 0; c < 3; c++)
               block_endpoint[c] = diff ? e0[c] << 3 | e1[c] - e0[c] & 7 : e0[c] << 3 & 0xF0 | e1[c] >> 1;
             block_endpoint[3] = e0[3] << 5 | e1[3] << 2 | diff << 1 | flip;
             pData[0] = *(uint32*)&block_endpoint;
-            pData[1] = block_selector;
+            pData[1] = m_color_selectors[selector_index << 1 | flip];
           }
         }
       }

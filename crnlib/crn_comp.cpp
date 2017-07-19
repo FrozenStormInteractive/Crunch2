@@ -184,36 +184,19 @@ bool crn_comp::pack_color_selectors(crnlib::vector<uint8>& packed_data, const cr
   crnlib::vector<uint32> remapped_selectors(m_color_selectors.size());
   for (uint i = 0; i < m_color_selectors.size(); i++)
     remapped_selectors[remapping[i]] = m_color_selectors[i];
-  crnlib::vector<uint> residual_syms;
-  residual_syms.reserve(m_color_selectors.size() * 8);
   symbol_histogram hist(16);
-  uint32 prev_selector = 0;
-  for (uint selector_index = 0; selector_index < m_color_selectors.size(); selector_index++) {
-    uint32 cur_selector = remapped_selectors[selector_index];
-    uint prev_sym = 0;
-    for (uint32 selector = cur_selector, i = 0; i < 16; i++, selector >>= 2, prev_selector >>= 2) {
-      int sym = selector - prev_selector & 3;
-      if (i & 1) {
-        uint paired_sym = sym << 2 | prev_sym;
-        residual_syms.push_back(paired_sym);
-        hist.inc_freq(paired_sym);
-      } else
-        prev_sym = sym;
-    }
-    prev_selector = cur_selector;
+  for (uint32 c, selector, prev_selector = 0, i = 0; i < remapped_selectors.size(); i++) {
+    for (selector = prev_selector ^ remapped_selectors[i], prev_selector ^= selector, c = 8; c; c--, selector >>= 4)
+      hist.inc_freq(selector & 0xF);
   }
-  static_huffman_data_model residual_dm;
+  static_huffman_data_model dm;
+  dm.init(true, hist, 15);
   symbol_codec codec;
   codec.start_encoding(1024 * 1024);
-  if (!residual_dm.init(true, hist, 15))
-    return false;
-  if (!codec.encode_transmit_static_huffman_data_model(residual_dm, false))
-    return false;
-  uint start_bits = codec.encode_get_total_bits_written();
-  start_bits;
-  for (uint i = 0; i < residual_syms.size(); i++) {
-    const uint sym = residual_syms[i];
-    codec.encode(sym, residual_dm);
+  codec.encode_transmit_static_huffman_data_model(dm, false);
+  for (uint32 c, selector, prev_selector = 0, i = 0; i < remapped_selectors.size(); i++) {
+    for (selector = prev_selector ^ remapped_selectors[i], prev_selector ^= selector, c = 8; c; c--, selector >>= 4)
+      codec.encode(selector & 0xF, dm);
   }
   codec.stop_encoding(false);
   packed_data.swap(codec.get_encoding_buf());
@@ -224,37 +207,19 @@ bool crn_comp::pack_alpha_selectors(crnlib::vector<uint8>& packed_data, const cr
   crnlib::vector<uint64> remapped_selectors(m_alpha_selectors.size());
   for (uint i = 0; i < m_alpha_selectors.size(); i++)
     remapped_selectors[remapping[i]] = m_alpha_selectors[i];
-  crnlib::vector<uint> residual_syms;
-  residual_syms.reserve(m_alpha_selectors.size() * 8);
   symbol_histogram hist(64);
-  uint64 prev_selector = 0;
-  for (uint selector_index = 0; selector_index < m_alpha_selectors.size(); selector_index++) {
-    uint64 cur_selector = remapped_selectors[selector_index];
-    uint prev_sym = 0;
-    for (uint64 selector = cur_selector, i = 0; i < 16; i++, selector >>= 3, prev_selector >>= 3) {
-      int sym = selector - prev_selector & 7;
-      if (i & 1) {
-        uint paired_sym = sym << 3 | prev_sym;
-        residual_syms.push_back(paired_sym);
-        hist.inc_freq(paired_sym);
-      } else
-        prev_sym = sym;
-    }
-    prev_selector = cur_selector;
+  for (uint64 c, selector, prev_selector = 0, i = 0; i < remapped_selectors.size(); i++) {
+    for (selector = prev_selector ^ remapped_selectors[i], prev_selector ^= selector, c = 8; c; c--, selector >>= 6)
+      hist.inc_freq(selector & 0x3F);
   }
-
-  static_huffman_data_model residual_dm;
+  static_huffman_data_model dm;
+  dm.init(true, hist, 15);
   symbol_codec codec;
   codec.start_encoding(1024 * 1024);
-  if (!residual_dm.init(true, hist, 15))
-    return false;
-  if (!codec.encode_transmit_static_huffman_data_model(residual_dm, false))
-    return false;
-  uint start_bits = codec.encode_get_total_bits_written();
-  start_bits;
-  for (uint i = 0; i < residual_syms.size(); i++) {
-    const uint sym = residual_syms[i];
-    codec.encode(sym, residual_dm);
+  codec.encode_transmit_static_huffman_data_model(dm, false);
+  for (uint64 c, selector, prev_selector = 0, i = 0; i < remapped_selectors.size(); i++) {
+    for (selector = prev_selector ^ remapped_selectors[i], prev_selector ^= selector, c = 8; c; c--, selector >>= 6)
+      codec.encode(selector & 0x3F, dm);
   }
   codec.stop_encoding(false);
   packed_data.swap(codec.get_encoding_buf());
@@ -741,10 +706,11 @@ void crn_comp::optimize_color_selectors() {
   uint16 n = m_color_selectors.size();
   remapping.resize(n);
 
-  uint8 d[] = {0, 1, 4, 1};
+  uint8 d[] = {0, 5, 14, 10};
+
   uint8 D4[0x100];
   for (uint16 i = 0; i < 0x100; i++)
-    D4[i] = d[i - (i >> 4) & 3] + d[(i >> 2) - (i >> 6) & 3];
+    D4[i] = d[(i ^ i >> 4) & 3] + d[(i >> 2 ^ i >> 6) & 3];
   uint8 D8[0x10000];
   for (uint32 i = 0; i < 0x10000; i++)
     D8[i] = D4[i >> 8 & 0xF0 | i >> 4 & 0xF] + D4[i >> 4 & 0xF0 | i & 0xF];
@@ -989,10 +955,11 @@ void crn_comp::optimize_alpha_selectors() {
   uint16 n = m_alpha_selectors.size();
   remapping.resize(n);
 
-  uint8 d[] = {0, 1, 4, 9, 16, 9, 4, 1};
+  uint8 d[] = {0, 2, 3, 3, 5, 5, 4, 4};
+
   uint8 D6[0x1000];
   for (uint16 i = 0; i < 0x1000; i++)
-    D6[i] = d[i - (i >> 6) & 7] + d[(i >> 3) - (i >> 9) & 7];
+    D6[i] = d[(i ^ i >> 6) & 7] + d[(i >> 3 ^ i >> 9) & 7];
 
   crnlib::vector<uint64> selectors(n);
   crnlib::vector<uint16> indices(n);
