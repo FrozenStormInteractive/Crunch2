@@ -37,6 +37,10 @@ const char* get_dxt_format_string(dxt_format fmt) {
       return "DXN_YX";
     case cETC1:
       return "ETC1";
+    case cETC2:
+      return "ETC2";
+    case cETC2A:
+      return "ETC2A";
     default:
       break;
   }
@@ -69,11 +73,13 @@ uint get_dxt_format_bits_per_pixel(dxt_format fmt) {
     case cDXT1A:
     case cDXT5A:
     case cETC1:
+    case cETC2:
       return 4;
     case cDXT3:
     case cDXT5:
     case cDXN_XY:
     case cDXN_YX:
+    case cETC2A:
       return 8;
     default:
       break;
@@ -88,6 +94,7 @@ bool get_dxt_format_has_alpha(dxt_format fmt) {
     case cDXT3:
     case cDXT5:
     case cDXT5A:
+    case cETC2A:
       return true;
     default:
       break;

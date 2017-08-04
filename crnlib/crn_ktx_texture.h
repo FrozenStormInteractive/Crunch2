@@ -44,6 +44,8 @@ typedef crnlib::vector<uint8_vec> ktx_image_data_vec;
 // Compressed pixel data formats: ETC1, DXT1, DXT3, DXT5
 enum {
   KTX_ETC1_RGB8_OES = 0x8D64,
+  KTX_COMPRESSED_RGB8_ETC2 = 0x9274,
+  KTX_COMPRESSED_RGBA8_ETC2_EAC = 0x9278,
   KTX_RGB_S3TC = 0x83A0,
   KTX_RGB4_S3TC = 0x83A1,
   KTX_COMPRESSED_RGB_S3TC_DXT1_EXT = 0x83F0,

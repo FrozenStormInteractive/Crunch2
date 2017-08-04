@@ -45,6 +45,7 @@ class crn_comp : public itexture_comp {
   };
 
   bool m_has_comp[cNumComps];
+  bool m_has_etc_color_blocks;
 
   struct level_details {
     uint first_block;

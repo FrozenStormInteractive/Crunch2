@@ -43,6 +43,7 @@ inline bool has_alpha(pixel_format fmt) {
     case PIXEL_FMT_A8:
     case PIXEL_FMT_A8L8:
     case PIXEL_FMT_DXT5_AGBR:
+    case PIXEL_FMT_ETC2A:
       return true;
     default:
       break;
@@ -91,6 +92,8 @@ inline int is_dxt(pixel_format fmt) {
     case PIXEL_FMT_DXT5_xGBR:
     case PIXEL_FMT_DXT5_AGBR:
     case PIXEL_FMT_ETC1:
+    case PIXEL_FMT_ETC2:
+    case PIXEL_FMT_ETC2A:
       return true;
     default:
       break;
@@ -143,6 +146,10 @@ inline dxt_format get_dxt_format(pixel_format fmt) {
       return cDXT5;
     case PIXEL_FMT_ETC1:
       return cETC1;
+    case PIXEL_FMT_ETC2:
+      return cETC2;
+    case PIXEL_FMT_ETC2A:
+      return cETC2A;
     default:
       break;
   }
@@ -167,6 +174,10 @@ inline pixel_format from_dxt_format(dxt_format dxt_fmt) {
       return PIXEL_FMT_DXT5A;
     case cETC1:
       return PIXEL_FMT_ETC1;
+    case cETC2:
+      return PIXEL_FMT_ETC2;
+    case cETC2A:
+      return PIXEL_FMT_ETC2A;
     default:
       break;
   }
@@ -214,6 +225,10 @@ inline uint get_bpp(pixel_format fmt) {
       return 4;
     case PIXEL_FMT_ETC1:
       return 4;
+    case PIXEL_FMT_ETC2:
+      return 4;
+    case PIXEL_FMT_ETC2A:
+      return 8;
     case PIXEL_FMT_DXT2:
       return 8;
     case PIXEL_FMT_DXT3:
@@ -263,6 +278,10 @@ inline uint get_dxt_bytes_per_block(pixel_format fmt) {
       return 8;
     case PIXEL_FMT_ETC1:
       return 8;
+    case PIXEL_FMT_ETC2:
+      return 8;
+    case PIXEL_FMT_ETC2A:
+      return 16;
     case PIXEL_FMT_DXT2:
       return 16;
     case PIXEL_FMT_DXT3:

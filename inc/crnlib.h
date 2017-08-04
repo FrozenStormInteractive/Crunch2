@@ -71,6 +71,8 @@ enum crn_format {
   cCRNFmtDXT5A,
 
   cCRNFmtETC1,
+  cCRNFmtETC2,
+  cCRNFmtETC2A,
 
   cCRNFmtTotal,
 

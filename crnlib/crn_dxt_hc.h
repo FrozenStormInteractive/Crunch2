@@ -32,6 +32,7 @@ class dxt_hc {
       uint16 component[3];
     };
     uint8 reference;
+    endpoint_indices_details() { utils::zero_object(*this); }
   };
 
   struct selector_indices_details {
@@ -43,6 +44,7 @@ class dxt_hc {
       };
       uint16 component[3];
     };
+    selector_indices_details() { utils::zero_object(*this); }
   };
 
   struct tile_details {
@@ -146,6 +148,7 @@ class dxt_hc {
 
   uint m_num_alpha_blocks;
   bool m_has_color_blocks;
+  bool m_has_etc_color_blocks;
 
   enum {
     cColor = 0,

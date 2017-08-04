@@ -10,6 +10,8 @@ namespace rg_etc1 {
 // This function is thread safe, and does not dynamically allocate any memory.
 // If preserve_alpha is true, the alpha channel of the destination pixels will not be overwritten. Otherwise, alpha will be set to 255.
 bool unpack_etc1_block(const void* pETC1_block, unsigned int* pDst_pixels_rgba, bool preserve_alpha = false);
+bool unpack_etc2_color(const void* pBlock, unsigned int* pDst_pixels_rgba, bool preserve_alpha = false);
+bool unpack_etc2_alpha(const void* pBlock, unsigned int* pDst_pixels_rgba, int comp_index = 3);
 
 // Quality setting = the higher the quality, the slower.
 // To pack large textures, it is highly recommended to call pack_etc1_block() in parallel, on different blocks, from multiple threads (particularly when using cHighQuality).
@@ -33,6 +35,20 @@ struct etc1_pack_params {
   }
 };
 
+struct etc2a_pack_params {
+  etc1_quality m_quality;
+  int comp_index;
+
+  inline etc2a_pack_params() {
+    clear();
+  }
+
+  void clear() {
+    m_quality = cHighQuality;
+    comp_index = 3;
+  }
+};
+
 // Important: pack_etc1_block_init() must be called before calling pack_etc1_block().
 void pack_etc1_block_init();
 
@@ -42,6 +58,7 @@ void pack_etc1_block_init();
 // This function is thread safe, and does not dynamically allocate any memory.
 // pack_etc1_block() does not currently support "perceptual" colorspace metrics - it primarily optimizes for RGB RMSE.
 unsigned int pack_etc1_block(void* pETC1_block, const unsigned int* pSrc_pixels_rgba, etc1_pack_params& pack_params);
+unsigned int pack_etc2_alpha(void* pBlock, const unsigned int* pSrc_pixels_rgba, etc2a_pack_params& pack_params);
 
 }  // namespace rg_etc1
 

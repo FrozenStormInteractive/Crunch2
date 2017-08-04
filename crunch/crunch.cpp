@@ -481,7 +481,8 @@ class crunch {
             out_file_type = texture_file_types::cFormatDDS;
             cfile_stream in_stream;
             crnd::crn_header in_header;
-            if (in_stream.open(in_filename.get_ptr()) && in_stream.read(&in_header, sizeof(in_header)) == sizeof(in_header) && in_header.m_format == cCRNFmtETC1)
+            if (in_stream.open(in_filename.get_ptr()) && in_stream.read(&in_header, sizeof(in_header)) == sizeof(in_header) &&
+                (in_header.m_format == cCRNFmtETC1 || in_header.m_format == cCRNFmtETC2 || in_header.m_format == cCRNFmtETC2A))
               out_file_type = texture_file_types::cFormatKTX;
           } else if (input_file_type == texture_file_types::cFormatKTX) {
             // Default to converting KTX files to PNG

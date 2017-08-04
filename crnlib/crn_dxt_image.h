@@ -36,7 +36,7 @@ class dxt_image {
 
   dxt_format get_format() const { return m_format; }
 
-  bool has_color() const { return (m_format == cDXT1) || (m_format == cDXT1A) || (m_format == cDXT3) || (m_format == cDXT5) || (m_format == cETC1); }
+  bool has_color() const { return (m_format == cDXT1) || (m_format == cDXT1A) || (m_format == cDXT3) || (m_format == cDXT5) || (m_format == cETC1) || (m_format == cETC2) || (m_format == cETC2A); }
 
   // Will be pretty slow if the image is DXT1, as this method scans for alpha blocks/selectors.
   bool has_alpha() const;
@@ -50,6 +50,9 @@ class dxt_image {
     cAlphaDXT5,  // DXT5 alpha block (only)
 
     cColorETC1,  // ETC1 color block
+    cColorETC2,  // ETC2 color block
+
+    cAlphaETC2,  // ETC2 alpha block (only)
   };
 
   element_type get_element_type(uint element_index) const {

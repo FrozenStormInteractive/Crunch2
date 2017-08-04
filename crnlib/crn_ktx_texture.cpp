@@ -69,11 +69,13 @@ uint get_ogl_type_size(uint32 ogl_type) {
 uint32 get_ogl_base_internal_fmt(uint32 ogl_fmt) {
   switch (ogl_fmt) {
     case KTX_ETC1_RGB8_OES:
+    case KTX_COMPRESSED_RGB8_ETC2:
     case KTX_RGB_S3TC:
     case KTX_RGB4_S3TC:
     case KTX_COMPRESSED_RGB_S3TC_DXT1_EXT:
     case KTX_COMPRESSED_SRGB_S3TC_DXT1_EXT:
       return KTX_RGB;
+    case KTX_COMPRESSED_RGBA8_ETC2_EAC:
     case KTX_COMPRESSED_RGBA_S3TC_DXT1_EXT:
     case KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT:
     case KTX_RGBA_S3TC:
@@ -146,6 +148,7 @@ bool get_ogl_fmt_desc(uint32 ogl_fmt, uint32 ogl_type, uint& block_dim, uint& by
     case KTX_COMPRESSED_LUMINANCE_LATC1_EXT:
     case KTX_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT:
     case KTX_ETC1_RGB8_OES:
+    case KTX_COMPRESSED_RGB8_ETC2:
     case KTX_RGB_S3TC:
     case KTX_RGB4_S3TC:
     case KTX_COMPRESSED_RGB_S3TC_DXT1_EXT:
@@ -156,6 +159,7 @@ bool get_ogl_fmt_desc(uint32 ogl_fmt, uint32 ogl_type, uint& block_dim, uint& by
       bytes_per_block = 8;
       break;
     }
+    case KTX_COMPRESSED_RGBA8_ETC2_EAC:
     case KTX_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT:
     case KTX_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT:
     case KTX_COMPRESSED_RED_GREEN_RGTC2_EXT:

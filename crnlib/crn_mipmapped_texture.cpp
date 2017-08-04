@@ -596,6 +596,16 @@ bool mipmapped_texture::read_dds_internal(data_stream_serializer& serializer) {
         dxt_fmt = cETC1;
         break;
       }
+      case PIXEL_FMT_ETC2: {
+        m_format = PIXEL_FMT_ETC2;
+        dxt_fmt = cETC2;
+        break;
+      }
+      case PIXEL_FMT_ETC2A: {
+        m_format = PIXEL_FMT_ETC2A;
+        dxt_fmt = cETC2A;
+        break;
+      }
       default: {
         dynamic_string err_msg(cVarArg, "Unsupported DDS FOURCC format: 0x%08X", desc.ddpfPixelFormat.dwFourCC);
         set_last_error(err_msg.get_ptr());
@@ -927,6 +937,16 @@ bool mipmapped_texture::write_dds(data_stream_serializer& serializer) const {
         desc.ddpfPixelFormat.dwRGBBitCount = 0;
         break;
       }
+      case PIXEL_FMT_ETC2: {
+        desc.ddpfPixelFormat.dwFourCC = (uint32)PIXEL_FMT_ETC2;
+        desc.ddpfPixelFormat.dwRGBBitCount = 0;
+        break;
+      }
+      case PIXEL_FMT_ETC2A: {
+        desc.ddpfPixelFormat.dwFourCC = (uint32)PIXEL_FMT_ETC2A;
+        desc.ddpfPixelFormat.dwRGBBitCount = 0;
+        break;
+      }
       case PIXEL_FMT_DXN: {
         desc.ddpfPixelFormat.dwFourCC = (uint32)PIXEL_FMT_3DC;
         desc.ddpfPixelFormat.dwRGBBitCount = PIXEL_FMT_DXN;
@@ -1197,6 +1217,12 @@ bool mipmapped_texture::read_ktx(data_stream_serializer& serializer) {
     switch (kt.get_ogl_internal_fmt()) {
       case KTX_ETC1_RGB8_OES:
         dxt_fmt = cETC1;
+        break;
+      case KTX_COMPRESSED_RGB8_ETC2:
+        dxt_fmt = cETC2;
+        break;
+      case KTX_COMPRESSED_RGBA8_ETC2_EAC:
+        dxt_fmt = cETC2A;
         break;
       case KTX_RGB_S3TC:
       case KTX_RGB4_S3TC:
@@ -1556,6 +1582,14 @@ bool mipmapped_texture::write_ktx(data_stream_serializer& serializer) const {
         ogl_internal_fmt = KTX_ETC1_RGB8_OES;
         break;
       }
+      case PIXEL_FMT_ETC2: {
+        ogl_internal_fmt = KTX_COMPRESSED_RGB8_ETC2;
+        break;
+      }
+      case PIXEL_FMT_ETC2A: {
+        ogl_internal_fmt = KTX_COMPRESSED_RGBA8_ETC2_EAC;
+        break;
+      }
       default: {
         CRNLIB_ASSERT(0);
         return false;
@@ -1839,8 +1873,8 @@ bool mipmapped_texture::convert(pixel_format fmt, const dxt_image::pack_params& 
 }
 
 bool mipmapped_texture::convert(pixel_format fmt, bool cook, const dxt_image::pack_params& p, int qdxt_quality, bool hierarchical) {
-  if ((!pixel_format_helpers::is_dxt(fmt)) || (fmt == PIXEL_FMT_DXT3) || (fmt == PIXEL_FMT_ETC1)) {
-    // QDXT doesn't support DXT3 or ETC1 yet.
+  if ((!pixel_format_helpers::is_dxt(fmt)) || (fmt == PIXEL_FMT_DXT3) || (fmt == PIXEL_FMT_ETC1) || (fmt == PIXEL_FMT_ETC2) || (fmt == PIXEL_FMT_ETC2A)) {
+    // QDXT doesn't support DXT3 or ETCn yet.
     return convert(fmt, cook, p);
   }
 
@@ -2290,8 +2324,10 @@ bool mipmapped_texture::qdxt_pack_init(qdxt_state& state, mipmapped_texture& dst
       state.m_qdxt5_params[0].m_comp_index = 3;
       break;
     }
-    case PIXEL_FMT_ETC1: {
-      console::warning("mipmapped_texture::qdxt_pack_init: This method does not support ETC1");
+    case PIXEL_FMT_ETC1:
+    case PIXEL_FMT_ETC2:
+    case PIXEL_FMT_ETC2A: {
+      console::warning("mipmapped_texture::qdxt_pack_init: This method does not support ETCn");
       return false;
     }
     default: {

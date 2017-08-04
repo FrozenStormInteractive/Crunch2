@@ -285,11 +285,11 @@ static pixel_format choose_pixel_format(convert_params& params, const crn_comp_p
         return pixel_format_helpers::has_alpha(src_fmt) ? PIXEL_FMT_A8R8G8B8 : PIXEL_FMT_R8G8B8;
       } else if (pixel_format_helpers::is_grayscale(src_fmt)) {
         if (pixel_format_helpers::has_alpha(src_fmt))
-          return PIXEL_FMT_A8L8;
+          return PIXEL_FMT_ETC2A;
         else
           return PIXEL_FMT_ETC1;
       } else if (pixel_format_helpers::has_alpha(src_fmt))
-        return PIXEL_FMT_A8R8G8B8;
+        return PIXEL_FMT_ETC2A;
       else
         return PIXEL_FMT_ETC1;
     }

@@ -7,6 +7,7 @@
 // v1.03 - 5/12/13 - Initial public release
 #include "crn_core.h"
 #include "crn_rg_etc1.h"
+#include "crn_dxt5a.h"
 
 #include <stdlib.h>
 #include <memory.h>
@@ -403,6 +404,27 @@ static const int g_etc1_inten_tables[cETC1IntenModifierValues][cETC1SelectorValu
         {-80, -24, 24, 80},
         {-106, -33, 33, 106},
         {-183, -47, 47, 183}};
+
+static const uint8 g_etc2_modifier_table[8] = { 3, 6, 11, 16, 23, 32, 41, 64 };
+
+static const int g_etc2a_modifier_table[16][8] = {
+  {  -3,  -6,  -9, -15,   2,   5,   8,  14},
+  {  -3,  -7, -10, -13,   2,   6,   9,  12},
+  {  -2,  -5,  -8, -13,   1,   4,   7,  12},
+  {  -2,  -4,  -6, -13,   1,   3,   5,  12},
+  {  -3,  -6,  -8, -12,   2,   5,   7,  11},
+  {  -3,  -7,  -9, -11,   2,   6,   8,  10},
+  {  -4,  -7,  -8, -11,   3,   6,   7,  10},
+  {  -3,  -5,  -8, -11,   2,   4,   7,  10},
+  {  -2,  -6,  -8, -10,   1,   5,   7,   9},
+  {  -2,  -5,  -8, -10,   1,   4,   7,   9},
+  {  -2,  -4,  -8, -10,   1,   3,   7,   9},
+  {  -2,  -5,  -7, -10,   1,   4,   6,   9},
+  {  -3,  -4,  -7, -10,   2,   3,   6,   9},
+  {  -1,  -2,  -3, -10,   0,   1,   2,   9},
+  {  -4,  -6,  -8,  -9,   3,   5,   7,   8},
+  {  -3,  -5,  -7,  -9,   2,   4,   6,   8},
+};
 
 static const uint8 g_etc1_to_selector_index[cETC1SelectorValues] = {2, 3, 1, 0};
 static const uint8 g_selector_index_to_etc1[cETC1SelectorValues] = {3, 2, 0, 1};
@@ -1428,6 +1450,104 @@ bool unpack_etc1_block(const void* pETC1_block, unsigned int* pDst_pixels_rgba, 
   return success;
 }
 
+bool unpack_etc2_color(const void* pBlock, unsigned int* pDst_pixels_rgba, bool preserve_alpha) {
+  if (unpack_etc1_block(pBlock, pDst_pixels_rgba, preserve_alpha))
+    return true;
+
+  color_quad_u8* pDst = reinterpret_cast<color_quad_u8*>(pDst_pixels_rgba);
+  const etc1_block& block = *static_cast<const etc1_block*>(pBlock);
+  const uint8* B = block.m_bytes;
+  const bool rOverflow = (int8(B[0] << 5) >> 5) + (B[0] >> 3) & 0x20;
+  const bool gOverflow = (int8(B[1] << 5) >> 5) + (B[1] >> 3) & 0x20;
+
+  if (rOverflow || gOverflow) {
+    color_quad_u8 block_colors[4];
+    if (rOverflow) {
+      uint8 unpacked[3] = {
+        B[0] & 0x3 | B[0] >> 1 & 0xC | B[2] & 0xF0,
+        B[1] >> 4 | B[2] << 4,
+        B[1] & 0xF | B[3] & 0xF0,
+      };
+      uint8 delta = g_etc2_modifier_table[B[3] & 1 | B[3] >> 1 & 6];
+      for (uint c = 0; c < 3; c++) {
+        block_colors[2][c] = unpacked[c] << 4 | unpacked[c] & 0xF;
+        block_colors[1][c] = unpacked[c] >> 4 | unpacked[c] & 0xF0;
+        block_colors[0][c] = math::maximum(0, block_colors[1][c] - delta);
+        block_colors[3][c] = math::minimum(255, block_colors[1][c] + delta);
+      }
+    } else {
+      uint8 unpacked[3] = {
+        B[0] >> 3 & 0xF | B[2] << 1 & 0xF0,
+        B[1] >> 4 & 0x1 | B[0] << 1 & 0xE | B[3] >> 3 & 0x10 | B[2] << 5,
+        B[2] >> 7 | B[1] << 1 & 0x6 | B[1] & 0x8 | B[3] << 1 & 0xF0,
+      };
+      uint8 modifier = B[3] & 4 | B[3] << 1 & 2 | 1;
+      for (int d = 0, c = 0; !d && c < 3; c++, modifier &= d < 0 ? 6 : 7)
+        d = (unpacked[c] & 0xF) - (unpacked[c] >> 4);
+      uint8 delta = g_etc2_modifier_table[modifier];
+      for (uint c = 0; c < 3; c++) {
+        uint8 c0 = unpacked[c] << 4 | unpacked[c] & 0xF;
+        uint8 c1 = unpacked[c] >> 4 | unpacked[c] & 0xF0;
+        block_colors[0][c] = math::maximum(0, c1 - delta);
+        block_colors[1][c] = math::minimum(255, c1 + delta);
+        block_colors[2][c] = math::minimum(255, c0 + delta);
+        block_colors[3][c] = math::maximum(0, c0 - delta);
+      }
+    }
+    for (uint i = 0; i < 4; i++) {
+      for (uint j = 0; j < 4; j++, pDst++) {
+        pDst->set_rgb(block_colors[block.get_selector(j, i)]);
+        if (!preserve_alpha)
+          pDst->a = 255;
+      }
+    }
+  } else {
+    int16 base[3], dj[3], di[3], color[3];
+    base[0] = B[0] << 1 & 0xFC | B[0] >> 5 & 3;
+    base[1] = B[0] << 7 & 0x80 | B[1] & 0x7E | B[0] & 1;
+    base[2] = B[1] << 7 & 0x80 | B[2] << 2 & 0x60 | B[2] << 3 & 0x18 | B[3] >> 5 & 4 | B[1] << 1 & 2 | B[2] >> 4 & 1;
+    di[0] = (B[5] << 5 & 0xE0 | B[6] >> 3 & 0x1C | B[5] >> 1 & 0x3) - base[0];
+    di[1] = (B[6] << 3 & 0xF8 | B[7] >> 5 & 0x6 | B[6] >> 4 & 0x1) - base[1];
+    di[2] = (B[7] << 2 & 0xFC | B[7] >> 4 & 0x3) - base[2];
+    dj[0] = (B[3] << 1 & 0xF8 | B[3] << 2 & 0x4 | B[3] >> 5 & 0x3) - base[0];
+    dj[1] = (B[4] & 0xFE | B[4] >> 7) - base[1];
+    dj[2] = (B[4] << 7 & 0x80 | B[5] >> 1 & 0x7C | B[4] << 1 & 0x2 | B[5] >> 7) - base[2];
+    for (uint c = 0; c < 3; c++)
+      base[c] = (base[c] << 2) + 2;
+    for (uint i = 0; i < 4; i++) {
+      for (uint c = 0; c < 3; base[c] += di[c], c++)
+        color[c] = base[c];
+      for (uint j = 0; j < 4; j++, pDst++) {
+        for (uint c = 0; c < 3; color[c] += dj[c], c++)
+          pDst->c[c] = math::clamp<int16>(color[c], 0, 1020) >> 2;
+        if (!preserve_alpha)
+          pDst->a = 255;
+      }
+    }
+  }
+  return true;
+}
+
+bool unpack_etc2_alpha(const void* pBlock, unsigned int* pDst_pixels_rgba, int comp_index) {
+  color_quad_u8* pDst = (color_quad_u8*)pDst_pixels_rgba;
+  const uint8* B = (const uint8*)pBlock;
+  const int* modifier = g_etc2a_modifier_table[B[1] & 0xF];
+  uint8 values[8];
+  for (int base_codeword = B[0], multiplier = B[1] >> 4, i = 0; i < 8; i++)
+    values[i] = math::clamp<int>(base_codeword + modifier[i] * multiplier, 0, 255);
+  for (uint d0 = 3, i = 0; i < 4; i++, d0 += 3) {
+    for (uint d = d0, j = 0; j < 4; j++, pDst++, d += 12) {
+      int byte_offset = 2 + (d >> 3);
+      int bit_offset = d & 7;
+      int s = B[byte_offset] >> 8 - bit_offset & 7;
+      if (bit_offset < 3)
+        s |= B[byte_offset - 1] << bit_offset & 7;
+      pDst->c[comp_index] = values[s];
+    }
+  }
+  return true;
+}
+
 struct etc1_solution_coordinates {
   inline etc1_solution_coordinates()
       : m_unscaled_color(0, 0, 0, 0),
@@ -2275,13 +2395,6 @@ unsigned int pack_etc1_block(void* pETC1_block, const unsigned int* pSrc_pixels_
   const color_quad_u8* pSrc_pixels = reinterpret_cast<const color_quad_u8*>(pSrc_pixels_rgba);
   etc1_block& dst_block = *static_cast<etc1_block*>(pETC1_block);
 
-#ifdef RG_ETC1_BUILD_DEBUG
-  // Ensure all alpha values are 0xFF.
-  for (uint i = 0; i < 16; i++) {
-    RG_ETC1_ASSERT(pSrc_pixels[i].a == 255);
-  }
-#endif
-
   color_quad_u8 src_pixel0(pSrc_pixels[0]);
 
   // Check for solid block.
@@ -2518,6 +2631,60 @@ unsigned int pack_etc1_block(void* pETC1_block, const unsigned int* pSrc_pixels_
   dst_block.m_bytes[7] = static_cast<uint8>(selector0 & 0xFF);
 
   return static_cast<unsigned int>(best_error);
+}
+
+unsigned int pack_etc2_alpha(void* pBlock, const unsigned int* pSrc_pixels_rgba, etc2a_pack_params& pack_params) {
+  crnlib::color_quad_u8* pixels = (crnlib::color_quad_u8*)pSrc_pixels_rgba;
+  dxt5_endpoint_optimizer dxt5_optimizer;
+
+  dxt5_endpoint_optimizer::results results;
+  uint8 selectors[16];
+  results.m_pSelectors = selectors;
+
+  dxt5_endpoint_optimizer::params params;
+  params.m_pPixels = pixels;
+  params.m_num_pixels = 16;
+  params.m_comp_index = pack_params.comp_index;
+  params.m_quality = pack_params.m_quality == cHighQuality ? cCRNDXTQualityUber : pack_params.m_quality == cMediumQuality ? cCRNDXTQualityNormal : cCRNDXTQualityFast;
+  params.m_use_both_block_types = false;
+  dxt5_optimizer.compute(params, results);
+
+  uint base_codeword = (results.m_first_endpoint + results.m_second_endpoint + 1) >> 1;
+  uint best_error = cUINT32_MAX;
+  for (int modifier_index = 0; modifier_index < 16; modifier_index++) {
+    const int* modifier = g_etc2a_modifier_table[modifier_index];
+    int multiplier = math::clamp<int>((results.m_first_endpoint - results.m_second_endpoint + modifier[7] + (modifier[7] >> 1)) / (modifier[7] << 1), 1, 15);
+    uint8 data[8] = {base_codeword, multiplier << 4 | modifier_index}, values[8];
+    for (int i = 0; i < 8; i++)
+      values[i] = math::clamp<int>(base_codeword + modifier[i] * multiplier, 0, 255);
+    uint error = 0;
+    for (uint d0 = 3, t = 0, i = 0; i < 4; i++, d0 += 3) {
+      for (uint d = d0, j = 0; j < 4; j++, t++, d += 12) {
+        int a = pixels[t].a;
+        uint byte_offset = 2 + (d >> 3);
+        uint bit_offset = d & 7;
+        uint best_s = 0;
+        uint best_delta = cUINT32_MAX;
+        for (uint s = 0; s < 8; s++) {
+          uint delta = abs(a - values[s]);
+          if (delta < best_delta) {
+            best_s = s;
+            best_delta = delta;
+          }
+        }
+        error += best_delta * best_delta;
+        data[byte_offset] |= best_s << 8 - bit_offset;
+        if (bit_offset < 3)
+          data[byte_offset - 1] |= best_s >> bit_offset;
+      }
+    }
+    if (error < best_error) {
+      memcpy(pBlock, data, 8);
+      best_error = error;
+    }
+  }
+
+  return best_error;
 }
 
 }  // namespace rg_etc1
