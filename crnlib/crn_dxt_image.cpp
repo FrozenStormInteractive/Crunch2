@@ -1162,9 +1162,6 @@ void dxt_image::set_block_pixels(
           params.m_pPixels = pPixels;
           params.m_num_pixels = cDXTBlockSize * cDXTBlockSize;
           params.m_endpoint_caching = p.m_endpoint_caching;
-          params.m_color_weights[0] = p.m_color_weights[0];
-          params.m_color_weights[1] = p.m_color_weights[1];
-          params.m_color_weights[2] = p.m_color_weights[2];
 
           if ((m_format != cDXT1) && (m_format != cDXT1A))
             params.m_use_alpha_blocks = false;

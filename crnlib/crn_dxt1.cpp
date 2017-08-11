@@ -35,10 +35,8 @@ static const uint cUberProbeTableSize = sizeof(g_uber_probe_table) / sizeof(g_ub
 dxt1_endpoint_optimizer::dxt1_endpoint_optimizer()
     : m_pParams(NULL),
       m_pResults(NULL),
-      m_pSolutions(NULL),
       m_perceptual(false),
-      m_has_color_weighting(false),
-      m_all_pixels_grayscale(false) {
+      m_num_prev_results(0) {
   m_low_coords.reserve(512);
   m_high_coords.reserve(512);
 
@@ -51,48 +49,6 @@ dxt1_endpoint_optimizer::dxt1_endpoint_optimizer()
 
   m_lo_cells.reserve(128);
   m_hi_cells.reserve(128);
-}
-
-void dxt1_endpoint_optimizer::clear() {
-  m_pParams = NULL;
-  m_pResults = NULL;
-  m_pSolutions = NULL;
-
-  if (m_unique_color_hash_map.get_table_size() > 8192)
-    m_unique_color_hash_map.clear();
-  else
-    m_unique_color_hash_map.reset();
-
-  if (m_solutions_tried.get_table_size() > 8192)
-    m_solutions_tried.clear();
-
-  m_unique_colors.resize(0);
-
-  m_has_transparent_pixels = false;
-  m_total_unique_color_weight = 0;
-
-  m_norm_unique_colors.resize(0);
-  m_mean_norm_color.clear();
-
-  m_norm_unique_colors_weighted.resize(0);
-  m_mean_norm_color_weighted.clear();
-
-  m_principle_axis.clear();
-
-  m_total_evals = 0;
-  m_all_pixels_grayscale = false;
-  m_has_color_weighting = false;
-  m_perceptual = false;
-}
-
-bool dxt1_endpoint_optimizer::handle_all_transparent_block() {
-  m_pResults->m_low_color = 0;
-  m_pResults->m_high_color = 0;
-  m_pResults->m_alpha_block = true;
-
-  memset(m_pResults->m_pSelectors, 3, m_pParams->m_num_pixels);
-
-  return true;
 }
 
 // All selectors are equal. Try compressing as if it was solid, using the block's average color, using ryg's optimal single color compression tables.
@@ -118,12 +74,12 @@ bool dxt1_endpoint_optimizer::try_average_block_as_solid() {
 
   uint low_color = (ryg_dxt::OMatch5[ave_r][0] << 11) | (ryg_dxt::OMatch6[ave_g][0] << 5) | ryg_dxt::OMatch5[ave_b][0];
   uint high_color = (ryg_dxt::OMatch5[ave_r][1] << 11) | (ryg_dxt::OMatch6[ave_g][1] << 5) | ryg_dxt::OMatch5[ave_b][1];
-  bool improved = evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color), true, &m_best_solution);
+  bool improved = evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color));
 
   if ((m_pParams->m_use_alpha_blocks) && (m_best_solution.m_error)) {
     low_color = (ryg_dxt::OMatch5_3[ave_r][0] << 11) | (ryg_dxt::OMatch6_3[ave_g][0] << 5) | ryg_dxt::OMatch5_3[ave_b][0];
     high_color = (ryg_dxt::OMatch5_3[ave_r][1] << 11) | (ryg_dxt::OMatch6_3[ave_g][1] << 5) | ryg_dxt::OMatch5_3[ave_b][1];
-    improved |= evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color), true, &m_best_solution);
+    improved |= evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color));
   }
 
   if (m_pParams->m_quality == cCRNDXTQualityUber) {
@@ -137,41 +93,17 @@ bool dxt1_endpoint_optimizer::try_average_block_as_solid() {
 
       uint low_color = (ryg_dxt::OMatch5[r][0] << 11) | (ryg_dxt::OMatch6[g][0] << 5) | ryg_dxt::OMatch5[b][0];
       uint high_color = (ryg_dxt::OMatch5[r][1] << 11) | (ryg_dxt::OMatch6[g][1] << 5) | ryg_dxt::OMatch5[b][1];
-      improved |= evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color), true, &m_best_solution);
+      improved |= evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color));
 
       if ((m_pParams->m_use_alpha_blocks) && (m_best_solution.m_error)) {
         low_color = (ryg_dxt::OMatch5_3[r][0] << 11) | (ryg_dxt::OMatch6_3[g][0] << 5) | ryg_dxt::OMatch5_3[b][0];
         high_color = (ryg_dxt::OMatch5_3[r][1] << 11) | (ryg_dxt::OMatch6_3[g][1] << 5) | ryg_dxt::OMatch5_3[b][1];
-        improved |= evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color), true, &m_best_solution);
+        improved |= evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color));
       }
     }
   }
 
   return improved;
-}
-
-// Block is solid, trying using ryg's optimal single color tables.
-bool dxt1_endpoint_optimizer::handle_solid_block() {
-  int r = m_unique_colors[0].m_color.r;
-  int g = m_unique_colors[0].m_color.g;
-  int b = m_unique_colors[0].m_color.b;
-
-  //uint packed_color = dxt1_block::pack_color(r, g, b, true);
-  //evaluate_solution(dxt1_solution_coordinates((uint16)packed_color, (uint16)packed_color), false, &m_best_solution);
-
-  uint low_color = (ryg_dxt::OMatch5[r][0] << 11) | (ryg_dxt::OMatch6[g][0] << 5) | ryg_dxt::OMatch5[b][0];
-  uint high_color = (ryg_dxt::OMatch5[r][1] << 11) | (ryg_dxt::OMatch6[g][1] << 5) | ryg_dxt::OMatch5[b][1];
-  evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color), false, &m_best_solution);
-
-  if ((m_pParams->m_use_alpha_blocks) && (m_best_solution.m_error)) {
-    low_color = (ryg_dxt::OMatch5_3[r][0] << 11) | (ryg_dxt::OMatch6_3[g][0] << 5) | ryg_dxt::OMatch5_3[b][0];
-    high_color = (ryg_dxt::OMatch5_3[r][1] << 11) | (ryg_dxt::OMatch6_3[g][1] << 5) | ryg_dxt::OMatch5_3[b][1];
-    evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color), true, &m_best_solution);
-  }
-
-  return_solution(*m_pResults, m_best_solution);
-
-  return true;
 }
 
 void dxt1_endpoint_optimizer::compute_vectors(const vec3F& perceptual_weights) {
@@ -208,58 +140,14 @@ void dxt1_endpoint_optimizer::compute_vectors(const vec3F& perceptual_weights) {
 
 // Compute PCA (principle axis, i.e. direction of largest variance) of input vectors.
 void dxt1_endpoint_optimizer::compute_pca(vec3F& axis, const vec3F_array& norm_colors, const vec3F& def) {
-#if 0
-      axis.clear();
-
-      CRNLIB_ASSERT(m_unique_colors.size() == norm_colors.size());
-
-      // Incremental PCA
-      bool first = true;
-      for (uint i = 0; i < norm_colors.size(); i++)
-      {
-         const uint weight = m_unique_colors[i].m_weight;
-
-         for (uint j = 0; j < weight; j++)
-         {
-            vec3F x(norm_colors[i] * norm_colors[i][0]);
-            vec3F y(norm_colors[i] * norm_colors[i][1]);
-            vec3F z(norm_colors[i] * norm_colors[i][2]);
-
-            vec3F v(first ? norm_colors[0] : axis);
-            first = false;
-
-            v.normalize(&def);
-
-            axis[0] += (x * v);
-            axis[1] += (y * v);
-            axis[2] += (z * v);
-         }
-      }
-
-      axis.normalize(&def);
-#else
   double cov[6] = {0, 0, 0, 0, 0, 0};
-
-  //vec3F lo(math::cNearlyInfinite);
-  //vec3F hi(-math::cNearlyInfinite);
-
   for (uint i = 0; i < norm_colors.size(); i++) {
     const vec3F& v = norm_colors[i];
-
-    //if (v[0] < lo[0]) lo[0] = v[0];
-    //if (v[1] < lo[1]) lo[1] = v[1];
-    //if (v[2] < lo[2]) lo[2] = v[2];
-    //if (v[0] > hi[0]) hi[0] = v[0];
-    //if (v[1] > hi[1]) hi[1] = v[1];
-    //if (v[2] > hi[2]) hi[2] = v[2];
-
     float r = v[0];
     float g = v[1];
     float b = v[2];
-
     if (m_unique_colors[i].m_weight > 1) {
       const double weight = m_unique_colors[i].m_weight;
-
       cov[0] += r * r * weight;
       cov[1] += r * g * weight;
       cov[2] += r * b * weight;
@@ -275,23 +163,13 @@ void dxt1_endpoint_optimizer::compute_pca(vec3F& axis, const vec3F_array& norm_c
       cov[5] += b * b;
     }
   }
-
-  double vfr, vfg, vfb;
-  //vfr = hi[0] - lo[0];
-  //vfg = hi[1] - lo[1];
-  //vfb = hi[2] - lo[2];
-  // This is more stable.
-  vfr = .9f;
-  vfg = 1.0f;
-  vfb = .7f;
-
-  const uint cNumIters = 8;
-
-  for (uint iter = 0; iter < cNumIters; iter++) {
+  double vfr = .9f;
+  double vfg = 1.0f;
+  double vfb = .7f;
+  for (uint iter = 0; iter < 8; iter++) {
     double r = vfr * cov[0] + vfg * cov[1] + vfb * cov[2];
     double g = vfr * cov[1] + vfg * cov[3] + vfb * cov[4];
     double b = vfr * cov[2] + vfg * cov[4] + vfb * cov[5];
-
     double m = math::maximum(fabs(r), fabs(g), fabs(b));
     if (m > 1e-10) {
       m = 1.0f / m;
@@ -299,30 +177,20 @@ void dxt1_endpoint_optimizer::compute_pca(vec3F& axis, const vec3F_array& norm_c
       g *= m;
       b *= m;
     }
-
     double delta = math::square(vfr - r) + math::square(vfg - g) + math::square(vfb - b);
-
     vfr = r;
     vfg = g;
     vfb = b;
-
     if ((iter > 2) && (delta < 1e-8))
       break;
   }
-
   double len = vfr * vfr + vfg * vfg + vfb * vfb;
-
   if (len < 1e-10) {
     axis = def;
   } else {
     len = 1.0f / sqrt(len);
-    vfr *= len;
-    vfg *= len;
-    vfb *= len;
-
-    axis.set(static_cast<float>(vfr), static_cast<float>(vfg), static_cast<float>(vfb));
+    axis.set(static_cast<float>(vfr * len), static_cast<float>(vfg * len), static_cast<float>(vfb * len));
   }
-#endif
 }
 
 static const uint8 g_invTableNull[4] = {0, 1, 2, 3};
@@ -330,37 +198,38 @@ static const uint8 g_invTableAlpha[4] = {1, 0, 2, 3};
 static const uint8 g_invTableColor[4] = {1, 0, 3, 2};
 
 // Computes a valid (encodable) DXT1 solution (low/high colors, swizzled selectors) from input.
-void dxt1_endpoint_optimizer::return_solution(results& res, const potential_solution& solution) {
+void dxt1_endpoint_optimizer::return_solution() {
+  compute_selectors();
   bool invert_selectors;
 
-  if (solution.m_alpha_block)
-    invert_selectors = (solution.m_coords.m_low_color > solution.m_coords.m_high_color);
+  if (m_best_solution.m_alpha_block)
+    invert_selectors = (m_best_solution.m_coords.m_low_color > m_best_solution.m_coords.m_high_color);
   else {
-    CRNLIB_ASSERT(solution.m_coords.m_low_color != solution.m_coords.m_high_color);
+    CRNLIB_ASSERT(m_best_solution.m_coords.m_low_color != m_best_solution.m_coords.m_high_color);
 
-    invert_selectors = (solution.m_coords.m_low_color < solution.m_coords.m_high_color);
+    invert_selectors = (m_best_solution.m_coords.m_low_color < m_best_solution.m_coords.m_high_color);
   }
 
-  res.m_alternate_rounding = solution.m_alternate_rounding;
-  res.m_enforce_selector = solution.m_enforce_selector;
-  res.m_enforced_selector = solution.m_enforced_selector;
-  res.m_reordered = invert_selectors;
+  m_pResults->m_alternate_rounding = m_best_solution.m_alternate_rounding;
+  m_pResults->m_enforce_selector = m_best_solution.m_enforce_selector;
+  m_pResults->m_enforced_selector = m_best_solution.m_enforced_selector;
+  m_pResults->m_reordered = invert_selectors;
   if (invert_selectors) {
-    res.m_low_color = solution.m_coords.m_high_color;
-    res.m_high_color = solution.m_coords.m_low_color;
+    m_pResults->m_low_color = m_best_solution.m_coords.m_high_color;
+    m_pResults->m_high_color = m_best_solution.m_coords.m_low_color;
   } else {
-    res.m_low_color = solution.m_coords.m_low_color;
-    res.m_high_color = solution.m_coords.m_high_color;
+    m_pResults->m_low_color = m_best_solution.m_coords.m_low_color;
+    m_pResults->m_high_color = m_best_solution.m_coords.m_high_color;
   }
 
   const uint8* pInvert_table = g_invTableNull;
   if (invert_selectors)
-    pInvert_table = solution.m_alpha_block ? g_invTableAlpha : g_invTableColor;
+    pInvert_table = m_best_solution.m_alpha_block ? g_invTableAlpha : g_invTableColor;
 
   const uint alpha_thresh = m_pParams->m_pixels_have_alpha ? (m_pParams->m_dxt1a_alpha_threshold << 24U) : 0;
 
   const uint32* pSrc_pixels = reinterpret_cast<const uint32*>(m_pParams->m_pPixels);
-  uint8* pDst_selectors = res.m_pSelectors;
+  uint8* pDst_selectors = m_pResults->m_pSelectors;
 
   if ((m_unique_colors.size() == 1) && (!m_pParams->m_pixels_have_alpha)) {
     uint32 c = utils::read_le32(pSrc_pixels);
@@ -374,7 +243,7 @@ void dxt1_endpoint_optimizer::return_solution(results& res, const potential_solu
 
     uint unique_color_index = it->second;
 
-    uint selector = pInvert_table[solution.m_selectors[unique_color_index]];
+    uint selector = pInvert_table[m_best_solution.m_selectors[unique_color_index]];
 
     memset(pDst_selectors, selector, m_pParams->m_num_pixels);
   } else {
@@ -401,7 +270,7 @@ void dxt1_endpoint_optimizer::return_solution(results& res, const potential_solu
 
           uint unique_color_index = it->second;
 
-          selector = pInvert_table[solution.m_selectors[unique_color_index]];
+          selector = pInvert_table[m_best_solution.m_selectors[unique_color_index]];
 
           prev_color = c;
           prev_selector = selector;
@@ -413,30 +282,15 @@ void dxt1_endpoint_optimizer::return_solution(results& res, const potential_solu
     } while (pDst_selectors != pDst_selectors_end);
   }
 
-  res.m_alpha_block = solution.m_alpha_block;
-  res.m_error = solution.m_error;
-}
-
-inline vec3F dxt1_endpoint_optimizer::unpack_to_vec3F(uint16 packed_color) {
-  color_quad_u8 c(dxt1_block::unpack_color(packed_color, false));
-
-  return vec3F(c.r * 1.0f / 31.0f, c.g * 1.0f / 63.0f, c.b * 1.0f / 31.0f);
-}
-
-inline vec3F dxt1_endpoint_optimizer::unpack_to_vec3F_raw(uint16 packed_color) {
-  color_quad_u8 c(dxt1_block::unpack_color(packed_color, false));
-
-  return vec3F(c.r, c.g, c.b);
+  m_pResults->m_alpha_block = m_best_solution.m_alpha_block;
+  m_pResults->m_error = m_best_solution.m_error;
 }
 
 // Per-component 1D endpoint optimization.
 void dxt1_endpoint_optimizer::optimize_endpoint_comps() {
+  compute_selectors();
   if ((m_best_solution.m_alpha_block) || (!m_best_solution.m_error))
     return;
-
-  //color_quad_u8 orig_l(dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, false));
-  //color_quad_u8 orig_h(dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, false));
-  //uint orig_error = m_best_solution.m_error;
 
   color_quad_u8 orig_l_scaled(dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, true));
   color_quad_u8 orig_h_scaled(dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, true));
@@ -524,45 +378,29 @@ void dxt1_endpoint_optimizer::optimize_endpoint_comps() {
               break;
           }
 
-          //CRNLIB_ASSERT(trial_error >= min_possible_error);
-
           if (trial_error < error_to_beat) {
             color_quad_u8 l(dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, false));
             color_quad_u8 h(dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, false));
             l[comp_index] = static_cast<uint8>(o);
             h[comp_index] = static_cast<uint8>(p);
 
-            bool better = evaluate_solution(
-                dxt1_solution_coordinates(dxt1_block::pack_color(l, false), dxt1_block::pack_color(h, false)),
-                true, &m_best_solution);
-            better;
+            bool better = evaluate_solution(dxt1_solution_coordinates(dxt1_block::pack_color(l, false), dxt1_block::pack_color(h, false)));
+            compute_selectors();
 
             if (better) {
-#if 0
-                        printf("comp: %u, orig: %u %u, new: %u %u, orig_error: %u, new_error: %u\n", comp_index,
-                           orig_l[comp_index], orig_h[comp_index],
-                           l[comp_index], h[comp_index],
-                           orig_error, m_best_solution.m_error);
-#endif
               if (!m_best_solution.m_error)
                 return;
-
               error_to_beat = 0;
               for (uint i = 0; i < m_unique_colors.size(); i++) {
                 int delta = tl[m_best_solution.m_selectors[i]] - m_unique_colors[i].m_color[comp_index];
                 error_to_beat += static_cast<int64>(m_unique_colors[i].m_weight) * (delta * delta);
               }
-
             }  // better
-
             //goto early_out;
           }  // if (trial_error < error_to_beat)
-
         }  // for (uint p = 0; p <= m; p++)
       }
-
     }  // for (uint o = 0; o <= m; o++)
-
   }  // comp_index
 }
 
@@ -602,7 +440,7 @@ static const struct adjacent_coords {
 
 // Attempt to refine current solution's endpoints given the current selectors using least squares.
 bool dxt1_endpoint_optimizer::refine_solution(int refinement_level) {
-  CRNLIB_ASSERT(m_best_solution.m_valid);
+  compute_selectors();
 
   static const int w1Tab[4] = {3, 0, 2, 1};
 
@@ -670,7 +508,7 @@ bool dxt1_endpoint_optimizer::refine_solution(int refinement_level) {
 
     dxt1_solution_coordinates nc((uint16)min16, (uint16)max16);
     nc.canonicalize();
-    improved |= evaluate_solution(nc, true, &m_best_solution, false);
+    improved |= evaluate_solution(nc);
   } else if (refinement_level == 1) {
     // Try exploring the local lattice neighbors of the least squares optimized result.
     color_quad_u8 e[2];
@@ -705,7 +543,7 @@ bool dxt1_endpoint_optimizer::refine_solution(int refinement_level) {
             nc.canonicalize();
 
             if ((nc.m_low_color != m_best_solution.m_coords.m_low_color) || (nc.m_high_color != m_best_solution.m_coords.m_high_color)) {
-              improved |= evaluate_solution(nc, true, &m_best_solution, false);
+              improved |= evaluate_solution(nc);
             }
           }
         }
@@ -748,7 +586,7 @@ bool dxt1_endpoint_optimizer::refine_solution(int refinement_level) {
                 nc.m_high_color = dxt1_block::pack_color(c[1], false);
                 nc.canonicalize();
 
-                improved |= evaluate_solution(nc, true, &m_best_solution, false);
+                improved |= evaluate_solution(nc);
               }
             }
           }
@@ -763,7 +601,7 @@ bool dxt1_endpoint_optimizer::refine_solution(int refinement_level) {
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
 // Primary endpoint optimization entrypoint.
-bool dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_color) {
+void dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_color) {
   vec3F orig_low_color(low_color);
   vec3F orig_high_color(high_color);
 
@@ -818,13 +656,13 @@ bool dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
       if (!solution_res.second)
         continue;
 
-      evaluate_solution(coords, true, &m_best_solution);
+      evaluate_solution(coords);
     }
 
     if (!m_best_solution.m_error) {
       // Got lucky - one of the previous endpoints is optimal.
-      return_solution(*m_pResults, m_best_solution);
-      return true;
+      return_solution();
+      return;
     }
   }
 
@@ -868,8 +706,10 @@ bool dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
     // This entire process can be repeated up to X times (depending on the quality level) until a local minimum is established.
     // This method is very stable and scalable. It could be implemented more elegantly, but I'm now very cautious of touching this code.
     if (pass) {
-      low_color = unpack_to_vec3F_raw(m_best_solution.m_coords.m_low_color);
-      high_color = unpack_to_vec3F_raw(m_best_solution.m_coords.m_high_color);
+      color_quad_u8 low(dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, false));
+      low_color = vec3F(low.r, low.g, low.b);
+      color_quad_u8 high(dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, false));
+      high_color = vec3F(high.r, high.g, high.b);
     }
 
     const uint64 prev_best_error = m_best_solution.m_error;
@@ -934,7 +774,7 @@ bool dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
         if (!solution_res.second)
           continue;
 
-        evaluate_solution(coords, true, &m_best_solution);
+        evaluate_solution(coords);
       }
     }
 
@@ -960,7 +800,7 @@ bool dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
 
         solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
         if (solution_res.second)
-          evaluate_solution(coords, true, &m_best_solution);
+          evaluate_solution(coords);
       }
 
       if (m_pParams->m_quality == cCRNDXTQualityUber) {
@@ -983,7 +823,7 @@ bool dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
 
             solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
             if (solution_res.second)
-              evaluate_solution(coords, true, &m_best_solution);
+              evaluate_solution(coords);
           }
         }
       }
@@ -1009,7 +849,7 @@ bool dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
 
         solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
         if (solution_res.second)
-          evaluate_solution(coords, true, &m_best_solution);
+          evaluate_solution(coords);
       }
 
       if (m_pParams->m_quality == cCRNDXTQualityUber) {
@@ -1032,7 +872,7 @@ bool dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
 
             solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
             if (solution_res.second)
-              evaluate_solution(coords, true, &m_best_solution);
+              evaluate_solution(coords);
           }
         }
       }
@@ -1070,23 +910,16 @@ bool dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
     }
   }
 
-  return_solution(*m_pResults, m_best_solution);
+  return_solution();
 
   if (m_pParams->m_endpoint_caching) {
     // Remember result for later reruse.
     m_prev_results[m_num_prev_results & (cMaxPrevResults - 1)] = m_best_solution.m_coords;
     m_num_prev_results++;
   }
-
-  return true;
 }
 
-static inline int mul_8bit(int a, int b) {
-  int t = a * b + 128;
-  return (t + (t >> 8)) >> 8;
-}
-
-bool dxt1_endpoint_optimizer::handle_multicolor_block() {
+void dxt1_endpoint_optimizer::handle_multicolor_block() {
   uint num_passes = 1;
   vec3F perceptual_weights(1.0f);
 
@@ -1099,26 +932,17 @@ bool dxt1_endpoint_optimizer::handle_multicolor_block() {
 
     for (uint i = 0; i < m_unique_colors.size(); i++) {
       const color_quad_u8& c = m_unique_colors[i].m_color;
-      const float weight = (float)m_unique_colors[i].m_weight;
-
-      int l = mul_8bit(c.r + c.g + c.b, 0x55);  // /3
-      ave_l += l;
-      l = math::maximum(1, l);
-
-      float scale = weight / static_cast<float>(l);
-
+      int l = (c.r + c.g + c.b + 1) / 3;
+      float scale = (float)m_unique_colors[i].m_weight / math::maximum<float>(1.0f, l);
       ave_redness += scale * c.r;
       ave_blueness += scale * c.b;
+      ave_l += l;
     }
 
     ave_redness /= m_total_unique_color_weight;
     ave_blueness /= m_total_unique_color_weight;
     ave_l /= m_total_unique_color_weight;
-
     ave_l = math::minimum(1.0f, ave_l * 16.0f / 255.0f);
-
-    //float r = ave_l * powf(math::saturate(ave_redness / 3.0f), 5.0f);
-    //float b = ave_l * powf(math::saturate(ave_blueness / 3.0f), 5.0f);
 
     float p = ave_l * powf(math::saturate(math::maximum(ave_redness, ave_blueness) * 1.0f / 3.0f), 2.75f);
 
@@ -1132,23 +956,11 @@ bool dxt1_endpoint_optimizer::handle_multicolor_block() {
 
   for (uint pass_index = 0; pass_index < num_passes; pass_index++) {
     compute_vectors(perceptual_weights);
-
     compute_pca(m_principle_axis, m_norm_unique_colors_weighted, vec3F(.2837149f, 0.9540631f, 0.096277453f));
-
-#if 0
-         matrix44F m(matrix44F::make_scale_matrix(perceptual_weights[0], perceptual_weights[1], perceptual_weights[2]));
-         matrix44F im(m.get_inverse());
-         im.transpose_in_place();
-         m_principle_axis = m_principle_axis * im;
-#else
-    // Purposely scale the components of the principle axis by the perceptual weighting.
-    // There's probably a cleaner way to go about this, but it works (more competitive in perceptual mode against nvdxt.exe or ATI_Compress).
     m_principle_axis[0] /= perceptual_weights[0];
     m_principle_axis[1] /= perceptual_weights[1];
     m_principle_axis[2] /= perceptual_weights[2];
-#endif
     m_principle_axis.normalize_in_place();
-
     if (num_passes > 1) {
       // Check for obviously wild principle axes and try to compensate by backing off the component weightings.
       if (fabs(m_principle_axis[0]) >= .795f)
@@ -1194,15 +1006,7 @@ bool dxt1_endpoint_optimizer::handle_multicolor_block() {
   }
 
   // Now optimize the endpoints using the projection bounds on the (potentially skewed) principle axis as a starting point.
-  if (!optimize_endpoints(low_color, high_color))
-    return false;
-
-  return true;
-}
-
-bool dxt1_endpoint_optimizer::handle_grayscale_block() {
-  // TODO
-  return true;
+  optimize_endpoints(low_color, high_color);
 }
 
 // Tries quantizing the block to 4 colors using vanilla LBG. It tries all combinations of the quantized results as potential endpoints.
@@ -1300,7 +1104,7 @@ bool dxt1_endpoint_optimizer::try_median4(const vec3F& low_color, const vec3F& h
 
       sc.canonicalize();
 
-      improved |= evaluate_solution(sc, true, &m_best_solution, false);
+      improved |= evaluate_solution(sc);
     }
   }
 
@@ -1311,38 +1115,12 @@ bool dxt1_endpoint_optimizer::try_median4(const vec3F& low_color, const vec3F& h
 
 // Given candidate low/high endpoints, find the optimal selectors for 3 and 4 color blocks, compute the resulting error,
 // and use the candidate if it results in less error than the best found result so far.
-bool dxt1_endpoint_optimizer::evaluate_solution(
-    const dxt1_solution_coordinates& coords,
-    bool early_out,
-    potential_solution* pBest_solution,
-    bool alternate_rounding) {
-  m_total_evals++;
-
-  if ((!m_pSolutions) || (alternate_rounding)) {
-    if (m_pParams->m_quality >= cCRNDXTQualityBetter)
-      return evaluate_solution_uber(m_trial_solution, coords, early_out, pBest_solution, alternate_rounding);
-    else
-      return evaluate_solution_fast(m_trial_solution, coords, early_out, pBest_solution, alternate_rounding);
-  }
-
-  evaluate_solution_uber(m_trial_solution, coords, false, NULL, alternate_rounding);
-
-  CRNLIB_ASSERT(m_trial_solution.m_valid);
-
-  // Caller has requested all considered candidate solutions for later analysis.
-  m_pSolutions->resize(m_pSolutions->size() + 1);
-  solution& new_solution = m_pSolutions->back();
-  new_solution.m_selectors.resize(m_pParams->m_num_pixels);
-  new_solution.m_results.m_pSelectors = &new_solution.m_selectors[0];
-
-  return_solution(new_solution.m_results, m_trial_solution);
-
-  if ((pBest_solution) && (m_trial_solution.m_error < m_best_solution.m_error)) {
-    *pBest_solution = m_trial_solution;
-    return true;
-  }
-
-  return false;
+bool dxt1_endpoint_optimizer::evaluate_solution(const dxt1_solution_coordinates& coords, bool alternate_rounding) {
+  if (m_evaluate_hc)
+    return evaluate_solution_hc(coords, alternate_rounding);
+  if (m_pParams->m_quality >= cCRNDXTQualityBetter)
+    return evaluate_solution_uber(coords, alternate_rounding);
+  return evaluate_solution_fast(coords, alternate_rounding);
 }
 
 inline uint dxt1_endpoint_optimizer::color_distance(bool perceptual, const color_quad_u8& e1, const color_quad_u8& e2, bool alpha) {
@@ -1359,44 +1137,16 @@ inline uint dxt1_endpoint_optimizer::color_distance(bool perceptual, const color
     } else {
       return yd * yd;
     }
-  } else if (m_has_color_weighting) {
-    // Compute error using user provided color component weights.
-    int dr = (int)e1[0] - (int)e2[0];
-    int dg = (int)e1[1] - (int)e2[1];
-    int db = (int)e1[2] - (int)e2[2];
-
-    dr = (dr * dr) * m_pParams->m_color_weights[0];
-    dg = (dg * dg) * m_pParams->m_color_weights[1];
-    db = (db * db) * m_pParams->m_color_weights[2];
-
-    if (alpha) {
-      int da = (int)e1[3] - (int)e2[3];
-      da = (da * da) * (m_pParams->m_color_weights[0] + m_pParams->m_color_weights[1] + m_pParams->m_color_weights[2]);
-      return dr + dg + db + da;
-    } else {
-      return dr + dg + db;
-    }
   } else {
     return color::color_distance(false, e1, e2, alpha);
   }
 }
 
-bool dxt1_endpoint_optimizer::evaluate_solution_uber(
-    potential_solution& solution,
-    const dxt1_solution_coordinates& coords,
-    bool early_out,
-    potential_solution* pBest_solution,
-    bool alternate_rounding) {
-  solution.m_coords = coords;
-  solution.m_selectors.resize(m_unique_colors.size());
-
-  if ((pBest_solution) && (early_out))
-    solution.m_error = pBest_solution->m_error;
-  else
-    solution.m_error = cUINT64_MAX;
-
-  solution.m_alpha_block = false;
-  solution.m_valid = false;
+bool dxt1_endpoint_optimizer::evaluate_solution_uber(const dxt1_solution_coordinates& coords, bool alternate_rounding) {
+  m_trial_solution.m_coords = coords;
+  m_trial_solution.m_selectors.resize(m_unique_colors.size());
+  m_trial_solution.m_error = m_best_solution.m_error;
+  m_trial_solution.m_alpha_block = false;
 
   uint first_block_type = 0;
   uint last_block_type = 1;
@@ -1446,7 +1196,7 @@ bool dxt1_endpoint_optimizer::evaluate_solution_uber(
           }
 
           trial_error += best_error * static_cast<uint64>(m_unique_colors[unique_color_index].m_weight);
-          if (trial_error >= solution.m_error)
+          if (trial_error >= m_trial_solution.m_error)
             break;
 
           m_trial_selectors[unique_color_index] = static_cast<uint8>(best_color_index);
@@ -1477,7 +1227,7 @@ bool dxt1_endpoint_optimizer::evaluate_solution_uber(
           }
 
           trial_error += best_error * static_cast<uint64>(m_unique_colors[unique_color_index].m_weight);
-          if (trial_error >= solution.m_error)
+          if (trial_error >= m_trial_solution.m_error)
             break;
 
           m_trial_selectors[unique_color_index] = static_cast<uint8>(best_color_index);
@@ -1506,7 +1256,7 @@ bool dxt1_endpoint_optimizer::evaluate_solution_uber(
           }
 
           trial_error += best_error * static_cast<uint64>(m_unique_colors[unique_color_index].m_weight);
-          if (trial_error >= solution.m_error)
+          if (trial_error >= m_trial_solution.m_error)
             break;
 
           m_trial_selectors[unique_color_index] = static_cast<uint8>(best_color_index);
@@ -1531,7 +1281,7 @@ bool dxt1_endpoint_optimizer::evaluate_solution_uber(
           }
 
           trial_error += best_error * static_cast<uint64>(m_unique_colors[unique_color_index].m_weight);
-          if (trial_error >= solution.m_error)
+          if (trial_error >= m_trial_solution.m_error)
             break;
 
           m_trial_selectors[unique_color_index] = static_cast<uint8>(best_color_index);
@@ -1539,55 +1289,43 @@ bool dxt1_endpoint_optimizer::evaluate_solution_uber(
       }
     }
 
-    if (trial_error < solution.m_error) {
-      solution.m_error = trial_error;
-      solution.m_alpha_block = (block_type != 0);
-      solution.m_selectors = m_trial_selectors;
-      solution.m_alternate_rounding = alternate_rounding;
-      solution.m_valid = true;
+    if (trial_error < m_trial_solution.m_error) {
+      m_trial_solution.m_error = trial_error;
+      m_trial_solution.m_alpha_block = (block_type != 0);
+      m_trial_solution.m_selectors = m_trial_selectors;
+      m_trial_solution.m_alternate_rounding = alternate_rounding;
     }
   }
 
-  solution.m_enforce_selector = !solution.m_alpha_block && solution.m_coords.m_low_color == solution.m_coords.m_high_color;
-  if (solution.m_enforce_selector) {
+  m_trial_solution.m_enforce_selector = !m_trial_solution.m_alpha_block && m_trial_solution.m_coords.m_low_color == m_trial_solution.m_coords.m_high_color;
+  if (m_trial_solution.m_enforce_selector) {
     uint s;
-    if ((solution.m_coords.m_low_color & 31) != 31) {
-      solution.m_coords.m_low_color++;
+    if ((m_trial_solution.m_coords.m_low_color & 31) != 31) {
+      m_trial_solution.m_coords.m_low_color++;
       s = 1;
     } else {
-      solution.m_coords.m_high_color--;
+      m_trial_solution.m_coords.m_high_color--;
       s = 0;
     }
 
     for (uint i = 0; i < m_unique_colors.size(); i++)
-      solution.m_selectors[i] = static_cast<uint8>(s);
-    solution.m_enforced_selector = s;
+      m_trial_solution.m_selectors[i] = static_cast<uint8>(s);
+    m_trial_solution.m_enforced_selector = s;
   }
 
-  if ((pBest_solution) && (solution.m_error < pBest_solution->m_error)) {
-    *pBest_solution = solution;
+  if (m_trial_solution.m_error < m_best_solution.m_error) {
+    m_best_solution = m_trial_solution;
     return true;
   }
 
   return false;
 }
 
-bool dxt1_endpoint_optimizer::evaluate_solution_fast(
-    potential_solution& solution,
-    const dxt1_solution_coordinates& coords,
-    bool early_out,
-    potential_solution* pBest_solution,
-    bool alternate_rounding) {
-  solution.m_coords = coords;
-  solution.m_selectors.resize(m_unique_colors.size());
-
-  if ((pBest_solution) && (early_out))
-    solution.m_error = pBest_solution->m_error;
-  else
-    solution.m_error = cUINT64_MAX;
-
-  solution.m_alpha_block = false;
-  solution.m_valid = false;
+bool dxt1_endpoint_optimizer::evaluate_solution_fast(const dxt1_solution_coordinates& coords, bool alternate_rounding) {
+  m_trial_solution.m_coords = coords;
+  m_trial_solution.m_selectors.resize(m_unique_colors.size());
+  m_trial_solution.m_error = m_best_solution.m_error;
+  m_trial_solution.m_alpha_block = false;
 
   uint first_block_type = 0;
   uint last_block_type = 1;
@@ -1648,7 +1386,7 @@ bool dxt1_endpoint_optimizer::evaluate_solution_fast(
         uint best_error = color_distance(m_perceptual, c, colors[best_color_index], false);
 
         trial_error += best_error * static_cast<uint64>(m_unique_colors[unique_color_index].m_weight);
-        if (trial_error >= solution.m_error)
+        if (trial_error >= m_trial_solution.m_error)
           break;
 
         m_trial_selectors[unique_color_index] = static_cast<uint8>(best_color_index);
@@ -1678,41 +1416,107 @@ bool dxt1_endpoint_optimizer::evaluate_solution_fast(
         uint best_error = color_distance(m_perceptual, c, colors[best_color_index], false);
 
         trial_error += best_error * static_cast<uint64>(m_unique_colors[unique_color_index].m_weight);
-        if (trial_error >= solution.m_error)
+        if (trial_error >= m_trial_solution.m_error)
           break;
 
         m_trial_selectors[unique_color_index] = static_cast<uint8>(best_color_index);
       }
     }
 
-    if (trial_error < solution.m_error) {
-      solution.m_error = trial_error;
-      solution.m_alpha_block = (block_type != 0);
-      solution.m_selectors = m_trial_selectors;
-      solution.m_valid = true;
+    if (trial_error < m_trial_solution.m_error) {
+      m_trial_solution.m_error = trial_error;
+      m_trial_solution.m_alpha_block = (block_type != 0);
+      m_trial_solution.m_selectors = m_trial_selectors;
     }
   }
 
-  if ((!solution.m_alpha_block) && (solution.m_coords.m_low_color == solution.m_coords.m_high_color)) {
+  if ((!m_trial_solution.m_alpha_block) && (m_trial_solution.m_coords.m_low_color == m_trial_solution.m_coords.m_high_color)) {
     uint s;
-    if ((solution.m_coords.m_low_color & 31) != 31) {
-      solution.m_coords.m_low_color++;
+    if ((m_trial_solution.m_coords.m_low_color & 31) != 31) {
+      m_trial_solution.m_coords.m_low_color++;
       s = 1;
     } else {
-      solution.m_coords.m_high_color--;
+      m_trial_solution.m_coords.m_high_color--;
       s = 0;
     }
 
     for (uint i = 0; i < m_unique_colors.size(); i++)
-      solution.m_selectors[i] = static_cast<uint8>(s);
+      m_trial_solution.m_selectors[i] = static_cast<uint8>(s);
   }
 
-  if ((pBest_solution) && (solution.m_error < pBest_solution->m_error)) {
-    *pBest_solution = solution;
+  if (m_trial_solution.m_error < m_best_solution.m_error) {
+    m_best_solution = m_trial_solution;
     return true;
   }
 
   return false;
+}
+
+bool dxt1_endpoint_optimizer::evaluate_solution_hc(const dxt1_solution_coordinates& coords, bool alternate_rounding) {
+  color_quad_u8 c0 = dxt1_block::unpack_color(coords.m_low_color, true);
+  color_quad_u8 c1 = dxt1_block::unpack_color(coords.m_high_color, true);
+  color_quad_u8 c2((c0.r * 2 + c1.r + alternate_rounding) / 3, (c0.g * 2 + c1.g + alternate_rounding) / 3, (c0.b * 2 + c1.b + alternate_rounding) / 3, 0);
+  color_quad_u8 c3((c1.r * 2 + c0.r + alternate_rounding) / 3, (c1.g * 2 + c0.g + alternate_rounding) / 3, (c1.b * 2 + c0.b + alternate_rounding) / 3, 0);
+  unique_color* color = m_unique_colors.get_ptr();
+  uint count = m_unique_colors.size();
+  uint64 error = 0;
+  if (m_perceptual) {
+    for (; count; color++, error < m_best_solution.m_error ? count-- : count = 0) {
+      uint e01 = math::minimum(color::color_distance(true, color->m_color, c0, false), color::color_distance(true, color->m_color, c1, false));
+      uint e23 = math::minimum(color::color_distance(true, color->m_color, c2, false), color::color_distance(true, color->m_color, c3, false));
+      error += math::minimum(e01, e23) * (uint64)color->m_weight;
+    }
+  } else {
+    for (; count; color++, error < m_best_solution.m_error ? count-- : count = 0) {
+      uint e01 = math::minimum(color::color_distance(false, color->m_color, c0, false), color::color_distance(false, color->m_color, c1, false));
+      uint e23 = math::minimum(color::color_distance(false, color->m_color, c2, false), color::color_distance(false, color->m_color, c3, false));
+      error += math::minimum(e01, e23) * (uint64)color->m_weight;
+    }
+  }
+  if (error >= m_best_solution.m_error)
+    return false;
+  m_best_solution.m_coords = coords;
+  m_best_solution.m_error = error;
+  m_best_solution.m_alpha_block = false;
+  m_best_solution.m_alternate_rounding = alternate_rounding;
+  m_best_solution.m_enforce_selector = m_best_solution.m_coords.m_low_color == m_best_solution.m_coords.m_high_color;
+  if (m_best_solution.m_enforce_selector) {
+    if ((m_best_solution.m_coords.m_low_color & 31) != 31) {
+      m_best_solution.m_coords.m_low_color++;
+      m_best_solution.m_enforced_selector = 1;
+    } else {
+      m_best_solution.m_coords.m_high_color--;
+      m_best_solution.m_enforced_selector = 0;
+    }
+  }
+  return true;
+}
+
+void dxt1_endpoint_optimizer::compute_selectors() {
+  if (m_evaluate_hc)
+    compute_selectors_hc();
+}
+
+void dxt1_endpoint_optimizer::compute_selectors_hc() {
+  m_best_solution.m_selectors.resize(m_unique_colors.size());
+  if (m_best_solution.m_enforce_selector) {
+    memset(m_best_solution.m_selectors.get_ptr(), m_best_solution.m_enforced_selector, m_best_solution.m_selectors.size());
+    return;
+  }
+  color_quad_u8 c0 = dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, true);
+  color_quad_u8 c1 = dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, true);
+  color_quad_u8 c2((c0.r * 2 + c1.r + m_best_solution.m_alternate_rounding) / 3, (c0.g * 2 + c1.g + m_best_solution.m_alternate_rounding) / 3, (c0.b * 2 + c1.b + m_best_solution.m_alternate_rounding) / 3, 0);
+  color_quad_u8 c3((c1.r * 2 + c0.r + m_best_solution.m_alternate_rounding) / 3, (c1.g * 2 + c0.g + m_best_solution.m_alternate_rounding) / 3, (c1.b * 2 + c0.b + m_best_solution.m_alternate_rounding) / 3, 0);
+  for (uint i = 0, iEnd = m_unique_colors.size(); i < iEnd; i++) {
+    const color_quad_u8& c = m_unique_colors[i].m_color;
+    uint e0 = color::color_distance(m_perceptual, c, c0, false);
+    uint e1 = color::color_distance(m_perceptual, c, c1, false);
+    uint e2 = color::color_distance(m_perceptual, c, c2, false);
+    uint e3 = color::color_distance(m_perceptual, c, c3, false);
+    uint e01 = math::minimum(e0, e1);
+    uint e23 = math::minimum(e2, e3);
+    m_best_solution.m_selectors[i] = e01 <= e23 ? e01 == e0 ? 0 : 1 : e23 == e2 ? 2 : 3;
+  }
 }
 
 unique_color dxt1_endpoint_optimizer::lerp_color(const color_quad_u8& a, const color_quad_u8& b, float f, int rounding) {
@@ -1802,29 +1606,20 @@ void dxt1_endpoint_optimizer::try_combinatorial_encoding() {
     m_unique_packed_colors.push_back(packed_color);
   }
 
-  if (m_unique_packed_colors.size() < 2)
-    return;
-
-  for (uint alt_rounding = 0; alt_rounding < 2; alt_rounding++) {
-    for (uint i = 0; i < m_unique_packed_colors.size() - 1; i++) {
-      for (uint j = i + 1; j < m_unique_packed_colors.size(); j++) {
-        evaluate_solution(
-            dxt1_solution_coordinates(m_unique_packed_colors[i], m_unique_packed_colors[j]),
-            true,
-            (alt_rounding == 0) ? &m_best_solution : NULL,
-            (alt_rounding != 0));
-
-        if (m_trial_solution.m_error == 0) {
-          if (alt_rounding)
-            m_best_solution = m_trial_solution;
-
-          return;
-        }
-      }
-    }
+  for (uint i = 0; m_best_solution.m_error && i < m_unique_packed_colors.size() - 1; i++) {
+    for (uint j = i + 1; m_best_solution.m_error && j < m_unique_packed_colors.size(); j++)
+      evaluate_solution(dxt1_solution_coordinates(m_unique_packed_colors[i], m_unique_packed_colors[j]));
   }
-
-  return;
+  uint64 error = m_best_solution.m_error;
+  if (error)
+    m_best_solution.m_error = 1;
+  for (uint i = 0; m_best_solution.m_error && i < m_unique_packed_colors.size() - 1; i++) {
+    for (uint j = i + 1; m_best_solution.m_error && j < m_unique_packed_colors.size(); j++)
+      evaluate_solution(dxt1_solution_coordinates(m_unique_packed_colors[i], m_unique_packed_colors[j]), true);
+  }
+  if (m_best_solution.m_error)
+    m_best_solution.m_error = error;
+  
 }
 
 // The fourth (transparent) color in 3 color "transparent" blocks is black, which can be optionally exploited for small gains in DXT1 mode if the caller
@@ -1859,8 +1654,7 @@ bool dxt1_endpoint_optimizer::try_alpha_as_black_optimization() {
   crnlib::vector<uint8> trial_selectors(m_pParams->m_num_pixels);
   trial_results.m_pSelectors = trial_selectors.get_ptr();
 
-  if (!compute_internal(trial_params, trial_results, NULL))
-    return false;
+  compute_internal(trial_params, trial_results);
 
   CRNLIB_ASSERT(trial_results.m_alpha_block);
 
@@ -1894,104 +1688,73 @@ bool dxt1_endpoint_optimizer::try_alpha_as_black_optimization() {
   return true;
 }
 
-bool dxt1_endpoint_optimizer::compute_internal(const params& p, results& r, solution_vec* pSolutions) {
-  clear();
-
+void dxt1_endpoint_optimizer::compute_internal(const params& p, results& r) {
   m_pParams = &p;
   m_pResults = &r;
-  m_pSolutions = pSolutions;
-
-  m_has_color_weighting = (m_pParams->m_color_weights[0] != 1) || (m_pParams->m_color_weights[1] != 1) || (m_pParams->m_color_weights[2] != 1);
-  m_perceptual = m_pParams->m_perceptual && !m_has_color_weighting && !m_pParams->m_grayscale_sampling;
-
-  find_unique_colors();
-
+  m_evaluate_hc = m_pParams->m_quality == cCRNDXTQualityUber && !m_pParams->m_pixels_have_alpha && !m_pParams->m_force_alpha_blocks
+    && !m_pParams->m_use_alpha_blocks && !m_pParams->m_grayscale_sampling;
+  m_perceptual = m_pParams->m_perceptual && !m_pParams->m_grayscale_sampling;
+  if (m_unique_color_hash_map.get_table_size() > 8192)
+    m_unique_color_hash_map.clear();
+  else
+    m_unique_color_hash_map.reset();
+  if (m_solutions_tried.get_table_size() > 8192)
+    m_solutions_tried.clear();
+  m_unique_colors.clear();
+  m_norm_unique_colors.clear();
+  m_mean_norm_color.clear();
+  m_norm_unique_colors_weighted.clear();
+  m_mean_norm_color_weighted.clear();
+  m_principle_axis.clear();
   m_best_solution.clear();
 
-  if (m_unique_colors.empty())
-    return handle_all_transparent_block();
-  else if ((m_unique_colors.size() == 1) && (!m_has_transparent_pixels))
-    return handle_solid_block();
-  else {
-    if (!handle_multicolor_block())
-      return false;
-
-    if ((m_all_pixels_grayscale) && (m_best_solution.m_error)) {
-      if (!handle_grayscale_block())
-        return false;
+  m_total_unique_color_weight = 0;
+  m_unique_colors.reserve(m_pParams->m_num_pixels);
+  unique_color color(color_quad_u8(0), 1);
+  for (uint i = 0; i < m_pParams->m_num_pixels; i++) {
+    if (!m_pParams->m_pixels_have_alpha || m_pParams->m_pPixels[i].a >= m_pParams->m_dxt1a_alpha_threshold) {
+      color.m_color.m_u32 = m_pParams->m_pPixels[i].m_u32 | 0xFF000000;
+      unique_color_hash_map::insert_result ins_result(m_unique_color_hash_map.insert(color.m_color.m_u32, m_unique_colors.size()));
+      if (ins_result.second) {
+        m_unique_colors.push_back(color);
+      } else {
+        m_unique_colors[ins_result.first->second].m_weight++;
+      }
+      m_total_unique_color_weight++;
     }
   }
+  m_has_transparent_pixels = m_total_unique_color_weight != m_pParams->m_num_pixels;
 
-  return true;
+  if (!m_unique_colors.size()) {
+    m_pResults->m_low_color = 0;
+    m_pResults->m_high_color = 0;
+    m_pResults->m_alpha_block = true;
+    memset(m_pResults->m_pSelectors, 3, m_pParams->m_num_pixels);
+  } else if (m_unique_colors.size() == 1 && !m_has_transparent_pixels) {
+    int r = m_unique_colors[0].m_color.r;
+    int g = m_unique_colors[0].m_color.g;
+    int b = m_unique_colors[0].m_color.b;
+    uint low_color = (ryg_dxt::OMatch5[r][0] << 11) | (ryg_dxt::OMatch6[g][0] << 5) | ryg_dxt::OMatch5[b][0];
+    uint high_color = (ryg_dxt::OMatch5[r][1] << 11) | (ryg_dxt::OMatch6[g][1] << 5) | ryg_dxt::OMatch5[b][1];
+    evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color));
+    if (m_pParams->m_use_alpha_blocks && m_best_solution.m_error) {
+      low_color = (ryg_dxt::OMatch5_3[r][0] << 11) | (ryg_dxt::OMatch6_3[g][0] << 5) | ryg_dxt::OMatch5_3[b][0];
+      high_color = (ryg_dxt::OMatch5_3[r][1] << 11) | (ryg_dxt::OMatch6_3[g][1] << 5) | ryg_dxt::OMatch5_3[b][1];
+      evaluate_solution(dxt1_solution_coordinates((uint16)low_color, (uint16)high_color));
+    }
+    return_solution();
+  } else {
+    handle_multicolor_block();
+  }
 }
 
-bool dxt1_endpoint_optimizer::compute(const params& p, results& r, solution_vec* pSolutions) {
+bool dxt1_endpoint_optimizer::compute(const params& p, results& r) {
   if (!p.m_pPixels)
     return false;
-
-  bool status = compute_internal(p, r, pSolutions);
-  if (!status)
-    return false;
-
-  if ((m_pParams->m_use_alpha_blocks) && (m_pParams->m_use_transparent_indices_for_black) && (!m_pParams->m_pixels_have_alpha) && (!pSolutions)) {
-    if (!try_alpha_as_black_optimization())
-      return false;
-  }
-
+  compute_internal(p, r);
+  if (m_pParams->m_use_alpha_blocks && m_pParams->m_use_transparent_indices_for_black && !m_pParams->m_pixels_have_alpha)
+    return try_alpha_as_black_optimization();
   return true;
-}
-
-// Build array of unique colors and their weights.
-void dxt1_endpoint_optimizer::find_unique_colors() {
-  m_has_transparent_pixels = false;
-
-  uint num_opaque_pixels = 0;
-
-  const uint alpha_thresh = m_pParams->m_pixels_have_alpha ? (m_pParams->m_dxt1a_alpha_threshold << 24U) : 0;
-
-  const uint32* pSrc_pixels = reinterpret_cast<const uint32*>(m_pParams->m_pPixels);
-  const uint32* pSrc_pixels_end = pSrc_pixels + m_pParams->m_num_pixels;
-
-  m_unique_colors.resize(m_pParams->m_num_pixels);
-  uint num_unique_colors = 0;
-
-  m_all_pixels_grayscale = true;
-
-  do {
-    uint32 c = utils::read_le32(pSrc_pixels);
-    pSrc_pixels++;
-
-    if (c < alpha_thresh) {
-      m_has_transparent_pixels = true;
-      continue;
-    }
-
-    if (m_all_pixels_grayscale) {
-      uint r = c & 0xFF;
-      uint g = (c >> 8) & 0xFF;
-      uint b = (c >> 16) & 0xFF;
-      if ((r != g) || (r != b))
-        m_all_pixels_grayscale = false;
-    }
-
-    c |= 0xFF000000U;
-
-    unique_color_hash_map::insert_result ins_result(m_unique_color_hash_map.insert(c, num_unique_colors));
-
-    if (ins_result.second) {
-      utils::write_le32(&m_unique_colors[num_unique_colors].m_color.m_u32, c);
-      m_unique_colors[num_unique_colors].m_weight = 1;
-      num_unique_colors++;
-    } else
-      m_unique_colors[ins_result.first->second].m_weight++;
-
-    num_opaque_pixels++;
-
-  } while (pSrc_pixels != pSrc_pixels_end);
-
-  m_unique_colors.resize(num_unique_colors);
-
-  m_total_unique_color_weight = num_opaque_pixels;
 }
 
 }  // namespace crnlib

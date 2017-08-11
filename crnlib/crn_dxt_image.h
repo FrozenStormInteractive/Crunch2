@@ -120,9 +120,6 @@ class dxt_image {
       m_progress_range = 100;
       m_use_transparent_indices_for_black = false;
       m_pTask_pool = NULL;
-      m_color_weights[0] = 1;
-      m_color_weights[1] = 1;
-      m_color_weights[2] = 1;
     }
 
     void init(const crn_comp_params& params) {
@@ -160,8 +157,6 @@ class dxt_image {
     uint m_progress_range;
 
     task_pool* m_pTask_pool;
-
-    int m_color_weights[3];
   };
 
   bool init(dxt_format fmt, const image_u8& img, const pack_params& p = dxt_image::pack_params());

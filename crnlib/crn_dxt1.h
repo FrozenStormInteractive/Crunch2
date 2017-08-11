@@ -122,9 +122,6 @@ class dxt1_endpoint_optimizer {
           m_endpoint_caching(true),
           m_use_transparent_indices_for_black(false),
           m_force_alpha_blocks(false) {
-      m_color_weights[0] = 1;
-      m_color_weights[1] = 1;
-      m_color_weights[2] = 1;
     }
 
     uint m_block_index;
@@ -142,7 +139,6 @@ class dxt1_endpoint_optimizer {
     bool m_endpoint_caching;
     bool m_use_transparent_indices_for_black;
     bool m_force_alpha_blocks;
-    int m_color_weights[3];
   };
 
   struct results {
@@ -162,47 +158,14 @@ class dxt1_endpoint_optimizer {
     uint8 m_enforced_selector;
   };
 
-  struct solution {
-    solution() {}
-
-    solution(const solution& other) {
-      m_results = other.m_results;
-      m_selectors = other.m_selectors;
-      m_results.m_pSelectors = m_selectors.begin();
-    }
-
-    solution& operator=(const solution& rhs) {
-      if (this == &rhs)
-        return *this;
-
-      m_results = rhs.m_results;
-      m_selectors = rhs.m_selectors;
-      m_results.m_pSelectors = m_selectors.begin();
-
-      return *this;
-    }
-
-    results m_results;
-    crnlib::vector<uint8> m_selectors;
-
-    inline bool operator<(const solution& other) const {
-      return m_results.m_error < other.m_results.m_error;
-    }
-    static inline bool coords_equal(const solution& lhs, const solution& rhs) {
-      return (lhs.m_results.m_low_color == rhs.m_results.m_low_color) && (lhs.m_results.m_high_color == rhs.m_results.m_high_color);
-    }
-  };
-  typedef crnlib::vector<solution> solution_vec;
-
-  bool compute(const params& p, results& r, solution_vec* pSolutions = NULL);
+  bool compute(const params& p, results& r);
 
  private:
   const params* m_pParams;
   results* m_pResults;
-  solution_vec* m_pSolutions;
 
   bool m_perceptual;
-  bool m_has_color_weighting;
+  bool m_evaluate_hc;
 
   typedef crnlib::vector<unique_color> unique_color_vec;
 
@@ -225,8 +188,6 @@ class dxt1_endpoint_optimizer {
 
   vec3F m_principle_axis;
 
-  bool m_all_pixels_grayscale;
-
   crnlib::vector<uint16> m_unique_packed_colors;
   crnlib::vector<uint8> m_trial_selectors;
 
@@ -240,18 +201,15 @@ class dxt1_endpoint_optimizer {
   crnlib::vector<vec3I> m_lo_cells;
   crnlib::vector<vec3I> m_hi_cells;
 
-  uint m_total_evals;
-
   struct potential_solution {
     potential_solution()
-        : m_coords(), m_error(cUINT64_MAX), m_alpha_block(false), m_valid(false) {
+        : m_coords(), m_error(cUINT64_MAX), m_alpha_block(false) {
     }
 
     dxt1_solution_coordinates m_coords;
     crnlib::vector<uint8> m_selectors;
     uint64 m_error;
     bool m_alpha_block;
-    bool m_valid;
     bool m_alternate_rounding;
     bool m_enforce_selector;
     uint8 m_enforced_selector;
@@ -261,7 +219,6 @@ class dxt1_endpoint_optimizer {
       m_selectors.resize(0);
       m_error = cUINT64_MAX;
       m_alpha_block = false;
-      m_valid = false;
     }
 
     bool are_selectors_all_equal() const {
@@ -283,55 +240,30 @@ class dxt1_endpoint_optimizer {
 
   bool refine_solution(int refinement_level = 0);
 
-  bool evaluate_solution(
-      const dxt1_solution_coordinates& coords,
-      bool early_out,
-      potential_solution* pBest_solution,
-      bool alternate_rounding = false);
+  bool evaluate_solution(const dxt1_solution_coordinates& coords, bool alternate_rounding = false);
+  bool evaluate_solution_uber(const dxt1_solution_coordinates& coords, bool alternate_rounding);
+  bool evaluate_solution_fast(const dxt1_solution_coordinates& coords, bool alternate_rounding);
+  bool evaluate_solution_hc(const dxt1_solution_coordinates& coords, bool alternate_rounding);
+  void compute_selectors();
+  void compute_selectors_hc();
 
-  bool evaluate_solution_uber(
-      potential_solution& solution,
-      const dxt1_solution_coordinates& coords,
-      bool early_out,
-      potential_solution* pBest_solution,
-      bool alternate_rounding = false);
-
-  bool evaluate_solution_fast(
-      potential_solution& solution,
-      const dxt1_solution_coordinates& coords,
-      bool early_out,
-      potential_solution* pBest_solution,
-      bool alternate_rounding = false);
-
-  void clear();
   void find_unique_colors();
-  bool handle_all_transparent_block();
-  bool handle_solid_block();
-  bool handle_multicolor_block();
-  bool handle_grayscale_block();
+  void handle_multicolor_block();
   void compute_pca(vec3F& axis, const vec3F_array& norm_colors, const vec3F& def);
   void compute_vectors(const vec3F& perceptual_weights);
-  void return_solution(results& results, const potential_solution& solution);
+  void return_solution();
   void try_combinatorial_encoding();
   void optimize_endpoint_comps();
-  bool optimize_endpoints(vec3F& low_color, vec3F& high_color);
+  void optimize_endpoints(vec3F& low_color, vec3F& high_color);
   bool try_alpha_as_black_optimization();
   bool try_average_block_as_solid();
   bool try_median4(const vec3F& low_color, const vec3F& high_color);
 
-  bool compute_internal(const params& p, results& r, solution_vec* pSolutions);
+  void compute_internal(const params& p, results& r);
 
   unique_color lerp_color(const color_quad_u8& a, const color_quad_u8& b, float f, int rounding = 1);
 
   inline uint color_distance(bool perceptual, const color_quad_u8& e1, const color_quad_u8& e2, bool alpha);
-
-  static inline vec3F unpack_to_vec3F_raw(uint16 packed_color);
-  static inline vec3F unpack_to_vec3F(uint16 packed_color);
 };
-
-inline void swap(dxt1_endpoint_optimizer::solution& a, dxt1_endpoint_optimizer::solution& b) {
-  std::swap(a.m_results, b.m_results);
-  a.m_selectors.swap(b.m_selectors);
-}
 
 }  // namespace crnlib
