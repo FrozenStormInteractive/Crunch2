@@ -462,8 +462,7 @@ static void CompressColorBlock(sU8* dest, const sU32* src, sInt quality) {
 }
 
 // Alpha block compression (this is easy for a change)
-static void CompressAlphaBlock(sU8* dest, const sU32* src, sInt quality) {
-  quality;
+static void CompressAlphaBlock(sU8* dest, const sU32* src) {
   const Pixel* block = (const Pixel*)src;
 
   // find min/max color
@@ -540,7 +539,7 @@ void sCompressDXTBlock(sU8* dest, const sU32* src, sBool alpha, sInt quality) {
 
   // if alpha specified, compress alpha as well
   if (alpha) {
-    CompressAlphaBlock(dest, src, quality);
+    CompressAlphaBlock(dest, src);
     dest += 8;
   }
 
@@ -548,10 +547,10 @@ void sCompressDXTBlock(sU8* dest, const sU32* src, sBool alpha, sInt quality) {
   CompressColorBlock(dest, src, quality);
 }
 
-void sCompressDXT5ABlock(sU8* dest, const sU32* src, sInt quality) {
+void sCompressDXT5ABlock(sU8* dest, const sU32* src) {
   CRNLIB_ASSERT(Expand5[1]);
 
-  CompressAlphaBlock(dest, src, quality);
+  CompressAlphaBlock(dest, src);
 }
 
 }  // namespace ryg_dxt

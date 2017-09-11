@@ -377,10 +377,7 @@ class tree_clusterizer {
       new_right_child *= (1.0f / right_weight);
 
       left_child = new_left_child;
-      left_weight = left_weight;
-
       right_child = new_right_child;
-      right_weight = right_weight;
 
       float total_variance = left_variance + right_variance;
       if (total_variance < .00001f)

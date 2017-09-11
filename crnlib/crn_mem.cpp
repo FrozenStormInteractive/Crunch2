@@ -56,9 +56,7 @@ static mem_stat_t update_total_allocated(int block_delta, mem_stat_t byte_delta)
 }
 #endif  // CRNLIB_MEM_STATS
 
-static void* crnlib_default_realloc(void* p, size_t size, size_t* pActual_size, bool movable, void* pUser_data) {
-  pUser_data;
-
+static void* crnlib_default_realloc(void* p, size_t size, size_t* pActual_size, bool movable, void*) {
   void* p_new;
 
   if (!p) {
@@ -106,90 +104,12 @@ static void* crnlib_default_realloc(void* p, size_t size, size_t* pActual_size, 
   return p_new;
 }
 
-static size_t crnlib_default_msize(void* p, void* pUser_data) {
-  pUser_data;
+static size_t crnlib_default_msize(void* p, void*) {
   return p ? _msize(p) : 0;
 }
 
-#if 0
-   static __declspec(thread) void *g_pBuf;
-   static __declspec(thread) size_t g_buf_size;
-   static __declspec(thread) size_t g_buf_ofs;
-
-   static size_t crnlib_nofree_msize(void* p, void* pUser_data)
-   {
-      pUser_data;
-      return p ? ((const size_t*)p)[-1] : 0;
-   }
-
-   static void* crnlib_nofree_realloc(void* p, size_t size, size_t* pActual_size, bool movable, void* pUser_data)
-   {
-      pUser_data;
-
-      void* p_new;
-
-      if (!p)
-      {
-         size = math::align_up_value(size, CRNLIB_MIN_ALLOC_ALIGNMENT);
-         size_t actual_size = sizeof(size_t)*2 + size;
-         size_t num_remaining = g_buf_size - g_buf_ofs;
-         if (num_remaining < actual_size)
-         {
-            g_buf_size = CRNLIB_MAX(actual_size, 32*1024*1024);
-            g_buf_ofs = 0;
-            g_pBuf = malloc(g_buf_size);
-            if (!g_pBuf)
-               return NULL;
-         }
-
-         p_new = (uint8*)g_pBuf + g_buf_ofs;
-         ((size_t*)p_new)[1] = size;
-         p_new = (size_t*)p_new + 2;
-         g_buf_ofs += actual_size;
-
-         if (pActual_size)
-            *pActual_size = size;
-
-         CRNLIB_ASSERT(crnlib_nofree_msize(p_new, NULL) == size);
-      }
-      else if (!size)
-      {
-         if (pActual_size)
-            *pActual_size = 0;
-         p_new = NULL;
-      }
-      else
-      {
-         size_t cur_size = crnlib_nofree_msize(p, NULL);
-         p_new = p;
-
-         if (!movable)
-            return NULL;
-
-         if (size > cur_size)
-         {
-            p_new = crnlib_nofree_realloc(NULL, size, NULL, true, NULL);
-            if (!p_new)
-               return NULL;
-
-            memcpy(p_new, p, cur_size);
-
-            cur_size = size;
-         }
-
-         if (pActual_size)
-            *pActual_size = cur_size;
-      }
-
-      return p_new;
-   }
-
-   static crn_realloc_func    g_pRealloc = crnlib_nofree_realloc;
-   static crn_msize_func      g_pMSize   = crnlib_nofree_msize;
-#else
 static crn_realloc_func g_pRealloc = crnlib_default_realloc;
 static crn_msize_func g_pMSize = crnlib_default_msize;
-#endif
 static void* g_pUser_data;
 
 void crnlib_mem_error(const char* p_msg) {

@@ -169,10 +169,7 @@ bool mip_level::unpack_from_dxt(bool uncook) {
     return false;
 
   image_u8* pNew_img = crnlib_new<image_u8>();
-  image_u8* pImg = get_unpacked_image(*pNew_img, uncook ? cUnpackFlagUncook : 0);
-  pImg;
-
-  CRNLIB_ASSERT(pImg == pNew_img);
+  CRNLIB_ASSERT(get_unpacked_image(*pNew_img, uncook ? cUnpackFlagUncook : 0) == pNew_img);
 
   assign(pNew_img, PIXEL_FMT_INVALID, m_orient_flags);
   return true;
@@ -2590,7 +2587,7 @@ bool mipmapped_texture::read_from_stream(data_stream_serializer& serializer, tex
   bool success = false;
 
   if (!texture_file_types::supports_mipmaps(file_format)) {
-    success = read_regular_image(serializer, file_format);
+    success = read_regular_image(serializer);
   } else {
     switch (file_format) {
       case texture_file_types::cFormatDDS: {
@@ -2623,9 +2620,7 @@ bool mipmapped_texture::read_from_stream(data_stream_serializer& serializer, tex
   return success;
 }
 
-bool mipmapped_texture::read_regular_image(data_stream_serializer& serializer, texture_file_types::format file_format) {
-  file_format;
-
+bool mipmapped_texture::read_regular_image(data_stream_serializer& serializer) {
   image_u8* pImg = crnlib_new<image_u8>();
   bool status = image_utils::read_from_stream(*pImg, serializer, 0);
   if (!status) {

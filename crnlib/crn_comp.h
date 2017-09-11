@@ -21,7 +21,7 @@ class crn_comp : public itexture_comp {
 
   virtual const char* get_ext() const { return "CRN"; }
 
-  virtual bool compress_init(const crn_comp_params& params);
+  virtual bool compress_init(const crn_comp_params&) { return true; };
   virtual bool compress_pass(const crn_comp_params& params, float* pEffective_bitrate);
   virtual void compress_deinit();
 

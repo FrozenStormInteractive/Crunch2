@@ -4,7 +4,9 @@
 #include "crn_resample_filters.h"
 
 namespace crnlib {
+#ifndef M_PI
 #define M_PI 3.14159265358979323846
+#endif
 
 // To add your own filter, insert the new function below and update the filter table.
 // There is no need to make the filter function particularly fast, because it's

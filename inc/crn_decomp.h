@@ -64,16 +64,6 @@ enum eClear { cClear };
 
 const uint32 cIntBits = 32U;
 
-#ifdef _WIN64
-typedef uint64 ptr_bits;
-#else
-#ifdef __x86_64__
-typedef uint64 ptr_bits;
-#else
-typedef uint32 ptr_bits;
-#endif
-#endif
-
 template <typename T>
 struct int_traits {
   enum { cMin = crnd::cINT32_MIN,
@@ -190,7 +180,6 @@ void construct_array(T* p, uint32 n, const U& init) {
 
 template <typename T>
 inline void destruct(T* p) {
-  p;
   p->~T();
 }
 
@@ -223,8 +212,8 @@ struct scalar_type<T*> {
   static inline void construct(T** p) { memset(p, 0, sizeof(T*)); }
   static inline void construct(T** p, T* init) { *p = init; }
   static inline void construct_array(T** p, uint32 n) { memset(p, 0, sizeof(T*) * n); }
-  static inline void destruct(T** p) { p; }
-  static inline void destruct_array(T** p, uint32 n) { p, n; }
+  static inline void destruct(T**) {}
+  static inline void destruct_array(T**, uint32) {}
 };
 
 #define CRND_DEFINE_BUILT_IN_TYPE(X)                                                    \
@@ -234,8 +223,8 @@ struct scalar_type<T*> {
     static inline void construct(X* p) { memset(p, 0, sizeof(X)); }                     \
     static inline void construct(X* p, const X& init) { memcpy(p, &init, sizeof(X)); }  \
     static inline void construct_array(X* p, uint32 n) { memset(p, 0, sizeof(X) * n); } \
-    static inline void destruct(X* p) { p; }                                            \
-    static inline void destruct_array(X* p, uint32 n) { p, n; }                         \
+    static inline void destruct(X*) {}                                                  \
+    static inline void destruct_array(X*, uint32) {}                                    \
   };
 
 CRND_DEFINE_BUILT_IN_TYPE(bool)
@@ -355,9 +344,7 @@ template <typename T>
 inline void crnd_delete_array(T* p) {
   if (p) {
     const uint32 num = reinterpret_cast<uint32*>(p)[-1];
-    const uint32 num_check = reinterpret_cast<uint32*>(p)[-2];
-    num_check;
-    CRND_ASSERT(num && (num == ~num_check));
+    CRND_ASSERT(num && (num == ~reinterpret_cast<uint32*>(p)[-2]));
 
     helpers::destruct_array(p, num);
 
@@ -830,7 +817,7 @@ extern void vector_test();
 
 // File: crnd_private.h
 namespace crnd {
-const crn_header* crnd_get_header(crn_header& header, const void* pData, uint32 data_size);
+const crn_header* crnd_get_header(const void* pData, uint32 data_size);
 
 }  // namespace crnd
 
@@ -1917,7 +1904,7 @@ void crnd_debug_break() {
 }
 
 void crnd_output_debug_string(const char* p) {
-  p;
+  (void)p;
 #ifdef CRND_DEVEL
   OutputDebugStringA(p);
 #endif
@@ -1929,9 +1916,7 @@ void crnd_output_debug_string(const char* p) {
 namespace crnd {
 const uint32 MAX_POSSIBLE_BLOCK_SIZE = 0x7FFF0000U;
 
-static void* crnd_default_realloc(void* p, size_t size, size_t* pActual_size, bool movable, void* pUser_data) {
-  pUser_data;
-
+static void* crnd_default_realloc(void* p, size_t size, size_t* pActual_size, bool movable, void*) {
   void* p_new;
 
   if (!p) {
@@ -2029,13 +2014,13 @@ void* crnd_malloc(size_t size, size_t* pActual_size) {
     return NULL;
   }
 
-  CRND_ASSERT(((uint32)p_new & (CRND_MIN_ALLOC_ALIGNMENT - 1)) == 0);
+  CRND_ASSERT(((uint32) reinterpret_cast<uintptr_t>(p_new) & (CRND_MIN_ALLOC_ALIGNMENT - 1)) == 0);
 
   return p_new;
 }
 
 void* crnd_realloc(void* p, size_t size, size_t* pActual_size, bool movable) {
-  if ((uint32) reinterpret_cast<ptr_bits>(p) & (CRND_MIN_ALLOC_ALIGNMENT - 1)) {
+  if ((uint32) reinterpret_cast<uintptr_t>(p) & (CRND_MIN_ALLOC_ALIGNMENT - 1)) {
     crnd_mem_error("crnd_realloc: bad ptr");
     return NULL;
   }
@@ -2051,7 +2036,7 @@ void* crnd_realloc(void* p, size_t size, size_t* pActual_size, bool movable) {
   if (pActual_size)
     *pActual_size = actual_size;
 
-  CRND_ASSERT(((uint32)p_new & (CRND_MIN_ALLOC_ALIGNMENT - 1)) == 0);
+  CRND_ASSERT(((uint32) reinterpret_cast<uintptr_t>(p_new) & (CRND_MIN_ALLOC_ALIGNMENT - 1)) == 0);
 
   return p_new;
 }
@@ -2060,7 +2045,7 @@ void crnd_free(void* p) {
   if (!p)
     return;
 
-  if ((uint32) reinterpret_cast<ptr_bits>(p) & (CRND_MIN_ALLOC_ALIGNMENT - 1)) {
+  if ((uint32) reinterpret_cast<uintptr_t>(p) & (CRND_MIN_ALLOC_ALIGNMENT - 1)) {
     crnd_mem_error("crnd_free: bad ptr");
     return;
   }
@@ -2072,7 +2057,7 @@ size_t crnd_msize(void* p) {
   if (!p)
     return 0;
 
-  if ((uint32) reinterpret_cast<ptr_bits>(p) & (CRND_MIN_ALLOC_ALIGNMENT - 1)) {
+  if ((uint32) reinterpret_cast<uintptr_t>(p) & (CRND_MIN_ALLOC_ALIGNMENT - 1)) {
     crnd_mem_error("crnd_msize: bad ptr");
     return 0;
   }
@@ -2180,9 +2165,7 @@ uint32 crnd_get_bytes_per_dxt_block(crn_format fmt) {
 }
 
 // TODO: tmp_header isn't used/This function is a helper to support old headers.
-const crn_header* crnd_get_header(crn_header& tmp_header, const void* pData, uint32 data_size) {
-  tmp_header;
-
+const crn_header* crnd_get_header(const void* pData, uint32 data_size) {
   if ((!pData) || (data_size < sizeof(crn_header)))
     return NULL;
 
@@ -2207,8 +2190,7 @@ bool crnd_validate_file(const void* pData, uint32 data_size, crn_file_info* pFil
   if ((!pData) || (data_size < cCRNHeaderMinSize))
     return false;
 
-  crn_header tmp_header;
-  const crn_header* pHeader = crnd_get_header(tmp_header, pData, data_size);
+  const crn_header* pHeader = crnd_get_header(pData, data_size);
   if (!pHeader)
     return false;
 
@@ -2268,8 +2250,7 @@ bool crnd_get_texture_info(const void* pData, uint32 data_size, crn_texture_info
   if (pInfo->m_struct_size != sizeof(crn_texture_info))
     return false;
 
-  crn_header tmp_header;
-  const crn_header* pHeader = crnd_get_header(tmp_header, pData, data_size);
+  const crn_header* pHeader = crnd_get_header(pData, data_size);
   if (!pHeader)
     return false;
 
@@ -2292,8 +2273,7 @@ bool crnd_get_level_info(const void* pData, uint32 data_size, uint32 level_index
   if (pLevel_info->m_struct_size != sizeof(crn_level_info))
     return false;
 
-  crn_header tmp_header;
-  const crn_header* pHeader = crnd_get_header(tmp_header, pData, data_size);
+  const crn_header* pHeader = crnd_get_header(pData, data_size);
   if (!pHeader)
     return false;
 
@@ -2321,8 +2301,7 @@ const void* crnd_get_level_data(const void* pData, uint32 data_size, uint32 leve
   if ((!pData) || (data_size < cCRNHeaderMinSize))
     return NULL;
 
-  crn_header tmp_header;
-  const crn_header* pHeader = crnd_get_header(tmp_header, pData, data_size);
+  const crn_header* pHeader = crnd_get_header(pData, data_size);
   if (!pHeader)
     return NULL;
 
@@ -2346,8 +2325,7 @@ uint32 crnd_get_segmented_file_size(const void* pData, uint32 data_size) {
   if ((!pData) || (data_size < cCRNHeaderMinSize))
     return false;
 
-  crn_header tmp_header;
-  const crn_header* pHeader = crnd_get_header(tmp_header, pData, data_size);
+  const crn_header* pHeader = crnd_get_header(pData, data_size);
   if (!pHeader)
     return false;
 
@@ -2366,8 +2344,7 @@ bool crnd_create_segmented_file(const void* pData, uint32 data_size, void* pBase
   if ((!pData) || (data_size < cCRNHeaderMinSize))
     return false;
 
-  crn_header tmp_header;
-  const crn_header* pHeader = crnd_get_header(tmp_header, pData, data_size);
+  const crn_header* pHeader = crnd_get_header(pData, data_size);
   if (!pHeader)
     return false;
 
@@ -2971,7 +2948,7 @@ class crn_unpacker {
   inline bool is_valid() const { return m_magic == cMagicValue; }
 
   bool init(const void* pData, uint32 data_size) {
-    m_pHeader = crnd_get_header(m_tmp_header, pData, data_size);
+    m_pHeader = crnd_get_header(pData, data_size);
     if (!m_pHeader)
       return false;
 
@@ -3005,7 +2982,6 @@ class crn_unpacker {
       const void* pSrc, uint32 src_size_in_bytes,
       void** pDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes,
       uint32 level_index) {
-    dst_size_in_bytes;
 
 #ifdef CRND_BUILD_DEBUG
     for (uint32 f = 0; f < m_pHeader->m_faces; f++)
@@ -3077,7 +3053,6 @@ class crn_unpacker {
 
   const uint8* m_pData;
   uint32 m_data_size;
-  crn_header m_tmp_header;
   const crn_header* m_pHeader;
 
   symbol_codec m_codec;
@@ -3198,16 +3173,16 @@ class crn_unpacker {
       for (uint32 j = 0; j < 32; j += 4)
         s ^= m_codec.decode(dm) << j;
       if (has_etc_color_blocks) {
-        for (uint32 selector = ~s & 0xAAAAAAAA | ~(s ^ s >> 1) & 0x55555555, t = 8, h = 0; h < 4; h++, t -= 15) {
+        for (uint32 selector = (~s & 0xAAAAAAAA) | (~(s ^ s >> 1) & 0x55555555), t = 8, h = 0; h < 4; h++, t -= 15) {
           for (uint32 w = 0; w < 4; w++, t += 4) {
             uint32 s0 = selector >> (w << 3 | h << 1);
-            m_color_selectors[i << 1] |= (s0 >> 1 & 1 | (s0 & 1) << 16) << (t & 15);
+            m_color_selectors[i << 1] |= ((s0 >> 1 & 1) | (s0 & 1) << 16) << (t & 15);
             uint32 s1 = selector >> (h << 3 | w << 1);
-            m_color_selectors[i << 1 | 1] |= (s1 >> 1 & 1 | (s1 & 1) << 16) << (t & 15);
+            m_color_selectors[i << 1 | 1] |= ((s1 >> 1 & 1) | (s1 & 1) << 16) << (t & 15);
           }
         }
       } else {
-        m_color_selectors[i] = (s ^ s << 1) & 0xAAAAAAAA | s >> 1 & 0x55555555;
+        m_color_selectors[i] = ((s ^ s << 1) & 0xAAAAAAAA) | (s >> 1 & 0x55555555);
       }
     }
     m_codec.stop_decoding();
@@ -3271,7 +3246,7 @@ class crn_unpacker {
     uint8 s_linear[8] = {};
     uint8* data = (uint8*)m_alpha_selectors.begin();
     for (uint i = 0; i < m_alpha_selectors.size(); i += 6, data += 12) {
-      for (uint s_group, p = 0; p < 16; p++) {
+      for (uint s_group = 0, p = 0; p < 16; p++) {
         s_group = p & 1 ? s_group >> 3 : s_linear[p >> 1] ^= m_codec.decode(dm);
         uint8 s = s_group & 7;
         if (s <= 3)
@@ -3279,13 +3254,13 @@ class crn_unpacker {
         uint8 d = 3 * (p + 1);
         uint8 byte_offset = d >> 3;
         uint8 bit_offset = d & 7;
-        data[byte_offset] |= s << 8 - bit_offset;
+        data[byte_offset] |= s << (8 - bit_offset);
         if (bit_offset < 3)
           data[byte_offset - 1] |= s >> bit_offset;
         d += 9 * ((p & 3) - (p >> 2));
         byte_offset = d >> 3;
         bit_offset = d & 7;
-        data[byte_offset + 6] |= s << 8 - bit_offset;
+        data[byte_offset + 6] |= s << (8 - bit_offset);
         if (bit_offset < 3)
           data[byte_offset + 5] |= s >> bit_offset;
       }
@@ -3573,8 +3548,8 @@ class crn_unpacker {
             endpoint_reference = buffer.endpoint_reference;
           } else {
             reference_group = m_codec.decode(m_reference_encoding_dm);
-            endpoint_reference = reference_group & 3 | reference_group >> 2 & 12;
-            buffer.endpoint_reference = reference_group >> 2 & 3 | reference_group >> 4 & 12;
+            endpoint_reference = (reference_group & 3) | (reference_group >> 2 & 12);
+            buffer.endpoint_reference = (reference_group >> 2 & 3) | (reference_group >> 4 & 12);
           }
           if (!(endpoint_reference & 3)) {
             color_endpoint_index += m_codec.decode(m_endpoint_delta_dm[0]);
@@ -3604,7 +3579,7 @@ class crn_unpacker {
             for (uint c = 0; diff && c < 3; c++)
               diff = e0[c] + 3 >= e1[c] && e1[c] + 4 >= e0[c] ? diff : 0;
             for (uint c = 0; c < 3; c++)
-              block_endpoint[c] = diff ? e0[c] << 3 | e1[c] - e0[c] & 7 : e0[c] << 3 & 0xF0 | e1[c] >> 1;
+              block_endpoint[c] = diff ? e0[c] << 3 | ((e1[c] - e0[c]) & 7) : (e0[c] << 3 & 0xF0) | e1[c] >> 1;
             block_endpoint[3] = e0[3] << 5 | e1[3] << 2 | diff << 1 | flip;
             pData[0] = *(uint32*)&block_endpoint;
             pData[1] = m_color_selectors[selector_index << 1 | flip];
@@ -3640,8 +3615,8 @@ class crn_unpacker {
             endpoint_reference = buffer.endpoint_reference;
           } else {
             reference_group = m_codec.decode(m_reference_encoding_dm);
-            endpoint_reference = reference_group & 3 | reference_group >> 2 & 12;
-            buffer.endpoint_reference = reference_group >> 2 & 3 | reference_group >> 4 & 12;
+            endpoint_reference = (reference_group & 3) | (reference_group >> 2 & 12);
+            buffer.endpoint_reference = (reference_group >> 2 & 3) | (reference_group >> 4 & 12);
           }
           if (!(endpoint_reference & 3)) {
             color_endpoint_index += m_codec.decode(m_endpoint_delta_dm[0]);
@@ -3681,7 +3656,7 @@ class crn_unpacker {
             for (uint c = 0; diff && c < 3; c++)
               diff = e0[c] + 3 >= e1[c] && e1[c] + 4 >= e0[c] ? diff : 0;
             for (uint c = 0; c < 3; c++)
-              block_endpoint[c] = diff ? e0[c] << 3 | e1[c] - e0[c] & 7 : e0[c] << 3 & 0xF0 | e1[c] >> 1;
+              block_endpoint[c] = diff ? e0[c] << 3 | ((e1[c] - e0[c]) & 7) : (e0[c] << 3 & 0xF0) | e1[c] >> 1;
             block_endpoint[3] = e0[3] << 5 | e1[3] << 2 | diff << 1 | flip;
             const uint16* pAlpha0_selectors = &m_alpha_selectors[alpha0_selector_index * 6 + (flip ? 3 : 0)];
             pData[0] = m_alpha_endpoints[alpha0_endpoint_index] | pAlpha0_selectors[0] << 16;

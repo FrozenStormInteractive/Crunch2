@@ -8,7 +8,7 @@ namespace crnlib {
 #define resampler_assert CRNLIB_ASSERT
 
 static inline int resampler_range_check(int v, int h) {
-  h;
+  (void)h;
   resampler_assert((v >= 0) && (v < h));
   return v;
 }

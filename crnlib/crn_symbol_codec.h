@@ -174,7 +174,7 @@ class adaptive_arith_data_model {
   friend class symbol_codec;
 };
 
-#if (defined(_XBOX) || defined(_WIN64))
+#if defined(_WIN64)
 #define CRNLIB_SYMBOL_CODEC_USE_64_BIT_BUFFER 1
 #else
 #define CRNLIB_SYMBOL_CODEC_USE_64_BIT_BUFFER 0
@@ -311,9 +311,7 @@ class symbol_codec {
 
 #define CRNLIB_SYMBOL_CODEC_USE_MACROS 1
 
-#ifdef _XBOX
-#define CRNLIB_READ_BIG_ENDIAN_UINT32(p) *reinterpret_cast<const uint32*>(p)
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
 #define CRNLIB_READ_BIG_ENDIAN_UINT32(p) _byteswap_ulong(*reinterpret_cast<const uint32*>(p))
 #else
 #define CRNLIB_READ_BIG_ENDIAN_UINT32(p) utils::swap32(*reinterpret_cast<const uint32*>(p))

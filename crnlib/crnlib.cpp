@@ -14,13 +14,11 @@
 #include "crn_rg_etc1.h"
 
 namespace crnlib {
-static void* realloc_func(void* p, size_t size, size_t* pActual_size, bool movable, void* pUser_data) {
-  pUser_data;
+static void* realloc_func(void* p, size_t size, size_t* pActual_size, bool movable, void*) {
   return crnlib_realloc(p, size, pActual_size, movable);
 }
 
-static size_t msize_func(void* p, void* pUser_data) {
-  pUser_data;
+static size_t msize_func(void* p, void*) {
   return crnlib_msize(p);
 }
 

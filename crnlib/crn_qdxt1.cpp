@@ -383,8 +383,7 @@ bool qdxt1::update_progress(uint value, uint max_value) {
   return true;
 }
 
-void qdxt1::pack_endpoints_task(uint64 data, void* pData_ptr) {
-  pData_ptr;
+void qdxt1::pack_endpoints_task(uint64 data, void*) {
   const uint thread_index = static_cast<uint>(data);
 
   crnlib::vector<color_quad_u8> cluster_pixels;

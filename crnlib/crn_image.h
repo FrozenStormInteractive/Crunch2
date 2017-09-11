@@ -335,7 +335,7 @@ class image {
     uint height = math::minimum(m_height - dst_y, src.get_height() - src_y);
 
     bool success = unclipped_blit(src_x, src_y, width, height, dst_x, dst_y, src);
-    success;
+    (void)success;
     CRNLIB_ASSERT(success);
 
     return true;
@@ -360,7 +360,7 @@ class image {
         src_rect.get_left(), src_rect.get_top(),
         math::minimum(src_rect.get_width(), dst_rect.get_width()), math::minimum(src_rect.get_height(), dst_rect.get_height()),
         dst_rect.get_left(), dst_rect.get_top(), src);
-    success;
+    (void)success;
     CRNLIB_ASSERT(success);
 
     return true;

@@ -231,7 +231,7 @@ bool dxt_hc::compress(
   return true;
 }
 
-void dxt_hc::determine_tiles_task(uint64 data, void* pData_ptr) {
+void dxt_hc::determine_tiles_task(uint64 data, void*) {
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   uint offsets[9] = {0, 16, 32, 48, 0, 32, 64, 96, 64};
   uint8 tiles[8][4] = {{8}, {6, 7}, {4, 5}, {6, 1, 3}, {7, 0, 2}, {4, 2, 3}, {5, 0, 1}, {0, 2, 1, 3}};
@@ -376,7 +376,7 @@ void dxt_hc::determine_tiles_task(uint64 data, void* pData_ptr) {
   }
 }
 
-void dxt_hc::determine_tiles_task_etc(uint64 data, void* pData_ptr) {
+void dxt_hc::determine_tiles_task_etc(uint64 data, void*) {
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   uint offsets[5] = {0, 8, 16, 24, 16};
   uint8 tiles[3][2] = {{4}, {2, 3}, {0, 1}};
@@ -399,11 +399,11 @@ void dxt_hc::determine_tiles_task_etc(uint64 data, void* pData_ptr) {
 
   for (uint level = 0; level < m_params.m_num_levels; level++) {
     float weight = m_params.m_levels[level].m_weight;
-    uint b = m_params.m_levels[level].m_first_block + m_params.m_levels[level].m_num_blocks * data / num_tasks & ~1;
-    uint bEnd = m_params.m_levels[level].m_first_block + m_params.m_levels[level].m_num_blocks * (data + 1) / num_tasks & ~1;
+    uint b = (m_params.m_levels[level].m_first_block + m_params.m_levels[level].m_num_blocks * data / num_tasks) & ~1;
+    uint bEnd = (m_params.m_levels[level].m_first_block + m_params.m_levels[level].m_num_blocks * (data + 1) / num_tasks) & ~1;
     for (; b < bEnd; b += 2) {
       for (uint p = 0; p < 16; p++)
-        tilePixels[p] = m_blocks[b >> 1][p << 2 & 12 | p >> 2];
+        tilePixels[p] = m_blocks[b >> 1][(p << 2 & 12) | p >> 2];
       memcpy(tilePixels + 16, m_blocks[b >> 1], 64);
       for (uint t = 0; t < 5; t++) {
         params.m_pSrc_pixels = tilePixels + offsets[t];
@@ -483,14 +483,12 @@ void dxt_hc::determine_tiles_task_etc(uint64 data, void* pData_ptr) {
   }
 }
 
-void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr) {
-  pData_ptr;
+void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void*) {
   const uint thread_index = static_cast<uint>(data);
 
   if (!m_has_color_blocks)
     return;
 
-  uint total_empty_clusters = 0;
   for (uint cluster_index = 0; cluster_index < m_color_clusters.size(); cluster_index++) {
     if (m_canceled)
       return;
@@ -580,7 +578,7 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void* pData_ptr
   }
 }
 
-void dxt_hc::determine_color_endpoint_codebook_task_etc(uint64 data, void* pData_ptr) {
+void dxt_hc::determine_color_endpoint_codebook_task_etc(uint64 data, void*) {
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   uint8 delta[8][2] = { {2, 8}, {5, 17}, {9, 29}, {13, 42}, {18, 60}, {24, 80}, {33, 106}, {47, 183} };
   int scan[] = {-1, 0, 1};
@@ -681,7 +679,7 @@ void dxt_hc::determine_color_endpoints() {
       if (m_endpoint_indices[b].reference >> 1) {
         color_quad_u8 mirror[16];
         for (uint p = 0; p < 16; p++)
-          mirror[p] = m_blocks[b >> 1][p << 2 & 12 | p >> 2];
+          mirror[p] = m_blocks[b >> 1][(p << 2 & 12) | p >> 2];
         memcpy(m_blocks[b >> 1], mirror, 64);
       }
       m_endpoint_indices[b].reference = 0;
@@ -693,8 +691,7 @@ void dxt_hc::determine_color_endpoints() {
   m_pTask_pool->join();
 }
 
-void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void* pData_ptr) {
-  pData_ptr;
+void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void*) {
   const uint thread_index = static_cast<uint>(data);
 
   for (uint cluster_index = 0; cluster_index < m_alpha_clusters.size(); cluster_index++) {
@@ -923,7 +920,7 @@ void dxt_hc::create_color_selector_codebook() {
   }
 
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
-  crnlib::vector<crnlib::vector<color_selector_details>> selector_details(num_tasks);
+  crnlib::vector<crnlib::vector<color_selector_details> > selector_details(num_tasks);
   for (uint t = 0; t < num_tasks; t++) {
     selector_details[t].resize(m_color_selectors.size());
     m_pTask_pool->queue_object_task(this, &dxt_hc::create_color_selector_codebook_task, t, &selector_details[t]);
@@ -1037,7 +1034,7 @@ void dxt_hc::create_alpha_selector_codebook() {
   }
 
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
-  crnlib::vector<crnlib::vector<alpha_selector_details>> selector_details(num_tasks);
+  crnlib::vector<crnlib::vector<alpha_selector_details> > selector_details(num_tasks);
   for (uint t = 0; t < num_tasks; t++) {
     selector_details[t].resize(m_alpha_selectors.size());
     m_pTask_pool->queue_object_task(this, &dxt_hc::create_alpha_selector_codebook_task, t, &selector_details[t]);

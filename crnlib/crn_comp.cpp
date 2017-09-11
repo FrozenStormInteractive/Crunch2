@@ -74,9 +74,6 @@ bool crn_comp::pack_color_endpoints(crnlib::vector<uint8>& packed_data, const cr
       return false;
   }
 
-  uint start_bits = codec.encode_get_total_bits_written();
-  start_bits;
-
   for (uint i = 0; i < residual_syms.size(); i++) {
     const uint sym = residual_syms[i];
     const uint table = ((i % 3) == 1) ? 1 : 0;
@@ -93,12 +90,12 @@ bool crn_comp::pack_color_endpoints(crnlib::vector<uint8>& packed_data, const cr
 bool crn_comp::pack_color_endpoints_etc(crnlib::vector<uint8>& packed_data, const crnlib::vector<uint16>& remapping) {
   crnlib::vector<uint32> remapped_endpoints(m_color_endpoints.size());
   for (uint i = 0; i < m_color_endpoints.size(); i++)
-    remapped_endpoints[remapping[i]] = m_color_endpoints[i] & 0x07000000 | m_color_endpoints[i] >> 3 & 0x001F1F1F;
+    remapped_endpoints[remapping[i]] = (m_color_endpoints[i] & 0x07000000) | (m_color_endpoints[i] >> 3 & 0x001F1F1F);
 
   symbol_histogram hist(32);
   for (uint32 prev_endpoint = 0, p = 0; p < remapped_endpoints.size(); p++) {
     for (uint32 _e = prev_endpoint, e = prev_endpoint = remapped_endpoints[p], c = 0; c < 4; c++, _e >>= 8, e >>= 8)
-      hist.inc_freq(e - _e & 0x1F);
+      hist.inc_freq((e - _e) & 0x1F);
   }
   static_huffman_data_model dm;
   dm.init(true, hist, 15);
@@ -107,7 +104,7 @@ bool crn_comp::pack_color_endpoints_etc(crnlib::vector<uint8>& packed_data, cons
   codec.encode_transmit_static_huffman_data_model(dm, false);
   for (uint32 prev_endpoint = 0, p = 0; p < remapped_endpoints.size(); p++) {
     for (uint32 _e = prev_endpoint, e = prev_endpoint = remapped_endpoints[p], c = 0; c < 4; c++, _e >>= 8, e >>= 8)
-      codec.encode(e - _e & 0x1F, dm);
+      codec.encode((e - _e) & 0x1F, dm);
   }
   codec.stop_encoding(false);
   packed_data.swap(codec.get_encoding_buf());
@@ -164,9 +161,6 @@ bool crn_comp::pack_alpha_endpoints(crnlib::vector<uint8>& packed_data, const cr
 
   if (!codec.encode_transmit_static_huffman_data_model(residual_dm, false))
     return false;
-
-  uint start_bits = codec.encode_get_total_bits_written();
-  start_bits;
 
   for (uint i = 0; i < residual_syms.size(); i++) {
     const uint sym = residual_syms[i];
@@ -341,8 +335,8 @@ bool crn_comp::alias_images() {
   m_levels.resize(m_pParams->m_levels);
   m_total_blocks = 0;
   for (uint level = 0; level < m_pParams->m_levels; level++) {
-    uint blockHeight = (math::maximum(1U, m_pParams->m_height >> level) + 7 & ~7) >> 2;
-    m_levels[level].block_width = (math::maximum(1U, m_pParams->m_width >> level) + 7 & ~7) >> (m_has_etc_color_blocks ? 1 : 2);
+    uint blockHeight = ((math::maximum(1U, m_pParams->m_height >> level) + 7) & ~7) >> 2;
+    m_levels[level].block_width = ((math::maximum(1U, m_pParams->m_width >> level) + 7) & ~7) >> (m_has_etc_color_blocks ? 1 : 2);
     m_levels[level].first_block = m_total_blocks;
     m_levels[level].num_blocks = m_pParams->m_faces * m_levels[level].block_width * blockHeight;
     m_total_blocks += m_levels[level].num_blocks;
@@ -558,8 +552,8 @@ bool crn_comp::quantize_images() {
       image_u8& image = m_images[face][level];
       uint width = image.get_width();
       uint height = image.get_height();
-      uint blockWidth = (width + 7 & ~7) >> 2;
-      uint blockHeight = (height + 7 & ~7) >> 2;
+      uint blockWidth = ((width + 7) & ~7) >> 2;
+      uint blockHeight = ((height + 7) & ~7) >> 2;
       for (uint by = 0; by < blockHeight; by++) {
         for (uint y0 = by << 2, bx = 0; bx < blockWidth; bx++, b++) {
           for (uint t = 0, x0 = bx << 2, dy = 0; dy < 4; dy++) {
@@ -634,8 +628,8 @@ static void remap_color_endpoints(uint16* remapping, const optimize_color_params
   for (uint similarity_base = (uint)(4000 * (1.0f + weight)), total_frequency_normalizer = 0; remaining.size();) {
     const optimize_color_params::unpacked_endpoint& e_front = unpacked_endpoints[chosen.front()];
     const optimize_color_params::unpacked_endpoint& e_back = unpacked_endpoints[chosen.back()];
-    uint16 selected_index;
-    uint64 best_value = 0, selected_similarity_front, selected_similarity_back;
+    uint16 selected_index = 0;
+    uint64 best_value = 0, selected_similarity_front = 0, selected_similarity_back = 0;
     for (uint16 i = 0; i < remaining.size(); i++) {
       uint remaining_index = remaining[i];
       const optimize_color_params::unpacked_endpoint& e_remaining = unpacked_endpoints[remaining_index];
@@ -730,7 +724,7 @@ void crn_comp::optimize_color_selectors() {
     D4[i] = d[(i ^ i >> 4) & 3] + d[(i >> 2 ^ i >> 6) & 3];
   uint8 D8[0x10000];
   for (uint32 i = 0; i < 0x10000; i++)
-    D8[i] = D4[i >> 8 & 0xF0 | i >> 4 & 0xF] + D4[i >> 4 & 0xF0 | i & 0xF];
+    D8[i] = D4[(i >> 8 & 0xF0) | (i >> 4 & 0xF)] + D4[(i >> 4 & 0xF0) | (i & 0xF)];
 
   crnlib::vector<uint32> selectors(n);
   crnlib::vector<uint16> indices(n);
@@ -744,10 +738,10 @@ void crn_comp::optimize_color_selectors() {
     uint min_error = cUINT32_MAX;
     for (uint16 i = 0; i < left; i++) {
       uint32 selector = selectors[i];
-      uint8 d0 = D8[selector >> 16 & 0xFF00 | selected_selector >> 24 & 0xFF];
-      uint8 d1 = D8[selector >> 8 & 0xFF00 | selected_selector >> 16 & 0xFF];
-      uint8 d2 = D8[selector & 0xFF00 | selected_selector >> 8 & 0xFF];
-      uint8 d3 = D8[selector << 8 & 0xFF00 | selected_selector & 0xFF];
+      uint8 d0 = D8[(selector >> 16 & 0xFF00) | (selected_selector >> 24 & 0xFF)];
+      uint8 d1 = D8[(selector >> 8 & 0xFF00) | (selected_selector >> 16 & 0xFF)];
+      uint8 d2 = D8[(selector & 0xFF00) | (selected_selector >> 8 & 0xFF)];
+      uint8 d3 = D8[(selector << 8 & 0xFF00) | (selected_selector & 0xFF)];
       uint error = d0 + d1 + d2 + d3;
       if (error < min_error) {
         min_error = error;
@@ -872,8 +866,8 @@ static void remap_alpha_endpoints(uint16* remapping, const optimize_alpha_params
   for (uint similarity_base = (uint)(1000 * (1.0f + weight)), total_frequency_normalizer = 0; remaining.size();) {
     const optimize_alpha_params::unpacked_endpoint& e_front = unpacked_endpoints[chosen.front()];
     const optimize_alpha_params::unpacked_endpoint& e_back = unpacked_endpoints[chosen.back()];
-    uint16 selected_index;
-    uint64 best_value = 0, selected_similarity_front, selected_similarity_back;
+    uint16 selected_index = 0;
+    uint64 best_value = 0, selected_similarity_front = 0, selected_similarity_back = 0;
     for (uint16 i = 0; i < remaining.size(); i++) {
       uint remaining_index = remaining[i];
       const optimize_alpha_params::unpacked_endpoint& e_remaining = unpacked_endpoints[remaining_index];
@@ -991,7 +985,7 @@ void crn_comp::optimize_alpha_selectors() {
     for (uint16 i = 0; i < left; i++) {
       uint error = 0;
       for (uint64 selector = selectors[i] << 6, delta_selector = selected_selector, j = 0; j < 8; j++, selector >>= 6, delta_selector >>= 6)
-        error += D6[selector & 0xFC0 | delta_selector & 0x3F];
+        error += D6[(selector & 0xFC0) | (delta_selector & 0x3F)];
       if (error < min_error) {
         min_error = error;
         selected_index = i;
@@ -1266,11 +1260,6 @@ bool crn_comp::compress_internal() {
     crnlib_print_mem_stats();
   }
 
-  return true;
-}
-
-bool crn_comp::compress_init(const crn_comp_params& params) {
-  params;
   return true;
 }
 

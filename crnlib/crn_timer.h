@@ -46,7 +46,7 @@ class timed_scope {
   timer m_tm;
 
  public:
-  inline timed_scope(char* pName = "timed_scope")
+  inline timed_scope(const char* pName = "timed_scope")
       : m_pName(pName) { m_tm.start(); }
 
   inline double get_elapsed_secs() const { return m_tm.get_elapsed_secs(); }

@@ -46,13 +46,11 @@ struct crnlib_assume_try {};
 
 #ifdef NDEBUG
 template <typename T>
-inline T crnlib_assert_range(T i, T m) {
-  m;
+inline T crnlib_assert_range(T i, T) {
   return i;
 }
 template <typename T>
-inline T crnlib_assert_range_incl(T i, T m) {
-  m;
+inline T crnlib_assert_range_incl(T i, T) {
   return i;
 }
 #else

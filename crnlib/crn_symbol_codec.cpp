@@ -200,7 +200,7 @@ void adaptive_huffman_data_model::update() {
     status = prefix_coding::generate_decoder_tables(m_total_syms, &m_code_sizes[0], m_pDecode_tables, m_decoder_table_bits);
 
   CRNLIB_ASSERT(status);
-  status;
+  (void)status;
 
   m_update_cycle = (5 * m_update_cycle) >> 2;
   uint max_cycle = (m_total_syms + 6) << 3;  // this was << 2 - which is ~12% slower but compresses around .5% better
@@ -488,8 +488,7 @@ void adaptive_arith_data_model::clear() {
   m_probs.clear();
 }
 
-void adaptive_arith_data_model::init(bool encoding, uint total_syms) {
-  encoding;
+void adaptive_arith_data_model::init(bool, uint total_syms) {
   if (!total_syms) {
     clear();
     return;

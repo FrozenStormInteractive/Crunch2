@@ -863,7 +863,7 @@ void dxt_image::set_pixel(uint x, uint y, const color_quad_u8& c, bool perceptua
         uint best_selector = 0;
 
         for (uint i = 0; i < cDXT5SelectorValues; i++) {
-          uint error = labs(values[i] - c[comp_index]);  // no need to square
+          uint error = labs((int)values[i] - (int)c[comp_index]);  // no need to square
 
           if (error < best_error) {
             best_error = error;
@@ -1096,7 +1096,7 @@ void dxt_image::set_block_pixels(
     }
 
     if (m_format == cDXT5A)
-      ryg_dxt::sCompressDXT5ABlock((sU8*)pElement, (const sU32*)pixels, 0);
+      ryg_dxt::sCompressDXT5ABlock((sU8*)pElement, (const sU32*)pixels);
     else
       ryg_dxt::sCompressDXTBlock((sU8*)pElement, (const sU32*)pixels, m_format == cDXT5, 0);
   } else if ((p.m_compressor == cCRNDXTCompressorCRNF) && (m_format != cDXT1A)) {

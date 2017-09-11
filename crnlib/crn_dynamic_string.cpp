@@ -6,10 +6,8 @@
 namespace crnlib {
 dynamic_string g_empty_dynamic_string;
 
-dynamic_string::dynamic_string(eVarArg dummy, const char* p, ...)
+dynamic_string::dynamic_string(eVarArg, const char* p, ...)
     : m_buf_size(0), m_len(0), m_pStr(NULL) {
-  dummy;
-
   CRNLIB_ASSERT(p);
 
   va_list args;

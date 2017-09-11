@@ -752,8 +752,8 @@ double compute_ssim(const image_u8& a, const image_u8& b, int channel_index) {
 }
 
 void print_ssim(const image_u8& src_img, const image_u8& dst_img) {
-  src_img;
-  dst_img;
+  (void)src_img;
+  (void)dst_img;
   //double y_ssim = compute_ssim(src_img, dst_img, -1);
   //console::printf("Luma MSSIM: %f, Scaled: %f", y_ssim, (y_ssim - .8f) / .2f);
 

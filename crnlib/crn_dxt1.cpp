@@ -1625,8 +1625,6 @@ void dxt1_endpoint_optimizer::try_combinatorial_encoding() {
 // The fourth (transparent) color in 3 color "transparent" blocks is black, which can be optionally exploited for small gains in DXT1 mode if the caller
 // doesn't actually use alpha. (But not in DXT5 mode, because 3-color blocks aren't permitted by GPU's for DXT5.)
 bool dxt1_endpoint_optimizer::try_alpha_as_black_optimization() {
-  const params* pOrig_params = m_pParams;
-  pOrig_params;
   results* pOrig_results = m_pResults;
 
   uint num_dark_colors = 0;

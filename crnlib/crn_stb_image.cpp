@@ -743,8 +743,7 @@ static uint32 get32le(stbi* s) {
 static void getn(stbi* s, stbi_uc* buffer, int n) {
 #ifndef STBI_NO_STDIO
   if (s->img_file) {
-    size_t nr = fread(buffer, 1, n, s->img_file);
-    nr;
+    fread(buffer, 1, n, s->img_file);
     return;
   }
 #endif
@@ -1712,13 +1711,11 @@ typedef uint8* (*resample_row_func)(uint8* out, uint8* in0, uint8* in1,
 
 #define div4(x) ((uint8)((x) >> 2))
 
-static uint8* resample_row_1(uint8* out, uint8* in_near, uint8* in_far, int w, int hs) {
-  out, in_far, w, hs;
+static uint8* resample_row_1(uint8*, uint8* in_near, uint8*, int, int) {
   return in_near;
 }
 
-static uint8* resample_row_v_2(uint8* out, uint8* in_near, uint8* in_far, int w, int hs) {
-  hs;
+static uint8* resample_row_v_2(uint8* out, uint8* in_near, uint8* in_far, int w, int) {
   // need to generate two samples vertically for every one in input
   int i;
   for (i = 0; i < w; ++i)
@@ -1726,8 +1723,7 @@ static uint8* resample_row_v_2(uint8* out, uint8* in_near, uint8* in_far, int w,
   return out;
 }
 
-static uint8* resample_row_h_2(uint8* out, uint8* in_near, uint8* in_far, int w, int hs) {
-  hs, in_far;
+static uint8* resample_row_h_2(uint8* out, uint8* in_near, uint8*, int w, int) {
   // need to generate two samples horizontally for every one in input
   int i;
   uint8* input = in_near;
@@ -1751,8 +1747,7 @@ static uint8* resample_row_h_2(uint8* out, uint8* in_near, uint8* in_far, int w,
 
 #define div16(x) ((uint8)((x) >> 4))
 
-static uint8* resample_row_hv_2(uint8* out, uint8* in_near, uint8* in_far, int w, int hs) {
-  hs;
+static uint8* resample_row_hv_2(uint8* out, uint8* in_near, uint8* in_far, int w, int) {
   // need to generate 2x2 samples for every one in input
   int i, t0, t1;
   if (w == 1) {
@@ -1772,8 +1767,7 @@ static uint8* resample_row_hv_2(uint8* out, uint8* in_near, uint8* in_far, int w
   return out;
 }
 
-static uint8* resample_row_generic(uint8* out, uint8* in_near, uint8* in_far, int w, int hs) {
-  in_far;
+static uint8* resample_row_generic(uint8* out, uint8* in_near, uint8*, int w, int hs) {
   // resample with nearest-neighbor
   int i, j;
   for (i = 0; i < w; ++i)
@@ -2723,8 +2717,7 @@ static int compute_transparency(png* z, uint8 tc[3], int out_n) {
   return 1;
 }
 
-static int expand_palette(png* a, uint8* palette, int len, int pal_img_n) {
-  len;
+static int expand_palette(png* a, uint8* palette, int pal_img_n) {
   uint32 i, pixel_count = a->s.img_x * a->s.img_y;
   uint8 *p, *temp_out, *orig = a->out;
 
@@ -2926,7 +2919,7 @@ static int parse_png_file(png* z, int scan, int req_comp) {
           s->img_out_n = pal_img_n;
           if (req_comp >= 3)
             s->img_out_n = req_comp;
-          if (!expand_palette(z, palette, pal_len, s->img_out_n))
+          if (!expand_palette(z, palette, s->img_out_n))
             return 0;
         }
         stb_free(z->expanded);
@@ -4020,7 +4013,7 @@ static float* hdr_load(stbi* s, int* x, int* y, int* comp, int req_comp) {
       if (c1 != 2 || c2 != 2 || (len & 0x80)) {
         // not run-length encoded, so we have to actually use THIS data as a decoded
         // pixel (note this can't be a valid pixel--one of RGB must be >= 128)
-        stbi_uc rgbe[4] = {c1, c2, len, get8(s)};
+        stbi_uc rgbe[4] = {(stbi_uc)c1, (stbi_uc)c2, (stbi_uc)len, (stbi_uc)get8(s)};
         hdr_convert(hdr_data, rgbe, req_comp);
         i = 1;
         j = 0;

@@ -1014,7 +1014,7 @@ bool etc1_optimizer::evaluate_solution_fast(const etc1_solution_coordinates& coo
     const color_quad_u8* pSrc_pixels = m_pParams->m_pSrc_pixels;
     if ((m_pSorted_luma[n - 1] * 2) < block_inten_midpoints[0]) {
       if (block_inten[0] > m_pSorted_luma[n - 1]) {
-        const uint min_error = labs(block_inten[0] - m_pSorted_luma[n - 1]);
+        const uint min_error = block_inten[0] - m_pSorted_luma[n - 1];
         if (min_error >= trial_solution.m_error)
           continue;
       }
@@ -1025,7 +1025,7 @@ bool etc1_optimizer::evaluate_solution_fast(const etc1_solution_coordinates& coo
         total_error += color::elucidian_distance(block_colors[0], pSrc_pixels[c], false);
     } else if ((m_pSorted_luma[0] * 2) >= block_inten_midpoints[2]) {
       if (m_pSorted_luma[0] > block_inten[3]) {
-        const uint min_error = labs(m_pSorted_luma[0] - block_inten[3]);
+        const uint min_error = m_pSorted_luma[0] - block_inten[3];
         if (min_error >= trial_solution.m_error)
           continue;
       }
@@ -1117,9 +1117,7 @@ static void DitherBlock(color_quad_u8* dest, const color_quad_u8* block) {
 }
 
 static uint etc1_decode_value(uint diff, uint inten, uint selector, uint packed_c) {
-  const uint limit = diff ? 32 : 16;
-  limit;
-  CRNLIB_ASSERT((diff < 2) && (inten < 8) && (selector < 4) && (packed_c < limit));
+  CRNLIB_ASSERT((diff < 2) && (inten < 8) && (selector < 4) && (packed_c < (diff ? 32 : 16)));
   int c;
   if (diff)
     c = (packed_c >> 2) | (packed_c << 3);
@@ -1137,7 +1135,7 @@ void pack_etc1_block_init() {
     for (uint inten = 0; inten < 8; inten++) {
       for (uint selector = 0; selector < 4; selector++) {
         const uint inverse_table_index = diff + (inten << 1) + (selector << 4);
-        for (uint color = 0; color < 256; color++) {
+        for (int color = 0; color < 256; color++) {
           uint best_error = cUINT32_MAX, best_packed_c = 0;
           for (uint packed_c = 0; packed_c < limit; packed_c++) {
             int v = etc1_decode_value(diff, inten, selector, packed_c);

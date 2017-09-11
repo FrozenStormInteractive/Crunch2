@@ -409,8 +409,9 @@ bool file_utils::remove_extension(dynamic_string& filename) {
 }
 
 bool file_utils::create_path(const dynamic_string& fullpath) {
+#ifdef WIN32
   bool got_unc = false;
-  got_unc;
+#endif
   dynamic_string cur_path;
 
   const int l = fullpath.get_len();

@@ -21,9 +21,7 @@ void colorized_console::tick() {
 }
 
 #ifdef CRNLIB_USE_WIN32_API
-bool colorized_console::console_output_func(eConsoleMessageType type, const char* pMsg, void* pData) {
-  pData;
-
+bool colorized_console::console_output_func(eConsoleMessageType type, const char* pMsg, void*) {
   if (console::get_output_disabled())
     return true;
 
@@ -78,8 +76,7 @@ bool colorized_console::console_output_func(eConsoleMessageType type, const char
   return true;
 }
 #else
-bool colorized_console::console_output_func(eConsoleMessageType type, const char* pMsg, void* pData) {
-  pData;
+bool colorized_console::console_output_func(eConsoleMessageType type, const char* pMsg, void*) {
   if (console::get_output_disabled())
     return true;
 

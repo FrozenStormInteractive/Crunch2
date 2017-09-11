@@ -22,6 +22,6 @@ void sInitDXT();
 // quality: 0=fastest (no dither), 1=medium (dither)
 void sCompressDXTBlock(sU8* dest, const sU32* src, sBool alpha, sInt quality);
 
-void sCompressDXT5ABlock(sU8* dest, const sU32* src, sInt quality);
+void sCompressDXT5ABlock(sU8* dest, const sU32* src);
 
 }  // namespace ryg_dxt

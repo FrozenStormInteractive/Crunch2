@@ -273,9 +273,7 @@ class threaded_clusterizer {
     compute_division(axis, centroid, vecs, indices, left_indices, right_indices);
   }
 
-  static bool generate_codebook_dummy_progress_callback(uint percentage_completed, void* pData) {
-    percentage_completed;
-
+  static bool generate_codebook_dummy_progress_callback(uint, void* pData) {
     if (static_cast<threaded_clusterizer*>(pData)->m_canceled)
       return false;
 

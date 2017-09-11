@@ -1457,37 +1457,34 @@ bool unpack_etc2_color(const void* pBlock, unsigned int* pDst_pixels_rgba, bool 
   color_quad_u8* pDst = reinterpret_cast<color_quad_u8*>(pDst_pixels_rgba);
   const etc1_block& block = *static_cast<const etc1_block*>(pBlock);
   const uint8* B = block.m_bytes;
-  const bool rOverflow = (int8(B[0] << 5) >> 5) + (B[0] >> 3) & 0x20;
-  const bool gOverflow = (int8(B[1] << 5) >> 5) + (B[1] >> 3) & 0x20;
+  const bool rOverflow = ((int8(B[0] << 5) >> 5) + (B[0] >> 3)) & 0x20;
+  const bool gOverflow = ((int8(B[1] << 5) >> 5) + (B[1] >> 3)) & 0x20;
 
   if (rOverflow || gOverflow) {
     color_quad_u8 block_colors[4];
+    uint8 unpacked[3];
     if (rOverflow) {
-      uint8 unpacked[3] = {
-        B[0] & 0x3 | B[0] >> 1 & 0xC | B[2] & 0xF0,
-        B[1] >> 4 | B[2] << 4,
-        B[1] & 0xF | B[3] & 0xF0,
-      };
-      uint8 delta = g_etc2_modifier_table[B[3] & 1 | B[3] >> 1 & 6];
+      unpacked[0] = (B[0] & 0x3) | (B[0] >> 1 & 0xC) | (B[2] & 0xF0);
+      unpacked[1] = B[1] >> 4 | B[2] << 4;
+      unpacked[2] = (B[1] & 0xF) | (B[3] & 0xF0);
+      uint8 delta = g_etc2_modifier_table[(B[3] & 1) | (B[3] >> 1 & 6)];
       for (uint c = 0; c < 3; c++) {
-        block_colors[2][c] = unpacked[c] << 4 | unpacked[c] & 0xF;
-        block_colors[1][c] = unpacked[c] >> 4 | unpacked[c] & 0xF0;
+        block_colors[2][c] = unpacked[c] << 4 | (unpacked[c] & 0xF);
+        block_colors[1][c] = unpacked[c] >> 4 | (unpacked[c] & 0xF0);
         block_colors[0][c] = math::maximum(0, block_colors[1][c] - delta);
         block_colors[3][c] = math::minimum(255, block_colors[1][c] + delta);
       }
     } else {
-      uint8 unpacked[3] = {
-        B[0] >> 3 & 0xF | B[2] << 1 & 0xF0,
-        B[1] >> 4 & 0x1 | B[0] << 1 & 0xE | B[3] >> 3 & 0x10 | B[2] << 5,
-        B[2] >> 7 | B[1] << 1 & 0x6 | B[1] & 0x8 | B[3] << 1 & 0xF0,
-      };
-      uint8 modifier = B[3] & 4 | B[3] << 1 & 2 | 1;
+      unpacked[0] = (B[0] >> 3 & 0xF) | (B[2] << 1 & 0xF0);
+      unpacked[1] = (B[1] >> 4 & 0x1) | (B[0] << 1 & 0xE) | (B[3] >> 3 & 0x10) | B[2] << 5;
+      unpacked[2] = B[2] >> 7 | (B[1] << 1 & 0x6) | (B[1] & 0x8) | (B[3] << 1 & 0xF0);
+      uint8 modifier = (B[3] & 4) | (B[3] << 1 & 2) | 1;
       for (int d = 0, c = 0; !d && c < 3; c++, modifier &= d < 0 ? 6 : 7)
         d = (unpacked[c] & 0xF) - (unpacked[c] >> 4);
       uint8 delta = g_etc2_modifier_table[modifier];
       for (uint c = 0; c < 3; c++) {
-        uint8 c0 = unpacked[c] << 4 | unpacked[c] & 0xF;
-        uint8 c1 = unpacked[c] >> 4 | unpacked[c] & 0xF0;
+        uint8 c0 = unpacked[c] << 4 | (unpacked[c] & 0xF);
+        uint8 c1 = unpacked[c] >> 4 | (unpacked[c] & 0xF0);
         block_colors[0][c] = math::maximum(0, c1 - delta);
         block_colors[1][c] = math::minimum(255, c1 + delta);
         block_colors[2][c] = math::minimum(255, c0 + delta);
@@ -1503,15 +1500,15 @@ bool unpack_etc2_color(const void* pBlock, unsigned int* pDst_pixels_rgba, bool 
     }
   } else {
     int16 base[3], dj[3], di[3], color[3];
-    base[0] = B[0] << 1 & 0xFC | B[0] >> 5 & 3;
-    base[1] = B[0] << 7 & 0x80 | B[1] & 0x7E | B[0] & 1;
-    base[2] = B[1] << 7 & 0x80 | B[2] << 2 & 0x60 | B[2] << 3 & 0x18 | B[3] >> 5 & 4 | B[1] << 1 & 2 | B[2] >> 4 & 1;
-    di[0] = (B[5] << 5 & 0xE0 | B[6] >> 3 & 0x1C | B[5] >> 1 & 0x3) - base[0];
-    di[1] = (B[6] << 3 & 0xF8 | B[7] >> 5 & 0x6 | B[6] >> 4 & 0x1) - base[1];
-    di[2] = (B[7] << 2 & 0xFC | B[7] >> 4 & 0x3) - base[2];
-    dj[0] = (B[3] << 1 & 0xF8 | B[3] << 2 & 0x4 | B[3] >> 5 & 0x3) - base[0];
-    dj[1] = (B[4] & 0xFE | B[4] >> 7) - base[1];
-    dj[2] = (B[4] << 7 & 0x80 | B[5] >> 1 & 0x7C | B[4] << 1 & 0x2 | B[5] >> 7) - base[2];
+    base[0] = (B[0] << 1 & 0xFC) | (B[0] >> 5 & 3);
+    base[1] = (B[0] << 7 & 0x80) | (B[1] & 0x7E) | (B[0] & 1);
+    base[2] = (B[1] << 7 & 0x80) | (B[2] << 2 & 0x60) | (B[2] << 3 & 0x18) | (B[3] >> 5 & 4) | (B[1] << 1 & 2) | (B[2] >> 4 & 1);
+    di[0] = ((B[5] << 5 & 0xE0) | (B[6] >> 3 & 0x1C) | (B[5] >> 1 & 0x3)) - base[0];
+    di[1] = ((B[6] << 3 & 0xF8) | (B[7] >> 5 & 0x6) | (B[6] >> 4 & 0x1)) - base[1];
+    di[2] = ((B[7] << 2 & 0xFC) | (B[7] >> 4 & 0x3)) - base[2];
+    dj[0] = ((B[3] << 1 & 0xF8) | (B[3] << 2 & 0x4) | (B[3] >> 5 & 0x3)) - base[0];
+    dj[1] = ((B[4] & 0xFE) | B[4] >> 7) - base[1];
+    dj[2] = ((B[4] << 7 & 0x80) | (B[5] >> 1 & 0x7C) | (B[4] << 1 & 0x2) | B[5] >> 7) - base[2];
     for (uint c = 0; c < 3; c++)
       base[c] = (base[c] << 2) + 2;
     for (uint i = 0; i < 4; i++) {
@@ -1539,7 +1536,7 @@ bool unpack_etc2_alpha(const void* pBlock, unsigned int* pDst_pixels_rgba, int c
     for (uint d = d0, j = 0; j < 4; j++, pDst++, d += 12) {
       int byte_offset = 2 + (d >> 3);
       int bit_offset = d & 7;
-      int s = B[byte_offset] >> 8 - bit_offset & 7;
+      int s = B[byte_offset] >> (8 - bit_offset) & 7;
       if (bit_offset < 3)
         s |= B[byte_offset - 1] << bit_offset & 7;
       pDst->c[comp_index] = values[s];
@@ -2045,7 +2042,7 @@ bool etc1_optimizer::evaluate_solution_fast(const etc1_solution_coordinates& coo
     const color_quad_u8* pSrc_pixels = m_pParams->m_pSrc_pixels;
     if ((m_pSorted_luma[n - 1] * 2) < block_inten_midpoints[0]) {
       if (block_inten[0] > m_pSorted_luma[n - 1]) {
-        const uint min_error = labs(block_inten[0] - m_pSorted_luma[n - 1]);
+        const uint min_error = block_inten[0] - m_pSorted_luma[n - 1];
         if (min_error >= trial_solution.m_error)
           continue;
       }
@@ -2056,7 +2053,7 @@ bool etc1_optimizer::evaluate_solution_fast(const etc1_solution_coordinates& coo
         total_error += block_colors[0].squared_distance_rgb(pSrc_pixels[c]);
     } else if ((m_pSorted_luma[0] * 2) >= block_inten_midpoints[2]) {
       if (m_pSorted_luma[0] > block_inten[3]) {
-        const uint min_error = labs(m_pSorted_luma[0] - block_inten[3]);
+        const uint min_error = m_pSorted_luma[0] - block_inten[3];
         if (min_error >= trial_solution.m_error)
           continue;
       }
@@ -2109,9 +2106,7 @@ bool etc1_optimizer::evaluate_solution_fast(const etc1_solution_coordinates& coo
 }
 
 static uint etc1_decode_value(uint diff, uint inten, uint selector, uint packed_c) {
-  const uint limit = diff ? 32 : 16;
-  limit;
-  RG_ETC1_ASSERT((diff < 2) && (inten < 8) && (selector < 4) && (packed_c < limit));
+  RG_ETC1_ASSERT((diff < 2) && (inten < 8) && (selector < 4) && (packed_c < (diff ? 32 : 16)));
   int c;
   if (diff)
     c = (packed_c >> 2) | (packed_c << 3);
@@ -2134,7 +2129,7 @@ void pack_etc1_block_init() {
     for (uint inten = 0; inten < 8; inten++) {
       for (uint selector = 0; selector < 4; selector++) {
         const uint inverse_table_index = diff + (inten << 1) + (selector << 4);
-        for (uint color = 0; color < 256; color++) {
+        for (int color = 0; color < 256; color++) {
           uint best_error = cUINT32_MAX, best_packed_c = 0;
           for (uint packed_c = 0; packed_c < limit; packed_c++) {
             int v = etc1_decode_value(diff, inten, selector, packed_c);
@@ -2165,8 +2160,7 @@ void pack_etc1_block_init() {
 
 // Packs solid color blocks efficiently using a set of small precomputed tables.
 // For random 888 inputs, MSE results are better than Erricson's ETC1 packer in "slow" mode ~9.5% of the time, is slightly worse only ~.01% of the time, and is equal the rest of the time.
-static uint64 pack_etc1_block_solid_color(etc1_block& block, const uint8* pColor, etc1_pack_params& pack_params) {
-  pack_params;
+static uint64 pack_etc1_block_solid_color(etc1_block& block, const uint8* pColor) {
   RG_ETC1_ASSERT(g_etc1_inverse_lookup[0][255]);
 
   static uint s_next_comp[4] = {1, 2, 0, 1};
@@ -2245,12 +2239,10 @@ found_perfect_match:
 static uint pack_etc1_block_solid_color_constrained(
     etc1_optimizer::results& results,
     uint num_colors, const uint8* pColor,
-    etc1_pack_params& pack_params,
     bool use_diff,
     const color_quad_u8* pBase_color5_unscaled) {
   RG_ETC1_ASSERT(g_etc1_inverse_lookup[0][255]);
 
-  pack_params;
   static uint s_next_comp[4] = {1, 2, 0, 1};
 
   uint best_error = cUINT32_MAX, best_i = 0;
@@ -2404,7 +2396,7 @@ unsigned int pack_etc1_block(void* pETC1_block, const unsigned int* pSrc_pixels_
     if (pSrc_pixels[r].m_u32 != first_pixel_u32)
       break;
   if (!r)
-    return static_cast<unsigned int>(16 * pack_etc1_block_solid_color(dst_block, &pSrc_pixels[0].r, pack_params));
+    return static_cast<unsigned int>(16 * pack_etc1_block_solid_color(dst_block, &pSrc_pixels[0].r));
 
   color_quad_u8 dithered_pixels[16];
   if (pack_params.m_dithering) {
@@ -2465,7 +2457,7 @@ unsigned int pack_etc1_block(void* pETC1_block, const unsigned int* pSrc_pixels_
             if (subblock_pixels[r].m_u32 != subblock_pixel0_u32)
               break;
           if (!r) {
-            pack_etc1_block_solid_color_constrained(results[2], 8, &subblock_pixels[0].r, pack_params, !use_color4, (subblock && !use_color4) ? &results[0].m_block_color_unscaled : NULL);
+            pack_etc1_block_solid_color_constrained(results[2], 8, &subblock_pixels[0].r, !use_color4, (subblock && !use_color4) ? &results[0].m_block_color_unscaled : NULL);
           }
         }
 
@@ -2654,7 +2646,7 @@ unsigned int pack_etc2_alpha(void* pBlock, const unsigned int* pSrc_pixels_rgba,
   for (int modifier_index = 0; modifier_index < 16; modifier_index++) {
     const int* modifier = g_etc2a_modifier_table[modifier_index];
     int multiplier = math::clamp<int>((results.m_first_endpoint - results.m_second_endpoint + modifier[7] + (modifier[7] >> 1)) / (modifier[7] << 1), 1, 15);
-    uint8 data[8] = {base_codeword, multiplier << 4 | modifier_index}, values[8];
+    uint8 data[8] = {(uint8)base_codeword, (uint8)(multiplier << 4 | modifier_index)}, values[8];
     for (int i = 0; i < 8; i++)
       values[i] = math::clamp<int>(base_codeword + modifier[i] * multiplier, 0, 255);
     uint error = 0;
@@ -2673,7 +2665,7 @@ unsigned int pack_etc2_alpha(void* pBlock, const unsigned int* pSrc_pixels_rgba,
           }
         }
         error += best_delta * best_delta;
-        data[byte_offset] |= best_s << 8 - bit_offset;
+        data[byte_offset] |= best_s << (8 - bit_offset);
         if (bit_offset < 3)
           data[byte_offset - 1] |= best_s >> bit_offset;
       }

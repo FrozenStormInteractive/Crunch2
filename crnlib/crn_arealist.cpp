@@ -8,8 +8,7 @@
 
 namespace crnlib {
 
-static void area_fatal_error(const char* pFunc, const char* pMsg, ...) {
-  pFunc;
+static void area_fatal_error(const char*, const char* pMsg, ...) {
   va_list args;
   va_start(args, pMsg);
 

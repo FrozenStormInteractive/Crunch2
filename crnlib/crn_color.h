@@ -469,9 +469,9 @@ struct scalar_type<color_quad<c, q> > {
   enum { cFlag = true };
   static inline void construct(color_quad<c, q>* p) {}
   static inline void construct(color_quad<c, q>* p, const color_quad<c, q>& init) { memcpy(p, &init, sizeof(color_quad<c, q>)); }
-  static inline void construct_array(color_quad<c, q>* p, uint n) { p, n; }
-  static inline void destruct(color_quad<c, q>* p) { p; }
-  static inline void destruct_array(color_quad<c, q>* p, uint n) { p, n; }
+  static inline void construct_array(color_quad<c, q>*, uint) {}
+  static inline void destruct(color_quad<c, q>*) {}
+  static inline void destruct_array(color_quad<c, q>*, uint) {}
 };
 
 typedef color_quad<uint8, int> color_quad_u8;

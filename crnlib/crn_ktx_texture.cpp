@@ -362,9 +362,6 @@ bool ktx_texture::read_from_stream(data_stream_serializer& serializer) {
   if ((!mip0_row_blocks) || (!mip0_col_blocks))
     return false;
 
-  const uint mip0_depth = CRNLIB_MAX(1, m_header.m_pixelDepth);
-  mip0_depth;
-
   bool has_valid_image_size_fields = true;
   bool disable_mip_and_cubemap_padding = false;
 

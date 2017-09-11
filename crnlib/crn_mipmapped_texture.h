@@ -321,7 +321,7 @@ class mipmapped_texture {
   inline void set_last_error(const char* p) const { m_last_error = p; }
 
   void free_all_mips();
-  bool read_regular_image(data_stream_serializer& serializer, texture_file_types::format file_format);
+  bool read_regular_image(data_stream_serializer& serializer);
   bool write_regular_image(const char* pFilename, uint32 image_write_flags);
   bool read_dds_internal(data_stream_serializer& serializer);
   void print_crn_comp_params(const crn_comp_params& p);
