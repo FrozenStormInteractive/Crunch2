@@ -541,10 +541,7 @@ bool dxt1_endpoint_optimizer::refine_solution(int refinement_level) {
             nc.m_high_color = dxt1_block::pack_color(c[1], false);
 
             nc.canonicalize();
-
-            if ((nc.m_low_color != m_best_solution.m_coords.m_low_color) || (nc.m_high_color != m_best_solution.m_coords.m_high_color)) {
-              improved |= evaluate_solution(nc);
-            }
+            improved |= evaluate_solution(nc);
           }
         }
       }
@@ -644,20 +641,11 @@ void dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
       break;
   }
 
-  m_solutions_tried.reset();
-
   if (m_pParams->m_endpoint_caching) {
     // Try the previous X winning endpoints. This may not give us optimal results, but it may increase the probability of early outs while evaluating potential solutions.
     const uint num_prev_results = math::minimum<uint>(cMaxPrevResults, m_num_prev_results);
-    for (uint i = 0; i < num_prev_results; i++) {
-      const dxt1_solution_coordinates& coords = m_prev_results[i];
-
-      solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
-      if (!solution_res.second)
-        continue;
-
-      evaluate_solution(coords);
-    }
+    for (uint i = 0; i < num_prev_results; i++)
+      evaluate_solution(m_prev_results[i]);
 
     if (!m_best_solution.m_error) {
       // Got lucky - one of the previous endpoints is optimal.
@@ -769,11 +757,6 @@ void dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
       for (uint j = 0; j < num_high_trials; j++) {
         dxt1_solution_coordinates coords((uint16)probe_low[i], (uint16)probe_high[j]);
         coords.canonicalize();
-
-        solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
-        if (!solution_res.second)
-          continue;
-
         evaluate_solution(coords);
       }
     }
@@ -797,10 +780,7 @@ void dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
 
         dxt1_solution_coordinates coords(dxt1_block::pack_color(r, g, b, false), m_best_solution.m_coords.m_high_color);
         coords.canonicalize();
-
-        solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
-        if (solution_res.second)
-          evaluate_solution(coords);
+        evaluate_solution(coords);
       }
 
       if (m_pParams->m_quality == cCRNDXTQualityUber) {
@@ -820,10 +800,7 @@ void dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
 
             dxt1_solution_coordinates coords(dxt1_block::pack_color(c, false), m_best_solution.m_coords.m_high_color);
             coords.canonicalize();
-
-            solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
-            if (solution_res.second)
-              evaluate_solution(coords);
+            evaluate_solution(coords);
           }
         }
       }
@@ -846,10 +823,7 @@ void dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
 
         dxt1_solution_coordinates coords(m_best_solution.m_coords.m_low_color, dxt1_block::pack_color(r, g, b, false));
         coords.canonicalize();
-
-        solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
-        if (solution_res.second)
-          evaluate_solution(coords);
+        evaluate_solution(coords);
       }
 
       if (m_pParams->m_quality == cCRNDXTQualityUber) {
@@ -869,10 +843,7 @@ void dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
 
             dxt1_solution_coordinates coords(m_best_solution.m_coords.m_low_color, dxt1_block::pack_color(c, false));
             coords.canonicalize();
-
-            solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | (coords.m_high_color << 16U)));
-            if (solution_res.second)
-              evaluate_solution(coords);
+            evaluate_solution(coords);
           }
         }
       }
@@ -1103,7 +1074,6 @@ bool dxt1_endpoint_optimizer::try_median4(const vec3F& low_color, const vec3F& h
           color_quad_u8((int)floor(.5f + v1[0] * 31.0f), (int)floor(.5f + v1[1] * 63.0f), (int)floor(.5f + v1[2] * 31.0f), 255), false);
 
       sc.canonicalize();
-
       improved |= evaluate_solution(sc);
     }
   }
@@ -1116,6 +1086,11 @@ bool dxt1_endpoint_optimizer::try_median4(const vec3F& low_color, const vec3F& h
 // Given candidate low/high endpoints, find the optimal selectors for 3 and 4 color blocks, compute the resulting error,
 // and use the candidate if it results in less error than the best found result so far.
 bool dxt1_endpoint_optimizer::evaluate_solution(const dxt1_solution_coordinates& coords, bool alternate_rounding) {
+  if (!alternate_rounding) {
+    solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | coords.m_high_color << 16));
+    if (!solution_res.second)
+      return false;
+  }
   if (m_evaluate_hc)
     return evaluate_solution_hc(coords, alternate_rounding);
   if (m_pParams->m_quality >= cCRNDXTQualityBetter)
@@ -1698,6 +1673,8 @@ void dxt1_endpoint_optimizer::compute_internal(const params& p, results& r) {
     m_unique_color_hash_map.reset();
   if (m_solutions_tried.get_table_size() > 8192)
     m_solutions_tried.clear();
+  else
+    m_solutions_tried.reset();
   m_unique_colors.clear();
   m_norm_unique_colors.clear();
   m_mean_norm_color.clear();

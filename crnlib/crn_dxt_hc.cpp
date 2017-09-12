@@ -484,30 +484,15 @@ void dxt_hc::determine_tiles_task_etc(uint64 data, void*) {
 }
 
 void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void*) {
-  const uint thread_index = static_cast<uint>(data);
+  const uint num_tasks = m_pTask_pool->get_num_threads() + 1;
+  dxt1_endpoint_optimizer optimizer;
+  dxt_endpoint_refiner refiner;
+  crnlib::vector<uint8> selectors;
 
-  if (!m_has_color_blocks)
-    return;
-
-  for (uint cluster_index = 0; cluster_index < m_color_clusters.size(); cluster_index++) {
-    if (m_canceled)
-      return;
-
-    if ((crn_get_current_thread_id() == m_main_thread_id) && ((cluster_index & 63) == 0)) {
-      if (!update_progress(3, cluster_index, m_color_clusters.size()))
-        return;
-    }
-
-    if (m_pTask_pool->get_num_threads()) {
-      if ((cluster_index % (m_pTask_pool->get_num_threads() + 1)) != thread_index)
-        continue;
-    }
-
+  for (uint cluster_index = (uint)data; cluster_index < m_color_clusters.size(); cluster_index += num_tasks) {
     color_cluster& cluster = m_color_clusters[cluster_index];
     if (cluster.pixels.empty())
       continue;
-
-    crnlib::vector<uint8> selectors(cluster.pixels.size());
 
     dxt1_endpoint_optimizer::params params;
     params.m_block_index = cluster_index;
@@ -520,9 +505,9 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void*) {
     params.m_endpoint_caching = false;
 
     dxt1_endpoint_optimizer::results results;
+    selectors.resize(params.m_num_pixels);
     results.m_pSelectors = selectors.get_ptr();
 
-    dxt1_endpoint_optimizer optimizer;
     optimizer.compute(params, results);
     cluster.first_endpoint = results.m_low_color;
     cluster.second_endpoint = results.m_high_color;
@@ -561,7 +546,6 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void*) {
       m_block_selectors[cColor][b] = selector | (uint64)weight << 32;
     }
 
-    dxt_endpoint_refiner refiner;
     dxt_endpoint_refiner::params refinerParams;
     dxt_endpoint_refiner::results refinerResults;
     refinerParams.m_perceptual = m_params.m_perceptual;
@@ -692,27 +676,15 @@ void dxt_hc::determine_color_endpoints() {
 }
 
 void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void*) {
-  const uint thread_index = static_cast<uint>(data);
+  const uint num_tasks = m_pTask_pool->get_num_threads() + 1;
+  dxt5_endpoint_optimizer optimizer;
+  dxt_endpoint_refiner refiner;
+  crnlib::vector<uint8> selectors;
 
-  for (uint cluster_index = 0; cluster_index < m_alpha_clusters.size(); cluster_index++) {
-    if (m_canceled)
-      return;
-
-    if ((crn_get_current_thread_id() == m_main_thread_id) && ((cluster_index & 63) == 0)) {
-      if (!update_progress(8, cluster_index, m_alpha_clusters.size()))
-        return;
-    }
-
-    if (m_pTask_pool->get_num_threads()) {
-      if ((cluster_index % (m_pTask_pool->get_num_threads() + 1)) != thread_index)
-        continue;
-    }
-
+  for (uint cluster_index = (uint)data; cluster_index < m_alpha_clusters.size(); cluster_index += num_tasks) {
     alpha_cluster& cluster = m_alpha_clusters[cluster_index];
     if (cluster.pixels.empty())
       continue;
-
-    crnlib::vector<uint8> selectors(cluster.pixels.size());
 
     dxt5_endpoint_optimizer::params params;
     params.m_pPixels = cluster.pixels.get_ptr();
@@ -722,9 +694,9 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void*) {
     params.m_use_both_block_types = false;
 
     dxt5_endpoint_optimizer::results results;
+    selectors.resize(params.m_num_pixels);
     results.m_pSelectors = selectors.get_ptr();
 
-    dxt5_endpoint_optimizer optimizer;
     optimizer.compute(params, results);
     cluster.first_endpoint = results.m_first_endpoint;
     cluster.second_endpoint = results.m_second_endpoint;
@@ -777,7 +749,6 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void*) {
       }
     }
 
-    dxt_endpoint_refiner refiner;
     dxt_endpoint_refiner::params refinerParams;
     dxt_endpoint_refiner::results refinerResults;
     refinerParams.m_perceptual = m_params.m_perceptual;

@@ -19,15 +19,7 @@ class tree_clusterizer {
   }
 
   void add_training_vec(const VectorType& v, uint weight) {
-    const std::pair<typename vector_map_type::iterator, bool> insert_result(m_hist.insert(std::make_pair(v, 0U)));
-
-    typename vector_map_type::iterator it(insert_result.first);
-
-    uint max_weight = UINT_MAX - weight;
-    if (weight > max_weight)
-      it->second = UINT_MAX;
-    else
-      it->second = it->second + weight;
+    m_hist.push_back(std::make_pair(v, weight));
   }
 
   bool generate_codebook(uint max_size) {
@@ -39,13 +31,23 @@ class tree_clusterizer {
     vq_node root;
     root.m_vectors.reserve(static_cast<uint>(m_hist.size()));
 
-    for (typename vector_map_type::const_iterator it = m_hist.begin(); it != m_hist.end(); ++it) {
-      const VectorType& v = it->first;
-      const uint weight = it->second;
+    std::sort(m_hist.begin(), m_hist.end());
+    for (uint i = 0; i < m_hist.size(); i++) {
+      if (!root.m_vectors.size() || m_hist[i].first != root.m_vectors.back().first) {
+        root.m_vectors.push_back(m_hist[i]);
+      } else if (root.m_vectors.back().second > UINT_MAX - m_hist[i].second) {
+        root.m_vectors.back().second = UINT_MAX;
+      } else {
+        root.m_vectors.back().second += m_hist[i].second;
+      }
+    }    
+
+    for (uint i = 0; i < root.m_vectors.size(); i++) {
+      const VectorType& v = root.m_vectors[i].first;
+      const uint weight = root.m_vectors[i].second;
 
       root.m_centroid += (v * (float)weight);
       root.m_total_weight += weight;
-      root.m_vectors.push_back(std::make_pair(v, weight));
 
       ttsum += v.dot(v) * weight;
     }
@@ -166,7 +168,7 @@ class tree_clusterizer {
  private:
   typedef std::map<VectorType, uint> vector_map_type;
 
-  vector_map_type m_hist;
+  crnlib::vector<std::pair<VectorType, uint> > m_hist;
 
   struct vq_node {
     vq_node()
