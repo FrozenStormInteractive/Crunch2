@@ -303,7 +303,25 @@ void dxt1_endpoint_optimizer::optimize_endpoint_comps() {
   }
 
   // Try to separately optimize each component. This is a 1D problem so it's easy to compute accurate per-component error bounds.
+  uint64 W[4] = {}, WD2[4] = {}, WDD[4] = {};
   for (uint comp_index = 0; comp_index < 3; comp_index++) {
+    uint min_color_weight = 0;
+    uint max_color_weight = 0;
+    for (uint s = 0; s < 4; s++)
+      W[s] = WD2[s] = WDD[s] = 0;
+    for (uint i = 0; i < m_unique_colors.size(); i++) {
+      uint c = m_unique_colors[i].m_color[comp_index];
+      uint w = m_unique_colors[i].m_weight;
+      uint8 s = m_best_solution.m_selectors[i];
+      W[s] += (int64)w;
+      WD2[s] += (int64)w * c * 2;
+      WDD[s] += (int64)w * c * c;
+      if (c == min_color[comp_index])
+        min_color_weight += w;
+      if (c == max_color[comp_index])
+        max_color_weight += w;
+    }
+
     uint ll[4];
     ll[0] = orig_l_scaled[comp_index];
     ll[1] = orig_h_scaled[comp_index];
@@ -311,20 +329,8 @@ void dxt1_endpoint_optimizer::optimize_endpoint_comps() {
     ll[3] = (ll[0] + ll[1] * 2) / 3;
 
     uint64 error_to_beat = 0;
-    uint min_color_weight = 0;
-    uint max_color_weight = 0;
-    for (uint i = 0; i < m_unique_colors.size(); i++) {
-      uint c = m_unique_colors[i].m_color[comp_index];
-      uint w = m_unique_colors[i].m_weight;
-
-      int delta = ll[m_best_solution.m_selectors[i]] - c;
-      error_to_beat += static_cast<int64>(w) * (delta * delta);
-
-      if (c == min_color[comp_index])
-        min_color_weight += w;
-      if (c == max_color[comp_index])
-        max_color_weight += w;
-    }
+    for (int s = 0; s < 4; s++)
+      error_to_beat += W[s] * ll[s] * ll[s] - WD2[s] * ll[s] + WDD[s];
 
     if (!error_to_beat)
       continue;
@@ -371,37 +377,38 @@ void dxt1_endpoint_optimizer::optimize_endpoint_comps() {
           tl[3] = (tl[0] + tl[1] * 2) / 3;
 
           uint64 trial_error = 0;
-          for (uint i = 0; i < m_unique_colors.size(); i++) {
-            int delta = tl[m_best_solution.m_selectors[i]] - m_unique_colors[i].m_color[comp_index];
-            trial_error += static_cast<int64>(m_unique_colors[i].m_weight) * (delta * delta);
-            if (trial_error >= error_to_beat)
-              break;
-          }
-
+          for (int s = 0; s < 4; s++)
+            trial_error += W[s] * tl[s] * tl[s] - WD2[s] * tl[s] + WDD[s];
+          
           if (trial_error < error_to_beat) {
             color_quad_u8 l(dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, false));
             color_quad_u8 h(dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, false));
             l[comp_index] = static_cast<uint8>(o);
             h[comp_index] = static_cast<uint8>(p);
 
-            bool better = evaluate_solution(dxt1_solution_coordinates(dxt1_block::pack_color(l, false), dxt1_block::pack_color(h, false)));
-            compute_selectors();
-
-            if (better) {
+            if (evaluate_solution(dxt1_solution_coordinates(dxt1_block::pack_color(l, false), dxt1_block::pack_color(h, false)))) {
               if (!m_best_solution.m_error)
                 return;
-              error_to_beat = 0;
+              compute_selectors();
+              for (uint s = 0; s < 4; s++)
+                W[s] = WD2[s] = WDD[s] = 0;
               for (uint i = 0; i < m_unique_colors.size(); i++) {
-                int delta = tl[m_best_solution.m_selectors[i]] - m_unique_colors[i].m_color[comp_index];
-                error_to_beat += static_cast<int64>(m_unique_colors[i].m_weight) * (delta * delta);
+                uint c = m_unique_colors[i].m_color[comp_index];
+                uint w = m_unique_colors[i].m_weight;
+                uint8 s = m_best_solution.m_selectors[i];
+                W[s] += (int64)w;
+                WD2[s] += (int64)w * c * 2;
+                WDD[s] += (int64)w * c * c;
               }
-            }  // better
-            //goto early_out;
-          }  // if (trial_error < error_to_beat)
-        }  // for (uint p = 0; p <= m; p++)
+              error_to_beat = 0;
+              for (int s = 0; s < 4; s++)
+                error_to_beat += W[s] * tl[s] * tl[s] - WD2[s] * tl[s] + WDD[s];
+            }
+          }
+        }
       }
-    }  // for (uint o = 0; o <= m; o++)
-  }  // comp_index
+    }
+  }
 }
 
 // Voxel adjacency delta coordinations.
