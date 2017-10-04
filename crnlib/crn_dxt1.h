@@ -174,6 +174,7 @@ class dxt1_endpoint_optimizer {
   unique_color_hash_map m_unique_color_hash_map;
 
   unique_color_vec m_unique_colors;  // excludes transparent colors!
+  unique_color_vec m_evaluated_colors;
   unique_color_vec m_temp_unique_colors;
 
   uint m_total_unique_color_weight;
@@ -243,7 +244,8 @@ class dxt1_endpoint_optimizer {
   bool evaluate_solution(const dxt1_solution_coordinates& coords, bool alternate_rounding = false);
   bool evaluate_solution_uber(const dxt1_solution_coordinates& coords, bool alternate_rounding);
   bool evaluate_solution_fast(const dxt1_solution_coordinates& coords, bool alternate_rounding);
-  bool evaluate_solution_hc(const dxt1_solution_coordinates& coords, bool alternate_rounding);
+  bool evaluate_solution_hc_perceptual(const dxt1_solution_coordinates& coords, bool alternate_rounding);
+  bool evaluate_solution_hc_uniform(const dxt1_solution_coordinates& coords, bool alternate_rounding);
   void compute_selectors();
   void compute_selectors_hc();
 

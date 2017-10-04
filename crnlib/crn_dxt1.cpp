@@ -30,6 +30,14 @@ static const uint cBetterProbeTableSize = sizeof(g_better_probe_table) / sizeof(
 static const int16 g_uber_probe_table[] = {0, 1, 2, 3, 5, 7, 9, 10, 13, 15, 19, 27, 43, 59, 91};
 static const uint cUberProbeTableSize = sizeof(g_uber_probe_table) / sizeof(g_uber_probe_table[0]);
 
+struct unique_color_projection {
+  unique_color color;
+  int64 projection;
+};
+static struct {
+  bool operator()(unique_color_projection a, unique_color_projection b) const { return a.projection < b.projection; }
+} g_unique_color_projection_sort;
+
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
 dxt1_endpoint_optimizer::dxt1_endpoint_optimizer()
@@ -693,6 +701,20 @@ void dxt1_endpoint_optimizer::optimize_endpoints(vec3F& low_color, vec3F& high_c
   high_color[1] = math::clamp(high_color[1] * 63.0f, 0.0f, 63.0f);
   high_color[2] = math::clamp(high_color[2] * 31.0f, 0.0f, 31.0f);
 
+  int d[3];
+  for (uint c = 0; c < 3; c++)
+    d[c] = math::float_to_int_round((high_color[c] - low_color[c]) * (c == 0 ? m_perceptual ? 16 : 2 : c == 1 ? m_perceptual ? 25 : 1 : 2));
+  crnlib::vector<unique_color_projection> evaluated_color_projections(m_evaluated_colors.size());
+  int64 average_projection = d[0] * (high_color[0] + low_color[0]) * 4 + d[1] * (high_color[1] + low_color[1]) * 2 + d[2] * (high_color[2] + low_color[2]) * 4;
+  for (uint i = 0; i < m_evaluated_colors.size(); i++) {
+    int64 delta = d[0] * m_evaluated_colors[i].m_color[0] + d[1] * m_evaluated_colors[i].m_color[1] + d[2] * m_evaluated_colors[i].m_color[2] - average_projection;
+    evaluated_color_projections[i].projection = delta * m_evaluated_colors[i].m_weight;
+    evaluated_color_projections[i].color = m_evaluated_colors[i];
+  }
+  std::sort(evaluated_color_projections.begin(), evaluated_color_projections.end(), g_unique_color_projection_sort);
+  for (uint i = 0, iEnd = m_evaluated_colors.size(); i < iEnd; i++)
+    m_evaluated_colors[i] = evaluated_color_projections[i & 1 ? i >> 1 : iEnd - 1 - (i >> 1)].color;
+
   for (uint pass = 0; pass < num_passes; pass++) {
     // Now separately sweep or probe the low and high colors along the principle axis, both positively and negatively.
     // This results in two arrays of candidate low/high endpoints. Every unique combination of candidate endpoints is tried as a potential solution.
@@ -1099,7 +1121,7 @@ bool dxt1_endpoint_optimizer::evaluate_solution(const dxt1_solution_coordinates&
       return false;
   }
   if (m_evaluate_hc)
-    return evaluate_solution_hc(coords, alternate_rounding);
+    return m_perceptual ? evaluate_solution_hc_perceptual(coords, alternate_rounding) : evaluate_solution_hc_uniform(coords, alternate_rounding);
   if (m_pParams->m_quality >= cCRNDXTQualityBetter)
     return evaluate_solution_uber(coords, alternate_rounding);
   return evaluate_solution_fast(coords, alternate_rounding);
@@ -1434,26 +1456,48 @@ bool dxt1_endpoint_optimizer::evaluate_solution_fast(const dxt1_solution_coordin
   return false;
 }
 
-bool dxt1_endpoint_optimizer::evaluate_solution_hc(const dxt1_solution_coordinates& coords, bool alternate_rounding) {
+bool dxt1_endpoint_optimizer::evaluate_solution_hc_perceptual(const dxt1_solution_coordinates& coords, bool alternate_rounding) {
   color_quad_u8 c0 = dxt1_block::unpack_color(coords.m_low_color, true);
   color_quad_u8 c1 = dxt1_block::unpack_color(coords.m_high_color, true);
   color_quad_u8 c2((c0.r * 2 + c1.r + alternate_rounding) / 3, (c0.g * 2 + c1.g + alternate_rounding) / 3, (c0.b * 2 + c1.b + alternate_rounding) / 3, 0);
   color_quad_u8 c3((c1.r * 2 + c0.r + alternate_rounding) / 3, (c1.g * 2 + c0.g + alternate_rounding) / 3, (c1.b * 2 + c0.b + alternate_rounding) / 3, 0);
-  unique_color* color = m_unique_colors.get_ptr();
-  uint count = m_unique_colors.size();
   uint64 error = 0;
-  if (m_perceptual) {
-    for (; count; color++, error < m_best_solution.m_error ? count-- : count = 0) {
-      uint e01 = math::minimum(color::color_distance(true, color->m_color, c0, false), color::color_distance(true, color->m_color, c1, false));
-      uint e23 = math::minimum(color::color_distance(true, color->m_color, c2, false), color::color_distance(true, color->m_color, c3, false));
-      error += math::minimum(e01, e23) * (uint64)color->m_weight;
+  unique_color* color = m_evaluated_colors.get_ptr();
+  for (uint count = m_evaluated_colors.size(); count; color++, error < m_best_solution.m_error ? count-- : count = 0) {
+    uint e01 = math::minimum(color::color_distance(true, color->m_color, c0, false), color::color_distance(true, color->m_color, c1, false));
+    uint e23 = math::minimum(color::color_distance(true, color->m_color, c2, false), color::color_distance(true, color->m_color, c3, false));
+    error += math::minimum(e01, e23) * (uint64)color->m_weight;
+  }
+  if (error >= m_best_solution.m_error)
+    return false;
+  m_best_solution.m_coords = coords;
+  m_best_solution.m_error = error;
+  m_best_solution.m_alpha_block = false;
+  m_best_solution.m_alternate_rounding = alternate_rounding;
+  m_best_solution.m_enforce_selector = m_best_solution.m_coords.m_low_color == m_best_solution.m_coords.m_high_color;
+  if (m_best_solution.m_enforce_selector) {
+    if ((m_best_solution.m_coords.m_low_color & 31) != 31) {
+      m_best_solution.m_coords.m_low_color++;
+      m_best_solution.m_enforced_selector = 1;
+    } else {
+      m_best_solution.m_coords.m_high_color--;
+      m_best_solution.m_enforced_selector = 0;
     }
-  } else {
-    for (; count; color++, error < m_best_solution.m_error ? count-- : count = 0) {
-      uint e01 = math::minimum(color::color_distance(false, color->m_color, c0, false), color::color_distance(false, color->m_color, c1, false));
-      uint e23 = math::minimum(color::color_distance(false, color->m_color, c2, false), color::color_distance(false, color->m_color, c3, false));
-      error += math::minimum(e01, e23) * (uint64)color->m_weight;
-    }
+  }
+  return true;
+}
+
+bool dxt1_endpoint_optimizer::evaluate_solution_hc_uniform(const dxt1_solution_coordinates& coords, bool alternate_rounding) {
+  color_quad_u8 c0 = dxt1_block::unpack_color(coords.m_low_color, true);
+  color_quad_u8 c1 = dxt1_block::unpack_color(coords.m_high_color, true);
+  color_quad_u8 c2((c0.r * 2 + c1.r + alternate_rounding) / 3, (c0.g * 2 + c1.g + alternate_rounding) / 3, (c0.b * 2 + c1.b + alternate_rounding) / 3, 0);
+  color_quad_u8 c3((c1.r * 2 + c0.r + alternate_rounding) / 3, (c1.g * 2 + c0.g + alternate_rounding) / 3, (c1.b * 2 + c0.b + alternate_rounding) / 3, 0);
+  uint64 error = 0;
+  unique_color* color = m_evaluated_colors.get_ptr();
+  for (uint count = m_evaluated_colors.size(); count; color++, error < m_best_solution.m_error ? count-- : count = 0) {
+    uint e01 = math::minimum(color::color_distance(false, color->m_color, c0, false), color::color_distance(false, color->m_color, c1, false));
+    uint e23 = math::minimum(color::color_distance(false, color->m_color, c2, false), color::color_distance(false, color->m_color, c3, false));
+    error += math::minimum(e01, e23) * (uint64)color->m_weight;
   }
   if (error >= m_best_solution.m_error)
     return false;
@@ -1706,6 +1750,7 @@ void dxt1_endpoint_optimizer::compute_internal(const params& p, results& r) {
     }
   }
   m_has_transparent_pixels = m_total_unique_color_weight != m_pParams->m_num_pixels;
+  m_evaluated_colors = m_unique_colors;
 
   if (!m_unique_colors.size()) {
     m_pResults->m_low_color = 0;
