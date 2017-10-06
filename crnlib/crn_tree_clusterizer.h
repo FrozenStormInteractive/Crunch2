@@ -7,15 +7,19 @@ namespace crnlib {
 template <typename VectorType>
 class tree_clusterizer {
  public:
-  tree_clusterizer()
-      : m_overall_variance(0.0f) {
-  }
+  tree_clusterizer() {}
+
+  struct VectorInfo {
+    uint index;
+    uint weight;
+    float weightedDotProduct;
+  };
 
   void clear() {
     m_hist.clear();
+    m_vectors.clear();
     m_codebook.clear();
     m_nodes.clear();
-    m_overall_variance = 0.0f;
   }
 
   void add_training_vec(const VectorType& v, uint weight) {
@@ -30,26 +34,35 @@ class tree_clusterizer {
 
     vq_node root;
     root.m_vectors.reserve(static_cast<uint>(m_hist.size()));
+    m_vectors.reserve(m_hist.size());
 
     std::sort(m_hist.begin(), m_hist.end());
     for (uint i = 0; i < m_hist.size(); i++) {
-      if (!root.m_vectors.size() || m_hist[i].first != root.m_vectors.back().first) {
-        root.m_vectors.push_back(m_hist[i]);
-      } else if (root.m_vectors.back().second > UINT_MAX - m_hist[i].second) {
-        root.m_vectors.back().second = UINT_MAX;
+      if (!root.m_vectors.size() || m_hist[i].first != m_vectors.back()) {
+        VectorInfo vectorInfo;
+        vectorInfo.index = m_vectors.size();
+        vectorInfo.weight = m_hist[i].second;
+        root.m_vectors.push_back(vectorInfo);
+        m_vectors.push_back(m_hist[i].first);
+      } else if (root.m_vectors.back().weight > UINT_MAX - m_hist[i].second) {
+        root.m_vectors.back().weight = UINT_MAX;
       } else {
-        root.m_vectors.back().second += m_hist[i].second;
+        root.m_vectors.back().weight += m_hist[i].second;
       }
-    }    
+    }
 
-    for (uint i = 0; i < root.m_vectors.size(); i++) {
-      const VectorType& v = root.m_vectors[i].first;
-      const uint weight = root.m_vectors[i].second;
+    m_weightedVectors.resize(m_vectors.size());
+    m_left_children_indices.resize(m_vectors.size());
+    m_right_children_indices.resize(m_vectors.size());
 
-      root.m_centroid += (v * (float)weight);
+    for (uint i = 0; i < m_vectors.size(); i++) {
+      const VectorType& v = m_vectors[i];
+      const uint weight = root.m_vectors[i].weight;
+      m_weightedVectors[i] = v * (float)weight;
+      root.m_centroid += m_weightedVectors[i];
       root.m_total_weight += weight;
-
-      ttsum += v.dot(v) * weight;
+      root.m_vectors[i].weightedDotProduct = v.dot(v) * weight;
+      ttsum += root.m_vectors[i].weightedDotProduct;
     }
 
     root.m_variance = (float)(ttsum - (root.m_centroid.dot(root.m_centroid) / root.m_total_weight));
@@ -91,8 +104,6 @@ class tree_clusterizer {
 
     m_codebook.clear();
 
-    m_overall_variance = 0.0f;
-
     for (uint i = 0; i < m_nodes.size(); i++) {
       vq_node& node = m_nodes[i];
       if (node.m_left != -1) {
@@ -104,14 +115,10 @@ class tree_clusterizer {
 
       node.m_codebook_index = m_codebook.size();
       m_codebook.push_back(node.m_centroid);
-
-      m_overall_variance += node.m_variance;
     }
 
     return true;
   }
-
-  inline float get_overall_variance() const { return m_overall_variance; }
 
   inline uint get_codebook_size() const {
     return m_codebook.size();
@@ -124,28 +131,6 @@ class tree_clusterizer {
   typedef crnlib::vector<VectorType> vector_vec_type;
   inline const vector_vec_type& get_codebook() const {
     return m_codebook;
-  }
-
-  uint find_best_codebook_entry(const VectorType& v) const {
-    uint cur_node_index = 0;
-
-    for (;;) {
-      const vq_node& cur_node = m_nodes[cur_node_index];
-
-      if (cur_node.m_left == -1)
-        return cur_node.m_codebook_index;
-
-      const vq_node& left_node = m_nodes[cur_node.m_left];
-      const vq_node& right_node = m_nodes[cur_node.m_right];
-
-      float left_dist = left_node.m_centroid.squared_distance(v);
-      float right_dist = right_node.m_centroid.squared_distance(v);
-
-      if (left_dist < right_dist)
-        cur_node_index = cur_node.m_left;
-      else
-        cur_node_index = cur_node.m_right;
-    }
   }
 
   uint find_best_codebook_entry_fs(const VectorType& v) const {
@@ -166,9 +151,12 @@ class tree_clusterizer {
   }
 
  private:
-  typedef std::map<VectorType, uint> vector_map_type;
 
   crnlib::vector<std::pair<VectorType, uint> > m_hist;
+  crnlib::vector<VectorType> m_vectors;
+  crnlib::vector<VectorType> m_weightedVectors;
+  crnlib::vector<uint> m_left_children_indices;
+  crnlib::vector<uint> m_right_children_indices;
 
   struct vq_node {
     vq_node()
@@ -179,7 +167,7 @@ class tree_clusterizer {
 
     float m_variance;
 
-    crnlib::vector<std::pair<VectorType, uint> > m_vectors;
+    crnlib::vector<VectorInfo> m_vectors;
 
     int m_left;
     int m_right;
@@ -195,10 +183,6 @@ class tree_clusterizer {
 
   vector_vec_type m_codebook;
 
-  float m_overall_variance;
-
-  random m_rand;
-
   void split_node(uint index) {
     vq_node& parent_node = m_nodes[index];
 
@@ -209,8 +193,7 @@ class tree_clusterizer {
     double furthest_dist = -1.0f;
 
     for (uint i = 0; i < parent_node.m_vectors.size(); i++) {
-      const VectorType& v = parent_node.m_vectors[i].first;
-
+      const VectorType& v = m_vectors[parent_node.m_vectors[i].index];
       double dist = v.squared_distance(parent_node.m_centroid);
       if (dist > furthest_dist) {
         furthest_dist = dist;
@@ -222,8 +205,7 @@ class tree_clusterizer {
     double opposite_dist = -1.0f;
 
     for (uint i = 0; i < parent_node.m_vectors.size(); i++) {
-      const VectorType& v = parent_node.m_vectors[i].first;
-
+      const VectorType& v = m_vectors[parent_node.m_vectors[i].index];
       double dist = v.squared_distance(furthest);
       if (dist > opposite_dist) {
         opposite_dist = dist;
@@ -241,22 +223,21 @@ class tree_clusterizer {
       covar.clear();
 
       for (uint i = 0; i < parent_node.m_vectors.size(); i++) {
-        const VectorType v(parent_node.m_vectors[i].first - parent_node.m_centroid);
-        const VectorType w(v * (float)parent_node.m_vectors[i].second);
-
-        for (uint x = 0; x < N; x++)
+        const VectorType v = m_vectors[parent_node.m_vectors[i].index] - parent_node.m_centroid;
+        const VectorType w = v * (float)parent_node.m_vectors[i].weight;
+        for (uint x = 0; x < N; x++) {
           for (uint y = x; y < N; y++)
             covar[x][y] = covar[x][y] + v[x] * w[y];
+        }
       }
 
-      if (N > 1) {
-        //for (uint x = 0; x < (N - 1); x++)
-        for (uint x = 0; x != (N - 1); x++)
-          for (uint y = x + 1; y < N; y++)
-            covar[y][x] = covar[x][y];
+      float divider = (float)parent_node.m_total_weight;
+      for (uint x = 0; x < N; x++) {
+        for (uint y = x; y < N; y++) {
+          covar[x][y] /= divider;
+          covar[y][x] = covar[x][y];
+        }
       }
-
-      covar /= float(parent_node.m_total_weight);
 
       VectorType axis(1.0f);
       // Starting with an estimate of the principle axis should work better, but doesn't in practice?
@@ -294,16 +275,14 @@ class tree_clusterizer {
       double right_weight = 0.0f;
 
       for (uint i = 0; i < parent_node.m_vectors.size(); i++) {
-        const float weight = (float)parent_node.m_vectors[i].second;
-
-        const VectorType& v = parent_node.m_vectors[i].first;
-
-        double t = (v - parent_node.m_centroid) * axis;
+        const VectorInfo& vectorInfo = parent_node.m_vectors[i];
+        const float weight = (float)vectorInfo.weight;
+        double t = (m_vectors[vectorInfo.index] - parent_node.m_centroid) * axis;
         if (t < 0.0f) {
-          new_left_child += v * weight;
+          new_left_child += m_weightedVectors[vectorInfo.index];
           left_weight += weight;
         } else {
-          new_right_child += v * weight;
+          new_right_child += m_weightedVectors[vectorInfo.index];
           right_weight += weight;
         }
       }
@@ -317,11 +296,8 @@ class tree_clusterizer {
     uint64 left_weight = 0;
     uint64 right_weight = 0;
 
-    crnlib::vector<std::pair<VectorType, uint> > left_children;
-    crnlib::vector<std::pair<VectorType, uint> > right_children;
-
-    left_children.reserve(parent_node.m_vectors.size() / 2);
-    right_children.reserve(parent_node.m_vectors.size() / 2);
+    uint left_children_indices_count = 0;
+    uint right_children_indices_count = 0;
 
     float prev_total_variance = 1e+10f;
 
@@ -331,8 +307,8 @@ class tree_clusterizer {
     // FIXME: Excessive upper limit
     const uint cMaxLoops = 1024;
     for (uint total_loops = 0; total_loops < cMaxLoops; total_loops++) {
-      left_children.resize(0);
-      right_children.resize(0);
+      left_children_indices_count = 0;
+      right_children_indices_count = 0;
 
       VectorType new_left_child(cClear);
       VectorType new_right_child(cClear);
@@ -344,26 +320,19 @@ class tree_clusterizer {
       right_weight = 0;
 
       for (uint i = 0; i < parent_node.m_vectors.size(); i++) {
-        const VectorType& v = parent_node.m_vectors[i].first;
-        const uint weight = parent_node.m_vectors[i].second;
-
-        double left_dist2 = left_child.squared_distance(v);
-        double right_dist2 = right_child.squared_distance(v);
-
+        const VectorInfo& vectorInfo = parent_node.m_vectors[i];
+        double left_dist2 = left_child.squared_distance(m_vectors[vectorInfo.index]);
+        double right_dist2 = right_child.squared_distance(m_vectors[vectorInfo.index]);
         if (left_dist2 < right_dist2) {
-          left_children.push_back(parent_node.m_vectors[i]);
-
-          new_left_child += (v * (float)weight);
-          left_weight += weight;
-
-          left_ttsum += v.dot(v) * weight;
+          m_left_children_indices[left_children_indices_count++] = i;
+          new_left_child += m_weightedVectors[vectorInfo.index];
+          left_ttsum += vectorInfo.weightedDotProduct;
+          left_weight += vectorInfo.weight;
         } else {
-          right_children.push_back(parent_node.m_vectors[i]);
-
-          new_right_child += (v * (float)weight);
-          right_weight += weight;
-
-          right_ttsum += v.dot(v) * weight;
+          m_right_children_indices[right_children_indices_count++] = i;
+          new_right_child += m_weightedVectors[vectorInfo.index];
+          right_ttsum += vectorInfo.weightedDotProduct;
+          right_weight += vectorInfo.weight;
         }
       }
 
@@ -406,12 +375,16 @@ class tree_clusterizer {
 
     left_child_node.m_centroid = left_child;
     left_child_node.m_total_weight = left_weight;
-    left_child_node.m_vectors.swap(left_children);
+    left_child_node.m_vectors.resize(left_children_indices_count);
+    for (uint i = 0; i < left_children_indices_count; i++)
+      left_child_node.m_vectors[i] = parent_node.m_vectors[m_left_children_indices[i]];
     left_child_node.m_variance = left_variance;
 
     right_child_node.m_centroid = right_child;
     right_child_node.m_total_weight = right_weight;
-    right_child_node.m_vectors.swap(right_children);
+    right_child_node.m_vectors.resize(right_children_indices_count);
+    for (uint i = 0; i < right_children_indices_count; i++)
+      right_child_node.m_vectors[i] = parent_node.m_vectors[m_right_children_indices[i]];
     right_child_node.m_variance = right_variance;
   }
 };
