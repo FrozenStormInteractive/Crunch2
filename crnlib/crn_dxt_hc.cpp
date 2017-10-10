@@ -629,10 +629,36 @@ void dxt_hc::determine_color_endpoint_codebook_task_etc(uint64 data, void*) {
 
 void dxt_hc::determine_color_endpoint_clusters_task(uint64 data, void* pData_ptr) {
   tree_clusterizer<vec6F>* vq = (tree_clusterizer<vec6F>*)pData_ptr;
+  const crnlib::vector<vec6F>& codebook = vq->get_codebook();
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   for (uint t = m_tiles.size() * data / num_tasks, tEnd = m_tiles.size() * (data + 1) / num_tasks; t < tEnd; t++) {
-    if (m_tiles[t].pixels.size())
-      m_tiles[t].cluster_indices[cColor] = vq->find_best_codebook_entry_fs(m_tiles[t].color_endpoint);
+    if (m_tiles[t].pixels.size()) {
+      const vec6F& v = m_tiles[t].color_endpoint;
+      float node_dist = codebook[vq->get_node_index(v)].squared_distance(v);
+      float best_dist = math::cNearlyInfinite;
+      uint best_index = 0;
+      for (uint i = 0; i < codebook.size(); i++) {
+        const vec6F& c = codebook[i];
+        float dist = 0;
+        dist += (c[0] - v[0]) * (c[0] - v[0]);
+        dist += (c[1] - v[1]) * (c[1] - v[1]);
+        if (dist > node_dist)
+          continue;
+        dist += (c[2] - v[2]) * (c[2] - v[2]);
+        dist += (c[3] - v[3]) * (c[3] - v[3]);
+        if (dist > node_dist)
+          continue;
+        dist += (c[4] - v[4]) * (c[4] - v[4]);
+        dist += (c[5] - v[5]) * (c[5] - v[5]);
+        if (dist < best_dist) {
+          best_dist = dist;
+          best_index = i;
+          if (best_dist == 0.0f)
+            break;
+        }
+      }
+      m_tiles[t].cluster_indices[cColor] = best_index;
+    }
   }
 }
 
@@ -643,7 +669,7 @@ void dxt_hc::determine_color_endpoints() {
       vq.add_training_vec(m_tiles[t].color_endpoint, (uint)(m_tiles[t].pixels.size() * m_tiles[t].weight));
   }
 
-  vq.generate_codebook(math::minimum<uint>(m_num_tiles, m_params.m_color_endpoint_codebook_size));
+  vq.generate_codebook(math::minimum<uint>(m_num_tiles, m_params.m_color_endpoint_codebook_size), true);
   m_color_clusters.resize(vq.get_codebook_size());
 
   for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
@@ -773,11 +799,25 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void*) {
 
 void dxt_hc::determine_alpha_endpoint_clusters_task(uint64 data, void* pData_ptr) {
   tree_clusterizer<vec2F>* vq = (tree_clusterizer<vec2F>*)pData_ptr;
+  const crnlib::vector<vec2F>& codebook = vq->get_codebook();
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   for (uint t = m_tiles.size() * data / num_tasks, tEnd = m_tiles.size() * (data + 1) / num_tasks; t < tEnd; t++) {
     if (m_tiles[t].pixels.size()) {
-      for (uint a = 0; a < m_num_alpha_blocks; a++)
-        m_tiles[t].cluster_indices[cAlpha0 + a] = vq->find_best_codebook_entry_fs(m_tiles[t].alpha_endpoints[a]);
+      for (uint a = 0; a < m_num_alpha_blocks; a++) {
+        const vec2F& v = m_tiles[t].alpha_endpoints[a];
+        float best_dist = math::cNearlyInfinite;
+        uint best_index = 0;
+        for (uint i = 0; i < codebook.size(); i++) {
+          float dist = (codebook[i][0] - v[0]) * (codebook[i][0] - v[0]) + (codebook[i][1] - v[1]) * (codebook[i][1] - v[1]);
+          if (dist < best_dist) {
+            best_dist = dist;
+            best_index = i;
+            if (best_dist == 0.0f)
+              break;
+          }
+        }
+        m_tiles[t].cluster_indices[cAlpha0 + a] = best_index;
+      }
     }
   }
 }

@@ -206,6 +206,10 @@ class vec : public helpers::rel_ops<vec<N, T> > {
     return m_s[i];
   }
 
+  inline operator size_t() const {
+    return (size_t)fast_hash(this, sizeof(*this));
+  }
+
   inline T get_x(void) const { return m_s[0]; }
   inline T get_y(void) const {
     CRNLIB_ASSUME(N >= 2);

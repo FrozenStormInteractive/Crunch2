@@ -20,13 +20,14 @@ class tree_clusterizer {
     m_vectors.clear();
     m_codebook.clear();
     m_nodes.clear();
+    m_node_index_map.clear();
   }
 
   void add_training_vec(const VectorType& v, uint weight) {
     m_hist.push_back(std::make_pair(v, weight));
   }
 
-  bool generate_codebook(uint max_size) {
+  bool generate_codebook(uint max_size, bool generate_node_index_map = false) {
     if (m_hist.empty())
       return false;
 
@@ -115,9 +116,18 @@ class tree_clusterizer {
 
       node.m_codebook_index = m_codebook.size();
       m_codebook.push_back(node.m_centroid);
+
+      if (generate_node_index_map) {
+        for (uint j = 0; j < node.m_vectors.size(); j++)
+          m_node_index_map.insert(std::make_pair(m_vectors[node.m_vectors[j].index], node.m_codebook_index));
+      }
     }
 
     return true;
+  }
+
+  inline uint get_node_index(const VectorType& v) {
+    return m_node_index_map.find(v)->second;
   }
 
   inline uint get_codebook_size() const {
@@ -133,23 +143,6 @@ class tree_clusterizer {
     return m_codebook;
   }
 
-  uint find_best_codebook_entry_fs(const VectorType& v) const {
-    float best_dist = math::cNearlyInfinite;
-    uint best_index = 0;
-
-    for (uint i = 0; i < m_codebook.size(); i++) {
-      float dist = m_codebook[i].squared_distance(v);
-      if (dist < best_dist) {
-        best_dist = dist;
-        best_index = i;
-        if (best_dist == 0.0f)
-          break;
-      }
-    }
-
-    return best_index;
-  }
-
  private:
 
   crnlib::vector<std::pair<VectorType, uint> > m_hist;
@@ -157,6 +150,7 @@ class tree_clusterizer {
   crnlib::vector<VectorType> m_weightedVectors;
   crnlib::vector<uint> m_left_children_indices;
   crnlib::vector<uint> m_right_children_indices;
+  crnlib::hash_map<VectorType, uint> m_node_index_map;
 
   struct vq_node {
     vq_node()
