@@ -12,7 +12,7 @@ class tree_clusterizer {
   struct VectorInfo {
     uint index;
     uint weight;
-    float weightedDotProduct;
+    double weightedDotProduct;
   };
 
   void clear() {

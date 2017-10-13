@@ -177,6 +177,10 @@ class dxt1_endpoint_optimizer {
   unique_color_vec m_evaluated_colors;
   unique_color_vec m_temp_unique_colors;
 
+  struct {
+    uint64 low, high;
+  } m_rDist[32], m_gDist[64], m_bDist[32];
+  
   uint m_total_unique_color_weight;
 
   bool m_has_transparent_pixels;

@@ -640,16 +640,16 @@ void dxt_hc::determine_color_endpoint_clusters_task(uint64 data, void* pData_ptr
       for (uint i = 0; i < codebook.size(); i++) {
         const vec6F& c = codebook[i];
         float dist = 0;
-        dist += (c[0] - v[0]) * (c[0] - v[0]);
-        dist += (c[1] - v[1]) * (c[1] - v[1]);
+        float d0 = c[0] - v[0]; dist += d0 * d0;
+        float d1 = c[1] - v[1]; dist += d1 * d1;
         if (dist > node_dist)
           continue;
-        dist += (c[2] - v[2]) * (c[2] - v[2]);
-        dist += (c[3] - v[3]) * (c[3] - v[3]);
+        float d2 = c[2] - v[2]; dist += d2 * d2;
+        float d3 = c[3] - v[3]; dist += d3 * d3;
         if (dist > node_dist)
           continue;
-        dist += (c[4] - v[4]) * (c[4] - v[4]);
-        dist += (c[5] - v[5]) * (c[5] - v[5]);
+        float d4 = c[4] - v[4]; dist += d4 * d4;
+        float d5 = c[5] - v[5]; dist += d5 * d5;
         if (dist < best_dist) {
           best_dist = dist;
           best_index = i;

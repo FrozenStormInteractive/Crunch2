@@ -1115,6 +1115,13 @@ bool dxt1_endpoint_optimizer::try_median4(const vec3F& low_color, const vec3F& h
 // Given candidate low/high endpoints, find the optimal selectors for 3 and 4 color blocks, compute the resulting error,
 // and use the candidate if it results in less error than the best found result so far.
 bool dxt1_endpoint_optimizer::evaluate_solution(const dxt1_solution_coordinates& coords, bool alternate_rounding) {
+  color_quad_u8 c0 = dxt1_block::unpack_color(coords.m_low_color, false);
+  color_quad_u8 c1 = dxt1_block::unpack_color(coords.m_high_color, false);
+  uint64 rError = c0.r < c1.r ? m_rDist[c0.r].low + m_rDist[c1.r].high : m_rDist[c0.r].high + m_rDist[c1.r].low;
+  uint64 gError = c0.g < c1.g ? m_gDist[c0.g].low + m_gDist[c1.g].high : m_gDist[c0.g].high + m_gDist[c1.g].low;
+  uint64 bError = c0.b < c1.b ? m_bDist[c0.b].low + m_bDist[c1.b].high : m_bDist[c0.b].high + m_bDist[c1.b].low;
+  if (rError + gError + bError >= m_best_solution.m_error)
+    return false;
   if (!alternate_rounding) {
     solution_hash_map::insert_result solution_res(m_solutions_tried.insert(coords.m_low_color | coords.m_high_color << 16));
     if (!solution_res.second)
@@ -1751,6 +1758,68 @@ void dxt1_endpoint_optimizer::compute_internal(const params& p, results& r) {
   }
   m_has_transparent_pixels = m_total_unique_color_weight != m_pParams->m_num_pixels;
   m_evaluated_colors = m_unique_colors;
+
+  struct {
+    uint64 weight, weightedColor, weightedSquaredColor;
+  } rPlane[32] = {}, gPlane[64] = {}, bPlane[32] = {};
+
+  for (uint i = 0; i < m_unique_colors.size(); i++) {
+    const unique_color& color = m_unique_colors[i];
+    uint8 R = color.m_color.r, r = (R >> 3) + ((R & 7) > (R >> 5) ? 1 : 0);
+    rPlane[r].weight += color.m_weight;
+    rPlane[r].weightedColor += (uint64)color.m_weight * R;
+    rPlane[r].weightedSquaredColor += (uint64)color.m_weight * R * R;
+    uint8 G = color.m_color.g, g = (G >> 2) + ((G & 3) > (G >> 6) ? 1 : 0);
+    gPlane[g].weight += color.m_weight;
+    gPlane[g].weightedColor += (uint64)color.m_weight * G;
+    gPlane[g].weightedSquaredColor += (uint64)color.m_weight * G * G;
+    uint8 B = color.m_color.b, b = (B >> 3) + ((B & 7) > (B >> 5) ? 1 : 0);
+    bPlane[b].weight += color.m_weight;
+    bPlane[b].weightedColor += (uint64)color.m_weight * B;
+    bPlane[b].weightedSquaredColor += (uint64)color.m_weight * B * B;
+  }
+
+  if (m_perceptual) {
+    for (uint c = 0; c < 32; c++) {
+      rPlane[c].weight *= 8;
+      rPlane[c].weightedColor *= 8;
+      rPlane[c].weightedSquaredColor *= 8;
+    }
+    for (uint c = 0; c < 64; c++) {
+      gPlane[c].weight *= 25;
+      gPlane[c].weightedColor *= 25;
+      gPlane[c].weightedSquaredColor *= 25;
+    }
+  }
+
+   for (uint c = 1; c < 32; c++) {
+    rPlane[c].weight += rPlane[c - 1].weight;
+    rPlane[c].weightedColor += rPlane[c - 1].weightedColor;
+    rPlane[c].weightedSquaredColor += rPlane[c - 1].weightedSquaredColor;
+    bPlane[c].weight += bPlane[c - 1].weight;
+    bPlane[c].weightedColor += bPlane[c - 1].weightedColor;
+    bPlane[c].weightedSquaredColor += bPlane[c - 1].weightedSquaredColor;
+  }
+
+  for (uint c = 1; c < 64; c++) {
+    gPlane[c].weight += gPlane[c - 1].weight;
+    gPlane[c].weightedColor += gPlane[c - 1].weightedColor;
+    gPlane[c].weightedSquaredColor += gPlane[c - 1].weightedSquaredColor;
+  }
+
+  for (uint c = 0; c < 32; c++) {
+    uint8 C = c << 3 | c >> 2;
+    m_rDist[c].low = rPlane[c].weightedSquaredColor + C * C * rPlane[c].weight - 2 * C * rPlane[c].weightedColor;
+    m_rDist[c].high = rPlane[31].weightedSquaredColor + C * C * rPlane[31].weight - 2 * C * rPlane[31].weightedColor - m_rDist[c].low;
+    m_bDist[c].low = bPlane[c].weightedSquaredColor + C * C * bPlane[c].weight - 2 * C * bPlane[c].weightedColor;
+    m_bDist[c].high = bPlane[31].weightedSquaredColor + C * C * bPlane[31].weight - 2 * C * bPlane[31].weightedColor - m_bDist[c].low;
+  }
+
+  for (uint c = 0; c < 64; c++) {
+    uint8 C = c << 2 | c >> 4;
+    m_gDist[c].low = gPlane[c].weightedSquaredColor + C * C * gPlane[c].weight - 2 * C * gPlane[c].weightedColor;
+    m_gDist[c].high = gPlane[63].weightedSquaredColor + C * C * gPlane[63].weight - 2 * C * gPlane[63].weightedColor - m_gDist[c].low;
+  }
 
   if (!m_unique_colors.size()) {
     m_pResults->m_low_color = 0;
