@@ -2,6 +2,7 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 #include "crn_matrix.h"
+#include <queue>
 
 namespace crnlib {
 template <typename VectorType>
@@ -12,6 +13,15 @@ class tree_clusterizer {
   struct VectorInfo {
     uint index;
     uint weight;
+  };
+
+  struct NodeInfo {
+    uint m_index;
+    float m_variance;
+    NodeInfo (uint index, float variance) : m_index(index), m_variance(variance) {}
+    bool operator<(const NodeInfo& other) const {
+      return m_index < other.m_index ? m_variance < other.m_variance : !(other.m_variance < m_variance);
+    }
   };
 
   void clear() {
@@ -74,42 +84,22 @@ class tree_clusterizer {
 
     root.m_centroid *= (1.0f / root.m_total_weight);
 
-    m_nodes.clear();
-    m_nodes.reserve(max_size * 2 + 1);
+    m_nodes.resize(max_size << 1);
 
-    m_nodes.push_back(root);
+    std::priority_queue<NodeInfo> node_queue;
+    uint begin_node = 0, end_node = begin_node, splits = 0;
 
-    // Warning: if this code is NOT compiled with -fno-strict-aliasing, m_nodes.get_ptr() can be NULL here. (Argh!)
+    m_nodes[end_node] = root;
+    node_queue.push(NodeInfo(end_node, root.m_variance));
+    end_node++;
+    splits++;
 
-    uint total_leaves = 1;
-
-    while (total_leaves < max_size) {
-      int worst_node_index = -1;
-      float worst_variance = -1.0f;
-
-      for (uint i = 0; i < m_nodes.size(); i++) {
-        vq_node& node = m_nodes[i];
-
-        // Skip internal and unsplittable nodes.
-        if ((node.m_left != -1) || (node.m_unsplittable))
-          continue;
-
-        if (node.m_variance > worst_variance) {
-          worst_variance = node.m_variance;
-          worst_node_index = i;
-        }
-      }
-
-      if (worst_variance <= 0.0f)
-        break;
-
-      split_node(worst_node_index);
-      total_leaves++;
-    }
+    while (splits < max_size && split_node(node_queue, end_node))
+      splits++;
 
     m_codebook.clear();
 
-    for (uint i = 0; i < m_nodes.size(); i++) {
+    for (uint i = begin_node; i < end_node; i++) {
       vq_node& node = m_nodes[i];
       if (node.m_left != -1) {
         CRNLIB_ASSERT(node.m_right != -1);
@@ -182,11 +172,16 @@ class tree_clusterizer {
 
   vector_vec_type m_codebook;
 
-  void split_node(uint index) {
-    vq_node& parent_node = m_nodes[index];
+  bool split_node(std::priority_queue<NodeInfo>& node_queue, uint& end_node) {
+    if (node_queue.empty() || node_queue.top().m_variance <= 0.0f)
+      return false;
+
+    vq_node& parent_node = m_nodes[node_queue.top().m_index];
 
     if (parent_node.m_begin + 1 == parent_node.m_end)
-      return;
+      return false;
+
+    node_queue.pop();
 
     VectorType furthest(0);
     double furthest_dist = -1.0f;
@@ -336,7 +331,7 @@ class tree_clusterizer {
 
       if ((!left_weight) || (!right_weight)) {
         parent_node.m_unsplittable = true;
-        return;
+        return true;
       }
 
       left_variance = (float)(left_ttsum - (new_left_child.dot(new_left_child) / left_weight));
@@ -358,18 +353,14 @@ class tree_clusterizer {
       prev_total_variance = total_variance;
     }
 
-    const uint left_child_index = m_nodes.size();
-    const uint right_child_index = m_nodes.size() + 1;
+    parent_node.m_left = end_node++;
+    parent_node.m_right = end_node++;
 
-    parent_node.m_left = m_nodes.size();
-    parent_node.m_right = m_nodes.size() + 1;
+    node_queue.push(NodeInfo(parent_node.m_left, left_variance));
+    node_queue.push(NodeInfo(parent_node.m_right, right_variance));
 
-    m_nodes.resize(m_nodes.size() + 2);
-
-    // parent_node is invalid now, because m_nodes has been changed
-
-    vq_node& left_child_node = m_nodes[left_child_index];
-    vq_node& right_child_node = m_nodes[right_child_index];
+    vq_node& left_child_node = m_nodes[parent_node.m_left];
+    vq_node& right_child_node = m_nodes[parent_node.m_right];
 
     left_child_node.m_begin = parent_node.m_begin;
     left_child_node.m_end = right_child_node.m_begin = left_info_index;
@@ -385,6 +376,8 @@ class tree_clusterizer {
     right_child_node.m_centroid = right_child;
     right_child_node.m_total_weight = right_weight;
     right_child_node.m_variance = right_variance;
+
+    return true;
   }
 };
 
