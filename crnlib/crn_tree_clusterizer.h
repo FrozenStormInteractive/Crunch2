@@ -38,6 +38,30 @@ class tree_clusterizer {
     m_hist.push_back(std::make_pair(v, weight));
   }
 
+  struct split_alternative_node_task_params {
+    uint main_node;
+    uint alternative_node;
+    uint max_size;
+  };
+
+  void split_alternative_node_task(uint64, void* pData_ptr) {
+    split_alternative_node_task_params* pParams = (split_alternative_node_task_params*)pData_ptr;
+    std::priority_queue<NodeInfo> node_queue;
+    uint begin_node = pParams->alternative_node, end_node = begin_node, splits = 0;
+
+    m_nodes[end_node] = m_nodes[pParams->main_node];
+    node_queue.push(NodeInfo(end_node, m_nodes[end_node].m_variance));
+    end_node++;
+    splits++;
+
+    while (splits < pParams->max_size && split_node(node_queue, end_node))
+      splits++;
+
+    m_nodes[pParams->main_node] = m_nodes[pParams->alternative_node];
+    m_nodes[pParams->main_node].m_alternative = true;
+  }
+
+
   bool generate_codebook(uint max_size, bool generate_node_index_map = false, task_pool* pTask_pool = 0) {
     if (m_hist.empty())
       return false;
@@ -86,7 +110,7 @@ class tree_clusterizer {
 
     root.m_centroid *= (1.0f / root.m_total_weight);
 
-    m_nodes.resize(max_size << 1);
+    m_nodes.resize(max_size << 2);
 
     std::priority_queue<NodeInfo> node_queue;
     uint begin_node = 0, end_node = begin_node, splits = 0;
@@ -96,6 +120,25 @@ class tree_clusterizer {
     end_node++;
     splits++;
 
+    uint num_tasks = pTask_pool ? pTask_pool->get_num_threads() + 1 : 1;
+
+    if (num_tasks > 1) {
+      while (splits < max_size && node_queue.size() != num_tasks && split_node(node_queue, end_node, pTask_pool))
+        splits++;
+      if (node_queue.size() == num_tasks) {
+        std::priority_queue<NodeInfo> alternative_node_queue = node_queue;
+        uint alternative_node = max_size << 1, alternative_max_size = max_size / num_tasks;
+        crnlib::vector<split_alternative_node_task_params> params(num_tasks);
+        for (uint task = 0; !alternative_node_queue.empty(); alternative_node_queue.pop(), alternative_node += alternative_max_size << 1, task++) {
+          params[task].main_node = alternative_node_queue.top().m_index;
+          params[task].alternative_node = alternative_node;
+          params[task].max_size = alternative_max_size;
+          pTask_pool->queue_object_task(this, &tree_clusterizer::split_alternative_node_task, task, &params[task]);
+        }
+        pTask_pool->join();
+      }
+    }
+
     while (splits < max_size && split_node(node_queue, end_node, pTask_pool))
       splits++;
 
@@ -103,12 +146,10 @@ class tree_clusterizer {
 
     for (uint i = begin_node; i < end_node; i++) {
       vq_node& node = m_nodes[i];
-      if (node.m_left != -1) {
+      if (!node.m_alternative && node.m_left != -1) {
         CRNLIB_ASSERT(node.m_right != -1);
         continue;
       }
-
-      CRNLIB_ASSERT((node.m_left == -1) && (node.m_right == -1));
 
       node.m_codebook_index = m_codebook.size();
       m_codebook.push_back(node.m_centroid);
@@ -151,7 +192,7 @@ class tree_clusterizer {
 
   struct vq_node {
     vq_node()
-        : m_centroid(cClear), m_total_weight(0), m_left(-1), m_right(-1), m_codebook_index(-1), m_unsplittable(false) {}
+        : m_centroid(cClear), m_total_weight(0), m_left(-1), m_right(-1), m_codebook_index(-1), m_unsplittable(false), m_alternative(false), m_processed(false) {}
 
     VectorType m_centroid;
     uint64 m_total_weight;
@@ -167,6 +208,8 @@ class tree_clusterizer {
     int m_codebook_index;
 
     bool m_unsplittable;
+    bool m_alternative;
+    bool m_processed;
   };
 
   typedef crnlib::vector<vq_node> node_vec_type;
@@ -198,15 +241,33 @@ class tree_clusterizer {
   }
 
   bool split_node(std::priority_queue<NodeInfo>& node_queue, uint& end_node, task_pool* pTask_pool = 0) {
-    if (node_queue.empty() || node_queue.top().m_variance <= 0.0f)
+    if (node_queue.empty())
       return false;
 
     vq_node& parent_node = m_nodes[node_queue.top().m_index];
 
-    if (parent_node.m_begin + 1 == parent_node.m_end)
+    if (parent_node.m_alternative)
+      parent_node.m_alternative = false;
+
+    if (parent_node.m_variance <= 0.0f || parent_node.m_begin + 1 == parent_node.m_end)
       return false;
 
     node_queue.pop();
+
+    if (parent_node.m_processed) {
+      if (!parent_node.m_unsplittable) {
+        m_nodes[end_node] = m_nodes[parent_node.m_left];
+        m_nodes[end_node].m_alternative = true;
+        node_queue.push(NodeInfo(end_node, m_nodes[end_node].m_variance));
+        parent_node.m_left = end_node++;
+        m_nodes[end_node] = m_nodes[parent_node.m_right];
+        m_nodes[end_node].m_alternative = true;
+        node_queue.push(NodeInfo(end_node, m_nodes[end_node].m_variance));
+        parent_node.m_right = end_node++;
+      }
+      return true;
+    }
+    parent_node.m_processed = true;
 
     uint num_blocks = (parent_node.m_end - parent_node.m_begin) >> 9;
     uint num_tasks = num_blocks > 1 && pTask_pool ? math::minimum(num_blocks, pTask_pool->get_num_threads() + 1) : 1;
