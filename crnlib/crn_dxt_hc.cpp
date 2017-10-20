@@ -669,7 +669,7 @@ void dxt_hc::determine_color_endpoints() {
       vq.add_training_vec(m_tiles[t].color_endpoint, (uint)(m_tiles[t].pixels.size() * m_tiles[t].weight));
   }
 
-  vq.generate_codebook(math::minimum<uint>(m_num_tiles, m_params.m_color_endpoint_codebook_size), true);
+  vq.generate_codebook(math::minimum<uint>(m_num_tiles, m_params.m_color_endpoint_codebook_size), true, m_pTask_pool);
   m_color_clusters.resize(vq.get_codebook_size());
 
   for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
@@ -831,7 +831,7 @@ void dxt_hc::determine_alpha_endpoints() {
     }
   }
 
-  vq.generate_codebook(math::minimum<uint>(m_num_tiles, m_params.m_alpha_endpoint_codebook_size));
+  vq.generate_codebook(math::minimum<uint>(m_num_tiles, m_params.m_alpha_endpoint_codebook_size), false, m_pTask_pool);
   m_alpha_clusters.resize(vq.get_codebook_size());
 
   for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
@@ -920,7 +920,7 @@ void dxt_hc::create_color_selector_codebook() {
       v[p] = ((selector & 3) + 0.5f) * 0.25f;
     selector_vq.add_training_vec(v, m_has_etc_color_blocks ? (selector & 0xFFFF) + (selector >> 16) : selector);
   }
-  selector_vq.generate_codebook(m_params.m_color_selector_codebook_size);
+  selector_vq.generate_codebook(m_params.m_color_selector_codebook_size, false, m_pTask_pool);
   m_color_selectors.resize(selector_vq.get_codebook_size());
   m_color_selectors_used.resize(selector_vq.get_codebook_size());
   for (uint i = 0; i < selector_vq.get_codebook_size(); i++) {
@@ -1034,7 +1034,7 @@ void dxt_hc::create_alpha_selector_codebook() {
       selector_vq.add_training_vec(v, selector);
     }
   }
-  selector_vq.generate_codebook(m_params.m_alpha_selector_codebook_size);
+  selector_vq.generate_codebook(m_params.m_alpha_selector_codebook_size, false, m_pTask_pool);
   m_alpha_selectors.resize(selector_vq.get_codebook_size());
   m_alpha_selectors_used.resize(selector_vq.get_codebook_size());
   for (uint i = 0; i < selector_vq.get_codebook_size(); i++) {

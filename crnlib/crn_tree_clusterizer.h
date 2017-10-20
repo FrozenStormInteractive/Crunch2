@@ -2,6 +2,7 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 #include "crn_matrix.h"
+#include "crn_threading.h"
 #include <queue>
 
 namespace crnlib {
@@ -37,7 +38,7 @@ class tree_clusterizer {
     m_hist.push_back(std::make_pair(v, weight));
   }
 
-  bool generate_codebook(uint max_size, bool generate_node_index_map = false) {
+  bool generate_codebook(uint max_size, bool generate_node_index_map = false, task_pool* pTask_pool = 0) {
     if (m_hist.empty())
       return false;
 
@@ -65,6 +66,7 @@ class tree_clusterizer {
     m_weightedDotProducts.resize(m_vectors.size());
     m_vectorsInfoLeft.resize(m_vectors.size());
     m_vectorsInfoRight.resize(m_vectors.size());
+    m_vectorComparison.resize(m_vectors.size());
 
     vq_node root;
     root.m_begin = 0;
@@ -94,7 +96,7 @@ class tree_clusterizer {
     end_node++;
     splits++;
 
-    while (splits < max_size && split_node(node_queue, end_node))
+    while (splits < max_size && split_node(node_queue, end_node, pTask_pool))
       splits++;
 
     m_codebook.clear();
@@ -144,6 +146,7 @@ class tree_clusterizer {
   crnlib::vector<VectorType> m_weightedVectors;
   crnlib::vector<double> m_weightedDotProducts;
   crnlib::vector<VectorInfo> m_vectorsInfo, m_vectorsInfoLeft, m_vectorsInfoRight;
+  crnlib::vector<bool> m_vectorComparison;
   crnlib::hash_map<VectorType, uint> m_node_index_map;
 
   struct vq_node {
@@ -172,7 +175,29 @@ class tree_clusterizer {
 
   vector_vec_type m_codebook;
 
-  bool split_node(std::priority_queue<NodeInfo>& node_queue, uint& end_node) {
+  struct distance_comparison_task_params {
+    VectorType* left_child;
+    VectorType* right_child;
+    uint begin;
+    uint end;
+    uint num_tasks;
+  };
+
+  void distance_comparison_task(uint64 data, void* pData_ptr) {
+    distance_comparison_task_params* pParams = (distance_comparison_task_params*)pData_ptr;
+    const VectorType& left_child = *pParams->left_child;
+    const VectorType& right_child = *pParams->right_child;
+    uint begin = pParams->begin + (pParams->end - pParams->begin) * data / pParams->num_tasks;
+    uint end = pParams->begin + (pParams->end - pParams->begin) * (data + 1) / pParams->num_tasks;
+    for (uint i = begin; i < end; i++) {
+      const VectorType& v = m_vectors[m_vectorsInfo[i].index];
+      double left_dist2 = left_child.squared_distance(v);
+      double right_dist2 = right_child.squared_distance(v);
+      m_vectorComparison[i] = left_dist2 < right_dist2;
+    }
+  }
+
+  bool split_node(std::priority_queue<NodeInfo>& node_queue, uint& end_node, task_pool* pTask_pool = 0) {
     if (node_queue.empty() || node_queue.top().m_variance <= 0.0f)
       return false;
 
@@ -182,6 +207,9 @@ class tree_clusterizer {
       return false;
 
     node_queue.pop();
+
+    uint num_blocks = (parent_node.m_end - parent_node.m_begin) >> 9;
+    uint num_tasks = num_blocks > 1 && pTask_pool ? math::minimum(num_blocks, pTask_pool->get_num_threads() + 1) : 1;
 
     VectorType furthest(0);
     double furthest_dist = -1.0f;
@@ -312,20 +340,48 @@ class tree_clusterizer {
       left_weight = 0;
       right_weight = 0;
 
-      for (uint i = parent_node.m_begin; i < parent_node.m_end; i++) {
-        const VectorInfo& vectorInfo = m_vectorsInfo[i];
-        double left_dist2 = left_child.squared_distance(m_vectors[vectorInfo.index]);
-        double right_dist2 = right_child.squared_distance(m_vectors[vectorInfo.index]);
-        if (left_dist2 < right_dist2) {
-          new_left_child += m_weightedVectors[vectorInfo.index];
-          left_ttsum += m_weightedDotProducts[vectorInfo.index];
-          left_weight += vectorInfo.weight;
-          m_vectorsInfoLeft[left_info_index++] = vectorInfo;
-        } else {
-          new_right_child += m_weightedVectors[vectorInfo.index];
-          right_ttsum += m_weightedDotProducts[vectorInfo.index];
-          right_weight += vectorInfo.weight;
-          m_vectorsInfoRight[right_info_index++] = vectorInfo;
+      if (num_tasks > 1) {
+        distance_comparison_task_params params;
+        params.left_child = &left_child;
+        params.right_child = &right_child;
+        params.begin = parent_node.m_begin;
+        params.end = parent_node.m_end;
+        params.num_tasks = num_tasks;
+
+        for (uint task = 0; task < params.num_tasks; task++)
+          pTask_pool->queue_object_task(this, &tree_clusterizer::distance_comparison_task, task, &params);
+        pTask_pool->join();
+
+        for (uint i = parent_node.m_begin; i < parent_node.m_end; i++) {
+          const VectorInfo& vectorInfo = m_vectorsInfo[i];
+          if (m_vectorComparison[i]) {
+            new_left_child += m_weightedVectors[vectorInfo.index];
+            left_ttsum += m_weightedDotProducts[vectorInfo.index];
+            left_weight += vectorInfo.weight;
+            m_vectorsInfoLeft[left_info_index++] = vectorInfo;
+          } else {
+            new_right_child += m_weightedVectors[vectorInfo.index];
+            right_ttsum += m_weightedDotProducts[vectorInfo.index];
+            right_weight += vectorInfo.weight;
+            m_vectorsInfoRight[right_info_index++] = vectorInfo;
+          }
+        }
+      } else {
+        for (uint i = parent_node.m_begin; i < parent_node.m_end; i++) {
+          const VectorInfo& vectorInfo = m_vectorsInfo[i];
+          double left_dist2 = left_child.squared_distance(m_vectors[vectorInfo.index]);
+          double right_dist2 = right_child.squared_distance(m_vectors[vectorInfo.index]);
+          if (left_dist2 < right_dist2) {
+            new_left_child += m_weightedVectors[vectorInfo.index];
+            left_ttsum += m_weightedDotProducts[vectorInfo.index];
+            left_weight += vectorInfo.weight;
+            m_vectorsInfoLeft[left_info_index++] = vectorInfo;
+          } else {
+            new_right_child += m_weightedVectors[vectorInfo.index];
+            right_ttsum += m_weightedDotProducts[vectorInfo.index];
+            right_weight += vectorInfo.weight;
+            m_vectorsInfoRight[right_info_index++] = vectorInfo;
+          }
         }
       }
 
