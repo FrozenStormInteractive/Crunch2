@@ -295,125 +295,87 @@ void dxt1_endpoint_optimizer::return_solution() {
 }
 
 // Per-component 1D endpoint optimization.
+
+void dxt1_endpoint_optimizer::compute_endpoint_component_errors(uint comp_index, uint64 (&error)[4][256], uint64 (&best_remaining_error)[4]) {
+  uint64 W[4] = {}, WP2[4] = {}, WPP[4] = {};
+  for (uint i = 0; i < m_unique_colors.size(); i++) {
+    uint p = m_unique_colors[i].m_color[comp_index];
+    uint w = m_unique_colors[i].m_weight;
+    uint8 s = m_best_solution.m_selectors[i];
+    W[s] += (int64)w;
+    WP2[s] += (int64)w * p * 2;
+    WPP[s] += (int64)w * p * p;
+  }
+  const uint comp_limit = comp_index == 1 ? 64 : 32;
+  for (uint8 s = 0; s < 2; s++) {
+    uint64 best_error = error[s][0] = WPP[s];
+    for (uint8 c = 1; c < comp_limit; c++) {
+      uint8 p = comp_index == 1 ? c << 2 | c >> 4 : c << 3 | c >> 2;
+      error[s][c] = W[s] * p * p - WP2[s] * p + WPP[s];
+      if (error[s][c] < best_error)
+        best_error = error[s][c];
+    }
+    best_remaining_error[s] = best_error;
+  }
+  for (uint8 s = 2; s < 4; s++) {
+    uint64 best_error = error[s][0] = WPP[s], d = W[s] - WP2[s], dd = W[s] << 1, e = WPP[s] + d;
+    for (uint p = 1; p < 256; p++, d += dd, e += d) {
+      error[s][p] = e;
+      if (e < best_error)
+        best_error = e;
+    }
+    best_remaining_error[s] = best_error;
+  }
+  for (uint8 s = 3; s; s--)
+    best_remaining_error[s - 1] += best_remaining_error[s];
+}
+
 void dxt1_endpoint_optimizer::optimize_endpoint_comps() {
   compute_selectors();
-  if ((m_best_solution.m_alpha_block) || (!m_best_solution.m_error))
+  if (m_best_solution.m_alpha_block || !m_best_solution.m_error)
     return;
-
-  color_quad_u8 orig_l_scaled(dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, true));
-  color_quad_u8 orig_h_scaled(dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, true));
-
-  color_quad_u8 min_color(0xFF, 0xFF, 0xFF, 0xFF);
-  color_quad_u8 max_color(0, 0, 0, 0);
-  for (uint i = 0; i < m_unique_colors.size(); i++) {
-    min_color = color_quad_u8::component_min(min_color, m_unique_colors[i].m_color);
-    max_color = color_quad_u8::component_max(max_color, m_unique_colors[i].m_color);
-  }
-
-  // Try to separately optimize each component. This is a 1D problem so it's easy to compute accurate per-component error bounds.
-  uint64 W[4] = {}, WD2[4] = {}, WDD[4] = {};
+  color_quad_u8 source_low(dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, true));
+  color_quad_u8 source_high(dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, true));
+  uint64 error[4][256], best_remaining_error[4];
   for (uint comp_index = 0; comp_index < 3; comp_index++) {
-    uint min_color_weight = 0;
-    uint max_color_weight = 0;
-    for (uint s = 0; s < 4; s++)
-      W[s] = WD2[s] = WDD[s] = 0;
-    for (uint i = 0; i < m_unique_colors.size(); i++) {
-      uint c = m_unique_colors[i].m_color[comp_index];
-      uint w = m_unique_colors[i].m_weight;
-      uint8 s = m_best_solution.m_selectors[i];
-      W[s] += (int64)w;
-      WD2[s] += (int64)w * c * 2;
-      WDD[s] += (int64)w * c * c;
-      if (c == min_color[comp_index])
-        min_color_weight += w;
-      if (c == max_color[comp_index])
-        max_color_weight += w;
-    }
-
-    uint ll[4];
-    ll[0] = orig_l_scaled[comp_index];
-    ll[1] = orig_h_scaled[comp_index];
-    ll[2] = (ll[0] * 2 + ll[1]) / 3;
-    ll[3] = (ll[0] + ll[1] * 2) / 3;
-
-    uint64 error_to_beat = 0;
-    for (int s = 0; s < 4; s++)
-      error_to_beat += W[s] * ll[s] * ll[s] - WD2[s] * ll[s] + WDD[s];
-
-    if (!error_to_beat)
+    uint8 p0 = source_low[comp_index];
+    uint8 p1 = source_high[comp_index];
+    color_quad_u8 low(dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, false));
+    color_quad_u8 high(dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, false));
+    compute_endpoint_component_errors(comp_index, error, best_remaining_error);
+    uint64 best_error = error[0][low[comp_index]] + error[1][high[comp_index]] + error[2][(p0 * 2 + p1) / 3] + error[3][(p0 + p1 * 2) / 3];
+    if (best_remaining_error[0] >= best_error)
       continue;
-
-    CRNLIB_ASSERT((min_color_weight > 0) && (max_color_weight > 0));
-    const uint error_to_beat_div_min_color_weight = min_color_weight ? ((error_to_beat + min_color_weight - 1) / min_color_weight) : 0;
-    const uint error_to_beat_div_max_color_weight = max_color_weight ? ((error_to_beat + max_color_weight - 1) / max_color_weight) : 0;
-
-    const uint m = (comp_index == 1) ? 63 : 31;
-    const uint m_shift = (comp_index == 1) ? 3 : 2;
-
-    for (uint o = 0; o <= m; o++) {
-      uint tl[4];
-
-      tl[0] = (comp_index == 1) ? ((o << 2) | (o >> 4)) : ((o << 3) | (o >> 2));
-
-      for (uint h = 0; h < 8; h++) {
-        const uint pl = h << m_shift;
-        const uint ph = ((h + 1) << m_shift) - 1;
-
-        uint tl_l = (comp_index == 1) ? ((pl << 2) | (pl >> 4)) : ((pl << 3) | (pl >> 2));
-        uint tl_h = (comp_index == 1) ? ((ph << 2) | (ph >> 4)) : ((ph << 3) | (ph >> 2));
-
-        tl_l = math::minimum(tl_l, tl[0]);
-        tl_h = math::maximum(tl_h, tl[0]);
-
-        uint c_l = min_color[comp_index];
-        uint c_h = max_color[comp_index];
-
-        if (c_h < tl_l) {
-          uint min_possible_error = math::square<int>(tl_l - c_l);
-          if (min_possible_error > error_to_beat_div_min_color_weight)
-            continue;
-        } else if (c_l > tl_h) {
-          uint min_possible_error = math::square<int>(c_h - tl_h);
-          if (min_possible_error > error_to_beat_div_max_color_weight)
-            continue;
-        }
-
-        for (uint p = pl; p <= ph; p++) {
-          tl[1] = (comp_index == 1) ? ((p << 2) | (p >> 4)) : ((p << 3) | (p >> 2));
-
-          tl[2] = (tl[0] * 2 + tl[1]) / 3;
-          tl[3] = (tl[0] + tl[1] * 2) / 3;
-
-          uint64 trial_error = 0;
-          for (int s = 0; s < 4; s++)
-            trial_error += W[s] * tl[s] * tl[s] - WD2[s] * tl[s] + WDD[s];
-          
-          if (trial_error < error_to_beat) {
-            color_quad_u8 l(dxt1_block::unpack_color(m_best_solution.m_coords.m_low_color, false));
-            color_quad_u8 h(dxt1_block::unpack_color(m_best_solution.m_coords.m_high_color, false));
-            l[comp_index] = static_cast<uint8>(o);
-            h[comp_index] = static_cast<uint8>(p);
-
-            if (evaluate_solution(dxt1_solution_coordinates(dxt1_block::pack_color(l, false), dxt1_block::pack_color(h, false)))) {
-              if (!m_best_solution.m_error)
-                return;
-              compute_selectors();
-              for (uint s = 0; s < 4; s++)
-                W[s] = WD2[s] = WDD[s] = 0;
-              for (uint i = 0; i < m_unique_colors.size(); i++) {
-                uint c = m_unique_colors[i].m_color[comp_index];
-                uint w = m_unique_colors[i].m_weight;
-                uint8 s = m_best_solution.m_selectors[i];
-                W[s] += (int64)w;
-                WD2[s] += (int64)w * c * 2;
-                WDD[s] += (int64)w * c * c;
-              }
-              error_to_beat = 0;
-              for (int s = 0; s < 4; s++)
-                error_to_beat += W[s] * tl[s] * tl[s] - WD2[s] * tl[s] + WDD[s];
-            }
-          }
-        }
+    const uint comp_limit = comp_index == 1 ? 64 : 32;
+    for (uint8 c0 = 0; c0 < comp_limit; c0++) {
+      uint64 e0 = error[0][c0];
+      if (e0 + best_remaining_error[1] >= best_error)
+        continue;
+      low[comp_index] = c0;
+      uint16 packed_low = dxt1_block::pack_color(low, false);
+      p0 = comp_index == 1 ? c0 << 2 | c0 >> 4 : c0 << 3 | c0 >> 2;
+      for (uint8 c1 = 0; c1 < comp_limit; c1++) {
+        uint64 e = e0 + error[1][c1];
+        if (e + best_remaining_error[2] >= best_error)
+          continue;
+        p1 = comp_index == 1 ? c1 << 2 | c1 >> 4 : c1 << 3 | c1 >> 2;
+        e += error[2][(p0 * 2 + p1) / 3];
+        if (e + best_remaining_error[3] >= best_error)
+          continue;
+        e += error[3][(p0 + p1 * 2) / 3];
+        if (e >= best_error)
+          continue;
+        high[comp_index] = c1;
+        if (!evaluate_solution(dxt1_solution_coordinates(packed_low, dxt1_block::pack_color(high, false))))
+          continue;
+        if (!m_best_solution.m_error)
+          return;
+        compute_selectors();
+        compute_endpoint_component_errors(comp_index, error, best_remaining_error);
+        best_error = error[0][c0] + error[1][c1] + error[2][(p0 * 2 + p1) / 3] + error[3][(p0 + p1 * 2) / 3];
+        e0 = error[0][c0];
+        if (e0 + best_remaining_error[1] >= best_error)
+          break;
       }
     }
   }

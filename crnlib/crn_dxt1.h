@@ -259,6 +259,7 @@ class dxt1_endpoint_optimizer {
   void compute_vectors(const vec3F& perceptual_weights);
   void return_solution();
   void try_combinatorial_encoding();
+  void compute_endpoint_component_errors(uint comp_index, uint64 (&error)[4][256], uint64 (&best_remaining_error)[4]);
   void optimize_endpoint_comps();
   void optimize_endpoints(vec3F& low_color, vec3F& high_color);
   bool try_alpha_as_black_optimization();
