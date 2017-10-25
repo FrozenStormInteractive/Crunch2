@@ -231,6 +231,56 @@ bool dxt_hc::compress(
   return true;
 }
 
+vec6F dxt_hc::palettize_color(color_quad_u8* pixels, uint pixels_count) {
+  uint color[64];
+  for (uint i = 0; i < pixels_count; i++)
+    color[i] = pixels[i][0] << 16 | pixels[i][1] << 8 | pixels[i][2];
+  std::sort(color, color + pixels_count);
+  vec3F vectors[64];
+  uint weights[64];
+  uint size = 0;
+  for (uint i = 0; i < pixels_count; i++) {
+    if (!i || color[i] != color[i - 1]) {
+      vectors[size][0] = m_params.m_perceptual ? m_uint8_to_float[color[i] >> 16] * 0.5f : m_uint8_to_float[color[i] >> 16];
+      vectors[size][1] = m_uint8_to_float[color[i] >> 8 & 0xFF];
+      vectors[size][2] = m_params.m_perceptual ? m_uint8_to_float[color[i] & 0xFF] * 0.25f : m_uint8_to_float[color[i] & 0xFF];
+      weights[size] = 1;
+      size++;
+    } else {
+      weights[size - 1]++;
+    }
+  }
+  vec3F result[2];
+  split_vectors<vec3F>(vectors, weights, size, result);
+  if (result[0].length() > result[1].length())
+    utils::swap(result[0], result[1]);
+  return *(vec6F*)result;
+}
+
+vec2F dxt_hc::palettize_alpha(color_quad_u8* pixels, uint pixels_count, uint comp_index) {
+  uint8 alpha[64];
+  for (uint p = 0; p < pixels_count; p++)
+    alpha[p] = pixels[p][comp_index];
+  std::sort(alpha, alpha + pixels_count);
+  vec1F vectors[64];
+  uint weights[64];
+  uint size = 0;
+  for (uint i = 0; i < pixels_count; i++) {
+    if (!i || alpha[i] != alpha[i - 1]) {
+      vectors[size][0] = m_uint8_to_float[alpha[i]];
+      weights[size] = 1;
+      size++;
+    } else {
+      weights[size - 1]++;
+    }
+  }
+  vec1F result[2];
+  split_vectors<vec1F>(vectors, weights, size, result);
+  if (result[0] > result[1])
+    utils::swap(result[0], result[1]);
+  return *(vec2F*)result;
+}
+
 void dxt_hc::determine_tiles_task(uint64 data, void*) {
   uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   uint offsets[9] = {0, 16, 32, 48, 0, 32, 64, 96, 64};
@@ -239,8 +289,6 @@ void dxt_hc::determine_tiles_task(uint64 data, void*) {
   uint8 selectors[64];
   uint tile_error[3][9];
   uint total_error[3][8];
-  tree_clusterizer<vec3F> color_palettizer;
-  tree_clusterizer<vec1F> alpha_palettizer;
 
   for (uint level = 0; level < m_params.m_num_levels; level++) {
     float weight = m_params.m_levels[level].m_weight;
@@ -335,33 +383,10 @@ void dxt_hc::determine_tiles_task(uint64 data, void*) {
           uint t = tiles[best_encoding][tile_index];
           tile.pixels.append(tilePixels + offsets[t], 16 << (t >> 2));
           tile.weight = weight;
-
-          if (m_has_color_blocks) {
-            color_palettizer.clear();
-            for (uint p = 0; p < tile.pixels.size(); p++) {
-              const color_quad_u8& pixel = tile.pixels[p];
-              vec3F v(m_uint8_to_float[pixel[0]], m_uint8_to_float[pixel[1]], m_uint8_to_float[pixel[2]]);
-              color_palettizer.add_training_vec(m_params.m_perceptual ? vec3F(v[0] * 0.5f, v[1], v[2] * 0.25f): v, 1);
-            }
-            color_palettizer.generate_codebook(2);
-            bool single = color_palettizer.get_codebook_size() == 1;
-            bool reorder = !single && color_palettizer.get_codebook_entry(0).length() > color_palettizer.get_codebook_entry(1).length();
-            for (uint t = 0, i = 0; i < 2; i++) {
-              vec3F v = color_palettizer.get_codebook_entry(single ? 0 : reorder ? 1 - i : i);
-              for (uint c = 0; c < 3; c++, t++)
-                tile.color_endpoint[t] = v[c];
-            }
-          }
-
-          for (uint a = 0; a < m_num_alpha_blocks; a++) {
-            alpha_palettizer.clear();
-            for (uint c = m_params.m_alpha_component_indices[a], p = 0; p < tile.pixels.size(); p++)
-              alpha_palettizer.add_training_vec(vec1F(m_uint8_to_float[tile.pixels[p][c]]), 1);
-            alpha_palettizer.generate_codebook(2);
-            float v[2] = {alpha_palettizer.get_codebook_entry(0)[0], alpha_palettizer.get_codebook_entry(alpha_palettizer.get_codebook_size() - 1)[0]};
-            tile.alpha_endpoints[a][0] = math::minimum(v[0], v[1]);
-            tile.alpha_endpoints[a][1] = math::maximum(v[0], v[1]);
-          }
+          if (m_has_color_blocks)
+            tile.color_endpoint = palettize_color(tile.pixels.get_ptr(), tile.pixels.size());
+          for (uint a = 0; a < m_num_alpha_blocks; a++)
+            tile.alpha_endpoints[a] = palettize_alpha(tile.pixels.get_ptr(), tile.pixels.size(), m_params.m_alpha_component_indices[a]);
         }
 
         for (uint by = 0; by < 2; by++) {
@@ -385,8 +410,6 @@ void dxt_hc::determine_tiles_task_etc(uint64 data, void*) {
   uint8 selectors[32];
   uint tile_error[5];
   uint total_error[3];
-  tree_clusterizer<vec3F> color_palettizer;
-  tree_clusterizer<vec1F> alpha_palettizer;
 
   etc1_optimizer optimizer;
   etc1_optimizer::params params;
@@ -438,36 +461,13 @@ void dxt_hc::determine_tiles_task_etc(uint64 data, void*) {
         }
       }
 
-      vec2F alpha_endpoints;
-      if (m_num_alpha_blocks) {
-        alpha_palettizer.clear();
-        for (uint p = 0; p < 16; p++)
-          alpha_palettizer.add_training_vec(vec1F(m_uint8_to_float[tilePixels[p].a]), 1);
-        alpha_palettizer.generate_codebook(2);
-        float v[2] = {alpha_palettizer.get_codebook_entry(0)[0], alpha_palettizer.get_codebook_entry(alpha_palettizer.get_codebook_size() - 1)[0]};
-        alpha_endpoints[0] = math::minimum(v[0], v[1]);
-        alpha_endpoints[1] = math::maximum(v[0], v[1]);
-      }
-
+      vec2F alpha_endpoints = m_num_alpha_blocks ? palettize_alpha(tilePixels, 16, 3) : vec2F(cClear);
       for (uint tile_index = 0, s = best_encoding + 1; s; s >>= 1, tile_index++) {
         tile_details& tile = m_tiles[b | tile_index];
         uint t = tiles[best_encoding][tile_index];
         tile.pixels.append(tilePixels + offsets[t], 8 << (t >> 2));
         tile.weight = weight;
-        color_palettizer.clear();
-        for (uint p = 0; p < tile.pixels.size(); p++) {
-          const color_quad_u8& pixel = tile.pixels[p];
-          vec3F v(m_uint8_to_float[pixel[0]], m_uint8_to_float[pixel[1]], m_uint8_to_float[pixel[2]]);
-          color_palettizer.add_training_vec(m_params.m_perceptual ? vec3F(v[0] * 0.5f, v[1], v[2] * 0.25f) : v, 1);
-        }
-        color_palettizer.generate_codebook(2);
-        bool single = color_palettizer.get_codebook_size() == 1;
-        bool reorder = !single && color_palettizer.get_codebook_entry(0).length() > color_palettizer.get_codebook_entry(1).length();
-        for (uint t = 0, i = 0; i < 2; i++) {
-          vec3F v = color_palettizer.get_codebook_entry(single ? 0 : reorder ? 1 - i : i);
-          for (uint c = 0; c < 3; c++, t++)
-            tile.color_endpoint[t] = v[c];
-        }
+        tile.color_endpoint = palettize_color(tile.pixels.get_ptr(), tile.pixels.size());
         if (m_num_alpha_blocks)
           tile.alpha_endpoints[0] = alpha_endpoints;
       }

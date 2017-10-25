@@ -186,6 +186,8 @@ class dxt_hc {
   int m_prev_phase_index;
   int m_prev_percentage_complete;
 
+  vec<6, float> palettize_color(color_quad_u8* pixels, uint pixels_count);
+  vec<2, float> palettize_alpha(color_quad_u8* pixels, uint pixels_count, uint comp_index);
   void determine_tiles_task(uint64 data, void* pData_ptr);
   void determine_tiles_task_etc(uint64 data, void* pData_ptr);
 

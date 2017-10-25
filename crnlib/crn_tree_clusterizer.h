@@ -25,15 +25,6 @@ class tree_clusterizer {
     }
   };
 
-  void clear() {
-    m_hist.clear();
-    m_vectors.clear();
-    m_vectorsInfo.clear();
-    m_codebook.clear();
-    m_nodes.clear();
-    m_node_index_map.clear();
-  }
-
   void add_training_vec(const VectorType& v, uint weight) {
     m_hist.push_back(std::make_pair(v, weight));
   }
@@ -497,5 +488,150 @@ class tree_clusterizer {
     return true;
   }
 };
+
+template<typename VectorType>
+void split_vectors(VectorType (&vectors)[64], uint (&weights)[64], uint size, VectorType (&result)[2]) {
+  VectorType weightedVectors[64];
+  double weightedDotProducts[64];
+  VectorType centroid(cClear);
+  uint64 total_weight = 0;
+  double ttsum = 0.0f;
+  for (uint i = 0; i < size; i++) {
+    const VectorType& v = vectors[i];
+    const uint weight = weights[i];
+    weightedVectors[i] = v * (float)weight;
+    centroid += weightedVectors[i];
+    total_weight += weight;
+    weightedDotProducts[i] = v.dot(v) * weight;
+    ttsum += weightedDotProducts[i];
+  }
+  float variance = (float)(ttsum - (centroid.dot(centroid) / total_weight));
+  centroid *= (1.0f / total_weight);
+  result[0] = result[1] = centroid;
+  if (variance <= 0.0f || size == 1)
+    return;
+  VectorType furthest;
+  double furthest_dist = -1.0f;
+  for (uint i = 0; i < size; i++) {
+    const VectorType& v = vectors[i];
+    double dist = v.squared_distance(centroid);
+    if (dist > furthest_dist) {
+      furthest_dist = dist;
+      furthest = v;
+    }
+  }
+  VectorType opposite;
+  double opposite_dist = -1.0f;
+  for (uint i = 0; i < size; i++) {
+    const VectorType& v = vectors[i];
+    double dist = v.squared_distance(furthest);
+    if (dist > opposite_dist) {
+      opposite_dist = dist;
+      opposite = v;
+    }
+  }
+  VectorType left_child((furthest + centroid) * .5f);
+  VectorType right_child((opposite + centroid) * .5f);
+  if (size > 2) {
+    const uint N = VectorType::num_elements;
+    matrix<N, N, float> covar;
+    covar.clear();
+    for (uint i = 0; i < size; i++) {
+      const VectorType& v = vectors[i] - centroid;
+      const VectorType w = v * (float)weights[i];
+      for (uint x = 0; x < N; x++) {
+        for (uint y = x; y < N; y++)
+          covar[x][y] = covar[x][y] + v[x] * w[y];
+      }
+    }
+    float divider = (float)total_weight;
+    for (uint x = 0; x < N; x++) {
+      for (uint y = x; y < N; y++) {
+        covar[x][y] /= divider;
+        covar[y][x] = covar[x][y];
+      }
+    }
+    VectorType axis(1.0f);
+    for (uint iter = 0; iter < 10; iter++) {
+      VectorType x;
+      double max_sum = 0;
+      for (uint i = 0; i < N; i++) {
+        double sum = 0;
+        for (uint j = 0; j < N; j++)
+          sum += axis[j] * covar[i][j];
+        x[i] = (float)sum;
+        max_sum = i ? math::maximum(max_sum, sum) : sum;
+      }
+      if (max_sum != 0.0f)
+        x *= (float)(1.0f / max_sum);
+      axis = x;
+    }
+    axis.normalize();
+    VectorType new_left_child(0.0f);
+    VectorType new_right_child(0.0f);
+    double left_weight = 0.0f;
+    double right_weight = 0.0f;
+    for (uint i = 0; i < size; i++) {
+      const VectorType& v = vectors[i];
+      const float weight = (float)weights[i];
+      double t = (v - centroid) * axis;
+      if (t < 0.0f) {
+        new_left_child += weightedVectors[i];
+        left_weight += weight;
+      } else {
+        new_right_child += weightedVectors[i];
+        right_weight += weight;
+      }
+    }
+    if ((left_weight > 0.0f) && (right_weight > 0.0f)) {
+      left_child = new_left_child * (float)(1.0f / left_weight);
+      right_child = new_right_child * (float)(1.0f / right_weight);
+    }
+  }
+  uint64 left_weight = 0;
+  uint64 right_weight = 0;
+  float prev_total_variance = 1e+10f;
+  float left_variance = 0.0f;
+  float right_variance = 0.0f;
+  const uint cMaxLoops = 1024;
+  for (uint total_loops = 0; total_loops < cMaxLoops; total_loops++) {
+    VectorType new_left_child(cClear);
+    VectorType new_right_child(cClear);
+    double left_ttsum = 0.0f;
+    double right_ttsum = 0.0f;
+    left_weight = 0;
+    right_weight = 0;
+    for (uint i = 0; i < size; i++) {
+      const VectorType& v = vectors[i];
+      double left_dist2 = left_child.squared_distance(v);
+      double right_dist2 = right_child.squared_distance(v);
+      if (left_dist2 < right_dist2) {
+        new_left_child += weightedVectors[i];
+        left_ttsum += weightedDotProducts[i];
+        left_weight += weights[i];
+      } else {
+        new_right_child += weightedVectors[i];
+        right_ttsum += weightedDotProducts[i];
+        right_weight += weights[i];
+      }
+    }
+    if ((!left_weight) || (!right_weight))
+      return;
+    left_variance = (float)(left_ttsum - (new_left_child.dot(new_left_child) / left_weight));
+    right_variance = (float)(right_ttsum - (new_right_child.dot(new_right_child) / right_weight));
+    new_left_child *= (1.0f / left_weight);
+    new_right_child *= (1.0f / right_weight);
+    left_child = new_left_child;
+    right_child = new_right_child;
+    float total_variance = left_variance + right_variance;
+    if (total_variance < .00001f)
+      break;
+    if (((prev_total_variance - total_variance) / total_variance) < .00001f)
+      break;
+    prev_total_variance = total_variance;
+  }
+  result[0] = left_child;
+  result[1] = right_child;
+}
 
 }  // namespace crnlib
