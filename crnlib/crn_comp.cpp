@@ -615,55 +615,64 @@ static void sort_color_endpoints(crnlib::vector<uint16>& remapping, const optimi
 }
 
 static void remap_color_endpoints(uint16* remapping, const optimize_color_params::unpacked_endpoint* unpacked_endpoints, const uint* hist, uint16 n, uint16 selected, float weight) {
-  const uint* frequency = hist + selected * n;
-  crnlib::vector<uint16> chosen, remaining;
-  crnlib::vector<uint> total_frequency(n);
-  chosen.push_back(selected);
+  struct Node {
+    uint index, frequency, front_similarity, back_similarity;
+    optimize_color_params::unpacked_endpoint e;
+    Node() { utils::zero_object(*this); }
+  };
+  crnlib::vector<Node> remaining(n);
   for (uint16 i = 0; i < n; i++) {
-    if (i != selected) {
-      remaining.push_back(i);
-      total_frequency[i] = frequency[i];
-    }
+    remaining[i].index = i;
+    remaining[i].e = unpacked_endpoints[i];
   }
-  for (uint similarity_base = (uint)(4000 * (1.0f + weight)), total_frequency_normalizer = 0; remaining.size();) {
-    const optimize_color_params::unpacked_endpoint& e_front = unpacked_endpoints[chosen.front()];
-    const optimize_color_params::unpacked_endpoint& e_back = unpacked_endpoints[chosen.back()];
-    uint16 selected_index = 0;
-    uint64 best_value = 0, selected_similarity_front = 0, selected_similarity_back = 0;
-    for (uint16 i = 0; i < remaining.size(); i++) {
-      uint remaining_index = remaining[i];
-      const optimize_color_params::unpacked_endpoint& e_remaining = unpacked_endpoints[remaining_index];
-      uint error_front = color::elucidian_distance(e_remaining.low, e_front.low, false) + color::elucidian_distance(e_remaining.high, e_front.high, false);
-      uint error_back = color::elucidian_distance(e_remaining.low, e_back.low, false) + color::elucidian_distance(e_remaining.high, e_back.high, false);
-      uint64 similarity_front = similarity_base - math::minimum<uint>(error_front, 4000);
-      uint64 similarity_back = similarity_base - math::minimum<uint>(error_back, 4000);
-      uint64 value = math::maximum(similarity_front, similarity_back) * (total_frequency[remaining_index] + (total_frequency_normalizer << 3)) + 1;
-      if (value > best_value) {
+  crnlib::vector<uint16> chosen(n << 1);
+  uint remaining_count = n, chosen_front = n, chosen_back = chosen_front;
+  chosen[chosen_front] = selected;
+  optimize_color_params::unpacked_endpoint front_e = remaining[selected].e, back_e = front_e;
+  bool front_updated = true, back_updated = true;
+  remaining[selected] = remaining[--remaining_count];
+  const uint* frequency = hist + selected * n;
+
+  for (uint similarity_base = (uint)(4000 * (1.0f + weight)), frequency_normalizer = 0; remaining_count;) {
+    uint64 best_value = 0;
+    uint best_index = 0;
+    for (uint i = 0; i < remaining_count; i++) {
+      Node& node = remaining[i];
+      node.frequency += frequency[node.index];
+      if (front_updated)
+        node.front_similarity = similarity_base - math::minimum<uint>(4000, color::elucidian_distance(node.e.low, front_e.low, false) + color::elucidian_distance(node.e.high, front_e.high, false));
+      if (back_updated)
+        node.back_similarity = similarity_base - math::minimum<uint>(4000, color::elucidian_distance(node.e.low, back_e.low, false) + color::elucidian_distance(node.e.high, back_e.high, false));
+      uint64 value = math::maximum(node.front_similarity, node.back_similarity) * (node.frequency + frequency_normalizer) + 1;
+      if (value > best_value || (value == best_value && node.index < selected)) {
         best_value = value;
-        selected_index = i;
-        selected_similarity_front = similarity_front;
-        selected_similarity_back = similarity_back;
+        best_index = i;
+        selected = node.index;
       }
     }
-    selected = remaining[selected_index];
     frequency = hist + selected * n;
-    total_frequency_normalizer = total_frequency[selected];
     uint frequency_front = 0, frequency_back = 0;
-    for (int front = 0, back = chosen.size() - 1, scale = back; scale > 0; front++, back--, scale -= 2) {
+    for (int front = chosen_front, back = chosen_back, scale = back - front; scale > 0; front++, back--, scale -= 2) {
       frequency_front += scale * frequency[chosen[front]];
       frequency_back += scale * frequency[chosen[back]];
     }
-    if (selected_similarity_front * frequency_front > selected_similarity_back * frequency_back) {
-      chosen.push_front(selected);
+    front_updated = back_updated = false;
+    Node& best_node = remaining[best_index];
+    frequency_normalizer = best_node.frequency << 3;
+    if ((uint64)best_node.front_similarity * frequency_front > (uint64)best_node.back_similarity * frequency_back) {
+      chosen[--chosen_front] = selected;
+      front_e = best_node.e;
+      front_updated = true;
     } else {
-      chosen.push_back(selected);
+      chosen[++chosen_back] = selected;
+      back_e = best_node.e;
+      back_updated = true;
     }
-    remaining.erase(remaining.begin() + selected_index);
-    for (uint16 i = 0; i < remaining.size(); i++)
-      total_frequency[remaining[i]] += frequency[remaining[i]];
+    best_node = remaining[--remaining_count];
   }
-  for (uint16 i = 0; i < n; i++)
-    remapping[chosen[i]] = i;
+
+  for (uint16 i = chosen_front; i <= chosen_back; i++)
+    remapping[chosen[i]] = i - chosen_front;
 }
 
 void crn_comp::optimize_color_endpoints_task(uint64 data, void* pData_ptr) {
