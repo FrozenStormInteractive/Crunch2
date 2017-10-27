@@ -530,7 +530,7 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void*) {
       uint b = blocks[i];
       uint weight = (uint)(math::clamp<uint>(endpoint_weight * m_block_weights[b], 1, 2048) * encoding_weight[m_block_encodings[b]]);
       uint32 selector = 0;
-      for (uint sh = 0, p = 0; p < 16; p++, sh += 2) {
+      for (uint p = 0; p < 16; p++) {
         uint error_best = cUINT32_MAX;
         uint8 s_best = 0;
         for (uint8 t = 0; t < 4; t++) {
@@ -541,9 +541,9 @@ void dxt_hc::determine_color_endpoint_codebook_task(uint64 data, void*) {
             error_best = error;
           }
         }
-        selector |= s_best << sh;
+        selector = selector << 2 | s_best;
       }
-      m_block_selectors[cColor][b] = selector | (uint64)weight << 32;
+      m_block_selectors[cColor][b] = (uint64)selector << 32 | weight;
     }
 
     dxt_endpoint_refiner::params refinerParams;
@@ -609,7 +609,7 @@ void dxt_hc::determine_color_endpoint_codebook_task_etc(uint64 data, void*) {
         uint b = blocks[i];
         uint weight = (uint)(math::clamp<uint>(0x8000 * endpoint_weight * m_block_weights[b] * (m_block_encodings[b] ? 0.972f : 1.0f), 1, 0xFFFF));
         uint32 selector = 0;
-        for (uint sh = 0, p = 0; p < 8; p++, sh += 2) {
+        for (uint p = 0; p < 8; p++) {
           uint error_best = cUINT32_MAX;
           uint8 s_best = 0;
           for (uint8 s = 0; s < 4; s++) {
@@ -619,9 +619,9 @@ void dxt_hc::determine_color_endpoint_codebook_task_etc(uint64 data, void*) {
               error_best = error;
             }
           }
-          selector |= s_best << sh;
+          selector = selector << 2 | s_best;
         }
-        m_block_selectors[cColor][b] = selector | (uint64)weight << 32;
+        m_block_selectors[cColor][b] = (uint64)selector << ((b & 1) ? 32 : 48) | weight;
       }
     }
   }
@@ -663,13 +663,59 @@ void dxt_hc::determine_color_endpoint_clusters_task(uint64 data, void* pData_ptr
 }
 
 void dxt_hc::determine_color_endpoints() {
-  tree_clusterizer<vec6F> vq;
+  uint num_tasks = m_pTask_pool->get_num_threads() + 1;
+  crnlib::vector<std::pair<vec6F, uint> > endpoints;
   for (uint t = 0; t < m_tiles.size(); t++) {
     if (m_tiles[t].pixels.size())
-      vq.add_training_vec(m_tiles[t].color_endpoint, (uint)(m_tiles[t].pixels.size() * m_tiles[t].weight));
+      endpoints.push_back(std::make_pair(m_tiles[t].color_endpoint, (uint)(m_tiles[t].pixels.size() * m_tiles[t].weight)));
   }
 
-  vq.generate_codebook(math::minimum<uint>(m_num_tiles, m_params.m_color_endpoint_codebook_size), true, m_pTask_pool);
+  struct Node {
+    std::pair<vec6F, uint> *p, *pEnd;
+    Node (std::pair<vec6F, uint>* begin, std::pair<vec6F, uint>* end) : p(begin), pEnd(end) {}
+    bool operator<(const Node& other) const { return *p > *other.p; }
+    static void sort_task(uint64 data, void* ptr) { std::sort(((Node*)ptr)->p, ((Node*)ptr)->pEnd); }
+  };
+
+  crnlib::vector<Node> nodes;
+  Node node(0, endpoints.get_ptr());
+  for (uint i = 0; i < num_tasks; i++) {
+    node.p = node.pEnd;
+    node.pEnd = endpoints.get_ptr() + endpoints.size() * (i + 1) / num_tasks;
+    if (node.p != node.pEnd)
+      nodes.push_back(node);
+  }
+
+  for (uint i = 0; i < nodes.size(); i++)
+    m_pTask_pool->queue_task(&Node::sort_task, i, &nodes[i]);
+  m_pTask_pool->join();
+
+  std::priority_queue<Node> queue;
+  for (uint i = 0; i < nodes.size(); i++)
+    queue.push(nodes[i]);
+
+  crnlib::vector<vec6F> vectors;
+  crnlib::vector<uint> weights;
+  vectors.reserve(endpoints.size());
+  weights.reserve(endpoints.size());
+  while (queue.size()) {
+    Node node = queue.top();
+    std::pair<vec6F, uint>* endpoint = node.p++;
+    queue.pop();
+    if (node.p != node.pEnd)
+      queue.push(node);
+    if (!vectors.size() || endpoint->first != vectors.back()) {
+      vectors.push_back(endpoint->first);
+      weights.push_back(endpoint->second);
+    } else if (weights.back() > UINT_MAX - endpoint->second) {
+      weights.back() = UINT_MAX;
+    } else {
+      weights.back() += endpoint->second;
+    }
+  }
+
+  tree_clusterizer<vec6F> vq;
+  vq.generate_codebook(vectors.get_ptr(), weights.get_ptr(), vectors.size(), math::minimum<uint>(m_num_tiles, m_params.m_color_endpoint_codebook_size), true, m_pTask_pool);
   m_color_clusters.resize(vq.get_codebook_size());
 
   for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
@@ -757,7 +803,7 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void*) {
         uint b = blocks[i];
         uint weight = encoding_weight[m_block_encodings[b]];
         uint64 selector = 0;
-        for (uint sh = 0, p = 0; p < 16; p++, sh += 3) {
+        for (uint p = 0; p < 16; p++) {
           uint error_best = cUINT32_MAX;
           uint8 s_best = 0;
           for (uint8 t = 0; t < 8; t++) {
@@ -769,9 +815,9 @@ void dxt_hc::determine_alpha_endpoint_codebook_task(uint64 data, void*) {
               error_best = error;
             }
           }
-          selector |= (uint64)s_best << sh;
+          selector = selector << 3 | s_best;
         }
-        m_block_selectors[cAlpha0 + a][b] = selector | (uint64)weight << 48;
+        m_block_selectors[cAlpha0 + a][b] = selector << 16 | weight;
       }
     }
 
@@ -823,18 +869,64 @@ void dxt_hc::determine_alpha_endpoint_clusters_task(uint64 data, void* pData_ptr
 }
 
 void dxt_hc::determine_alpha_endpoints() {
-  tree_clusterizer<vec2F> vq;
+  uint num_tasks = m_pTask_pool->get_num_threads() + 1;
+  crnlib::vector<std::pair<vec2F, uint> > endpoints;
   for (uint a = 0; a < m_num_alpha_blocks; a++) {
     for (uint t = 0; t < m_tiles.size(); t++) {
       if (m_tiles[t].pixels.size())
-        vq.add_training_vec(m_tiles[t].alpha_endpoints[a], m_tiles[t].pixels.size());
+        endpoints.push_back(std::make_pair(m_tiles[t].alpha_endpoints[a], m_tiles[t].pixels.size()));
     }
   }
 
-  vq.generate_codebook(math::minimum<uint>(m_num_tiles, m_params.m_alpha_endpoint_codebook_size), false, m_pTask_pool);
+  struct Node {
+    std::pair<vec2F, uint> *p, *pEnd;
+    Node (std::pair<vec2F, uint>* begin, std::pair<vec2F, uint>* end) : p(begin), pEnd(end) {}
+    bool operator<(const Node& other) const { return *p > *other.p; }
+    static void sort_task(uint64 data, void* ptr) { std::sort(((Node*)ptr)->p, ((Node*)ptr)->pEnd); }
+  };
+
+  crnlib::vector<Node> nodes;
+  Node node(0, endpoints.get_ptr());
+  for (uint i = 0; i < num_tasks; i++) {
+    node.p = node.pEnd;
+    node.pEnd = endpoints.get_ptr() + endpoints.size() * (i + 1) / num_tasks;
+    if (node.p != node.pEnd)
+      nodes.push_back(node);
+  }
+
+  for (uint i = 0; i < nodes.size(); i++)
+    m_pTask_pool->queue_task(&Node::sort_task, i, &nodes[i]);
+  m_pTask_pool->join();
+
+  std::priority_queue<Node> queue;
+  for (uint i = 0; i < nodes.size(); i++)
+    queue.push(nodes[i]);
+
+  crnlib::vector<vec2F> vectors;
+  crnlib::vector<uint> weights;
+  vectors.reserve(endpoints.size());
+  weights.reserve(endpoints.size());
+  while (queue.size()) {
+    Node node = queue.top();
+    std::pair<vec2F, uint>* endpoint = node.p++;
+    queue.pop();
+    if (node.p != node.pEnd)
+      queue.push(node);
+    if (!vectors.size() || endpoint->first != vectors.back()) {
+      vectors.push_back(endpoint->first);
+      weights.push_back(endpoint->second);
+    } else if (weights.back() > UINT_MAX - endpoint->second) {
+      weights.back() = UINT_MAX;
+    } else {
+      weights.back() += endpoint->second;
+    }
+  }
+
+  tree_clusterizer<vec2F> vq;
+  vq.generate_codebook(vectors.get_ptr(), weights.get_ptr(), vectors.size(), math::minimum<uint>(m_num_tiles, m_params.m_alpha_endpoint_codebook_size), false, m_pTask_pool);
   m_alpha_clusters.resize(vq.get_codebook_size());
 
-  for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
+  for (uint i = 0; i < num_tasks; i++)
     m_pTask_pool->queue_object_task(this, &dxt_hc::determine_alpha_endpoint_clusters_task, i, &vq);
   m_pTask_pool->join();
 
@@ -859,7 +951,7 @@ void dxt_hc::determine_alpha_endpoints() {
     }
   }
 
-  for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
+  for (uint i = 0; i < num_tasks; i++)
     m_pTask_pool->queue_object_task(this, &dxt_hc::determine_alpha_endpoint_codebook_task, i, NULL);
   m_pTask_pool->join();
 }
@@ -911,16 +1003,68 @@ void dxt_hc::create_color_selector_codebook_task(uint64 data, void* pData_ptr) {
   }
 }
 
+struct SelectorNode {
+  uint64 *p, *pEnd;
+  SelectorNode (uint64* begin, uint64* end) : p(begin), pEnd(end) {}
+  bool operator<(const SelectorNode& other) const { return *p > *other.p; }
+  static void sort_task(uint64 data, void* ptr) { std::sort(((SelectorNode*)ptr)->p, ((SelectorNode*)ptr)->pEnd); }
+};
+
 void dxt_hc::create_color_selector_codebook() {
-  tree_clusterizer<vec16F> selector_vq;
-  vec16F v;
-  for (uint n = m_has_etc_color_blocks ? m_num_blocks >> 1 : m_num_blocks, b = 0; b < n; b++) {
-    uint64 selector = m_has_etc_color_blocks ? m_block_selectors[cColor][b << 1] | m_block_selectors[cColor][b << 1 | 1] << 16 : m_block_selectors[cColor][b];
-    for (uint8 p = 0; p < 16; p++, selector >>= 2)
-      v[p] = ((selector & 3) + 0.5f) * 0.25f;
-    selector_vq.add_training_vec(v, m_has_etc_color_blocks ? (selector & 0xFFFF) + (selector >> 16) : selector);
+  uint num_tasks = m_pTask_pool->get_num_threads() + 1;
+  crnlib::vector<uint64> selectors(m_has_etc_color_blocks ? m_num_blocks >> 1 : m_num_blocks);
+  for (uint i = 0, b = 0, step = m_has_etc_color_blocks ? 2 : 1; b < m_num_blocks; b += step)
+    selectors[i++] = m_block_selectors[cColor][b] + (m_has_etc_color_blocks ? m_block_selectors[cColor][b + 1] : 0);
+
+  crnlib::vector<SelectorNode> nodes;
+  SelectorNode node(0, selectors.get_ptr());
+  for (uint i = 0; i < num_tasks; i++) {
+    node.p = node.pEnd;
+    node.pEnd = selectors.get_ptr() + selectors.size() * (i + 1) / num_tasks;
+    if (node.p != node.pEnd)
+      nodes.push_back(node);
   }
-  selector_vq.generate_codebook(m_params.m_color_selector_codebook_size, false, m_pTask_pool);
+
+  for (uint i = 0; i < nodes.size(); i++)
+    m_pTask_pool->queue_task(&SelectorNode::sort_task, i, &nodes[i]);
+  m_pTask_pool->join();
+
+  std::priority_queue<SelectorNode> queue;
+  for (uint i = 0; i < nodes.size(); i++)
+    queue.push(nodes[i]);
+
+  float v[4];
+  for (uint s = 0; s < 4; s++)
+    v[s] = (s + 0.5f) * 0.25f;
+
+  crnlib::vector<vec16F> vectors;
+  crnlib::vector<uint> weights;
+  vectors.reserve(selectors.size());
+  weights.reserve(selectors.size());
+  for (uint64 prev_selector = 0; queue.size();) {
+    SelectorNode node = queue.top();
+    uint64 selector = *node.p++;
+    queue.pop();
+    if (node.p != node.pEnd)
+      queue.push(node);
+    uint weight = (uint)selector;
+    selector >>= 32;
+    if (!vectors.size() || selector != prev_selector) {
+      prev_selector = selector;
+      vec16F vector;
+      for (uint p = 0; p < 16; p++, selector >>= 2)
+        vector[15 - p] = v[selector & 3];
+      vectors.push_back(vector);
+      weights.push_back(weight);
+    } else if (weights.back() > UINT_MAX - weight) {
+      weights.back() = UINT_MAX;
+    } else {
+      weights.back() += weight;
+    }
+  }
+
+  tree_clusterizer<vec16F> selector_vq;
+  selector_vq.generate_codebook(vectors.get_ptr(), weights.get_ptr(), vectors.size(), m_params.m_color_selector_codebook_size, false, m_pTask_pool);
   m_color_selectors.resize(selector_vq.get_codebook_size());
   m_color_selectors_used.resize(selector_vq.get_codebook_size());
   for (uint i = 0; i < selector_vq.get_codebook_size(); i++) {
@@ -930,7 +1074,6 @@ void dxt_hc::create_color_selector_codebook() {
       m_color_selectors[i] |= (uint)(v[j] * 4.0f) << sh;
   }
 
-  uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   crnlib::vector<crnlib::vector<color_selector_details> > selector_details(num_tasks);
   for (uint t = 0; t < num_tasks; t++) {
     selector_details[t].resize(m_color_selectors.size());
@@ -1024,17 +1167,62 @@ void dxt_hc::create_alpha_selector_codebook_task(uint64 data, void* pData_ptr) {
 }
 
 void dxt_hc::create_alpha_selector_codebook() {
-  tree_clusterizer<vec16F> selector_vq;
-  vec16F v;
-  for (uint c = cAlpha0; c < cAlpha0 + m_num_alpha_blocks; c++) {
-    for (uint b = 0; b < m_num_blocks; b += m_has_etc_color_blocks ? 2 : 1) {
-      uint64 selector = m_block_selectors[c][b];
-      for (uint8 p = 0; p < 16; p++, selector >>= 3)
-        v[p] = ((selector & 7) + 0.5f) * 0.125f;
-      selector_vq.add_training_vec(v, selector);
+  uint num_tasks = m_pTask_pool->get_num_threads() + 1;
+  crnlib::vector<uint64> selectors(m_num_alpha_blocks * (m_has_etc_color_blocks ? m_num_blocks >> 1 : m_num_blocks));
+  for (uint i = 0, c = cAlpha0; c < cAlpha0 + m_num_alpha_blocks; c++) {
+    for (uint b = 0, step = m_has_etc_color_blocks ? 2 : 1; b < m_num_blocks; b += step)
+      selectors[i++] = m_block_selectors[c][b];
+  }
+
+  crnlib::vector<SelectorNode> nodes;
+  SelectorNode node(0, selectors.get_ptr());
+  for (uint i = 0; i < num_tasks; i++) {
+    node.p = node.pEnd;
+    node.pEnd = selectors.get_ptr() + selectors.size() * (i + 1) / num_tasks;
+    if (node.p != node.pEnd)
+      nodes.push_back(node);
+  }
+
+  for (uint i = 0; i < nodes.size(); i++)
+    m_pTask_pool->queue_task(&SelectorNode::sort_task, i, &nodes[i]);
+  m_pTask_pool->join();
+
+  std::priority_queue<SelectorNode> queue;
+  for (uint i = 0; i < nodes.size(); i++)
+    queue.push(nodes[i]);
+
+  float v[8];
+  for (uint s = 0; s < 8; s++)
+    v[s] = (s + 0.5f) * 0.125f;
+
+  crnlib::vector<vec16F> vectors;
+  crnlib::vector<uint> weights;
+  vectors.reserve(selectors.size());
+  weights.reserve(selectors.size());
+  for (uint64 prev_selector = 0; queue.size();) {
+    SelectorNode node = queue.top();
+    uint64 selector = *node.p++;
+    queue.pop();
+    if (node.p != node.pEnd)
+      queue.push(node);
+    uint weight = (uint16)selector;
+    selector >>= 16;
+    if (!vectors.size() || selector != prev_selector) {
+      prev_selector = selector;
+      vec16F vector;
+      for (uint p = 0; p < 16; p++, selector >>= 3)
+        vector[15 - p] = v[selector & 7];
+      vectors.push_back(vector);
+      weights.push_back(weight);
+    } else if (weights.back() > UINT_MAX - weight) {
+      weights.back() = UINT_MAX;
+    } else {
+      weights.back() += weight;
     }
   }
-  selector_vq.generate_codebook(m_params.m_alpha_selector_codebook_size, false, m_pTask_pool);
+
+  tree_clusterizer<vec16F> selector_vq;
+  selector_vq.generate_codebook(vectors.get_ptr(), weights.get_ptr(), vectors.size(), m_params.m_alpha_selector_codebook_size, false, m_pTask_pool);
   m_alpha_selectors.resize(selector_vq.get_codebook_size());
   m_alpha_selectors_used.resize(selector_vq.get_codebook_size());
   for (uint i = 0; i < selector_vq.get_codebook_size(); i++) {
@@ -1044,7 +1232,6 @@ void dxt_hc::create_alpha_selector_codebook() {
       m_alpha_selectors[i] |= (uint64)(v[j] * 8.0f) << sh;
   }
 
-  uint num_tasks = m_pTask_pool->get_num_threads() + 1;
   crnlib::vector<crnlib::vector<alpha_selector_details> > selector_details(num_tasks);
   for (uint t = 0; t < num_tasks; t++) {
     selector_details[t].resize(m_alpha_selectors.size());

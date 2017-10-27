@@ -25,14 +25,10 @@ class tree_clusterizer {
     }
   };
 
-  void add_training_vec(const VectorType& v, uint weight) {
-    m_hist.push_back(std::make_pair(v, weight));
-  }
-
   struct split_alternative_node_task_params {
     uint main_node;
     uint alternative_node;
-    uint max_size;
+    uint max_splits;
   };
 
   void split_alternative_node_task(uint64, void* pData_ptr) {
@@ -45,7 +41,7 @@ class tree_clusterizer {
     end_node++;
     splits++;
 
-    while (splits < pParams->max_size && split_node(node_queue, end_node))
+    while (splits < pParams->max_splits && split_node(node_queue, end_node))
       splits++;
 
     m_nodes[pParams->main_node] = m_nodes[pParams->alternative_node];
@@ -53,105 +49,73 @@ class tree_clusterizer {
   }
 
 
-  bool generate_codebook(uint max_size, bool generate_node_index_map = false, task_pool* pTask_pool = 0) {
-    if (m_hist.empty())
-      return false;
-
-    double ttsum = 0.0f;
-
-    m_vectors.reserve(m_hist.size());
-    m_vectorsInfo.reserve(m_hist.size());
-
-    std::sort(m_hist.begin(), m_hist.end());
-    for (uint i = 0; i < m_hist.size(); i++) {
-      if (!i || m_hist[i].first != m_hist[i - 1].first) {
-        VectorInfo vectorInfo;
-        vectorInfo.index = m_vectors.size();
-        vectorInfo.weight = m_hist[i].second;
-        m_vectorsInfo.push_back(vectorInfo);
-        m_vectors.push_back(m_hist[i].first);
-      } else if (m_vectorsInfo.back().weight > UINT_MAX - m_hist[i].second) {
-        m_vectorsInfo.back().weight = UINT_MAX;
-      } else {
-        m_vectorsInfo.back().weight += m_hist[i].second;
-      }
-    }
-
-    m_weightedVectors.resize(m_vectors.size());
-    m_weightedDotProducts.resize(m_vectors.size());
-    m_vectorsInfoLeft.resize(m_vectors.size());
-    m_vectorsInfoRight.resize(m_vectors.size());
-    m_vectorComparison.resize(m_vectors.size());
+  void generate_codebook(VectorType* vectors, uint* weights, uint size, uint max_splits, bool generate_node_index_map = false, task_pool* pTask_pool = 0) {
+    m_vectors = vectors;
+    m_vectorsInfo.resize(size);
+    m_weightedVectors.resize(size);
+    m_weightedDotProducts.resize(size);
+    m_vectorsInfoLeft.resize(size);
+    m_vectorsInfoRight.resize(size);
+    m_vectorComparison.resize(size);
+    m_nodes.resize(max_splits << 2);
+    m_codebook.clear();
+    uint num_tasks = pTask_pool ? pTask_pool->get_num_threads() + 1 : 1;
 
     vq_node root;
     root.m_begin = 0;
-    root.m_end = m_vectorsInfo.size();
-
-    for (uint i = 0; i < m_vectors.size(); i++) {
-      const VectorType& v = m_vectors[i];
-      const uint weight = m_vectorsInfo[i].weight;
+    root.m_end = size;
+    double ttsum = 0.0f;
+    for (uint i = 0; i < m_vectorsInfo.size(); i++) {
+      const VectorType& v = vectors[i];
+      m_vectorsInfo[i].index = i;
+      const uint weight = m_vectorsInfo[i].weight = weights[i];
       m_weightedVectors[i] = v * (float)weight;
       root.m_centroid += m_weightedVectors[i];
       root.m_total_weight += weight;
       m_weightedDotProducts[i] = v.dot(v) * weight;
       ttsum += m_weightedDotProducts[i];
     }
-
     root.m_variance = (float)(ttsum - (root.m_centroid.dot(root.m_centroid) / root.m_total_weight));
-
     root.m_centroid *= (1.0f / root.m_total_weight);
-
-    m_nodes.resize(max_size << 2);
 
     std::priority_queue<NodeInfo> node_queue;
     uint begin_node = 0, end_node = begin_node, splits = 0;
-
     m_nodes[end_node] = root;
     node_queue.push(NodeInfo(end_node, root.m_variance));
     end_node++;
     splits++;
 
-    uint num_tasks = pTask_pool ? pTask_pool->get_num_threads() + 1 : 1;
-
     if (num_tasks > 1) {
-      while (splits < max_size && node_queue.size() != num_tasks && split_node(node_queue, end_node, pTask_pool))
+      while (splits < max_splits && node_queue.size() != num_tasks && split_node(node_queue, end_node, pTask_pool))
         splits++;
       if (node_queue.size() == num_tasks) {
         std::priority_queue<NodeInfo> alternative_node_queue = node_queue;
-        uint alternative_node = max_size << 1, alternative_max_size = max_size / num_tasks;
+        uint alternative_node = max_splits << 1, alternative_max_splits = max_splits / num_tasks;
         crnlib::vector<split_alternative_node_task_params> params(num_tasks);
-        for (uint task = 0; !alternative_node_queue.empty(); alternative_node_queue.pop(), alternative_node += alternative_max_size << 1, task++) {
+        for (uint task = 0; !alternative_node_queue.empty(); alternative_node_queue.pop(), alternative_node += alternative_max_splits << 1, task++) {
           params[task].main_node = alternative_node_queue.top().m_index;
           params[task].alternative_node = alternative_node;
-          params[task].max_size = alternative_max_size;
+          params[task].max_splits = alternative_max_splits;
           pTask_pool->queue_object_task(this, &tree_clusterizer::split_alternative_node_task, task, &params[task]);
         }
         pTask_pool->join();
       }
     }
 
-    while (splits < max_size && split_node(node_queue, end_node, pTask_pool))
+    while (splits < max_splits && split_node(node_queue, end_node, pTask_pool))
       splits++;
-
-    m_codebook.clear();
 
     for (uint i = begin_node; i < end_node; i++) {
       vq_node& node = m_nodes[i];
-      if (!node.m_alternative && node.m_left != -1) {
-        CRNLIB_ASSERT(node.m_right != -1);
+      if (!node.m_alternative && node.m_left != -1)
         continue;
-      }
-
       node.m_codebook_index = m_codebook.size();
       m_codebook.push_back(node.m_centroid);
-
       if (generate_node_index_map) {
         for (uint j = node.m_begin; j < node.m_end; j++)
           m_node_index_map.insert(std::make_pair(m_vectors[m_vectorsInfo[j].index], node.m_codebook_index));
       }
     }
-
-    return true;
   }
 
   inline uint get_node_index(const VectorType& v) {
@@ -172,9 +136,7 @@ class tree_clusterizer {
   }
 
  private:
-
-  crnlib::vector<std::pair<VectorType, uint> > m_hist;
-  crnlib::vector<VectorType> m_vectors;
+  VectorType* m_vectors;
   crnlib::vector<VectorType> m_weightedVectors;
   crnlib::vector<double> m_weightedDotProducts;
   crnlib::vector<VectorInfo> m_vectorsInfo, m_vectorsInfoLeft, m_vectorsInfoRight;
