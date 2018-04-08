@@ -1965,7 +1965,7 @@ static void* crnd_default_realloc(void* p, size_t size, size_t* pActual_size, bo
 }
 
 static size_t crnd_default_msize(void* p, void* pUser_data) {
-  pUser_data;
+  (void)pUser_data;
 #ifdef WIN32
   return p ? _msize(p) : 0;
 #else
@@ -3297,8 +3297,8 @@ class crn_unpacker {
 
   bool unpack_dxt1(uint8** pDst, uint32 output_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_color_endpoints = m_color_endpoints.size();
-    const uint32 width = output_width + 1 & ~1;
-    const uint32 height = output_height + 1 & ~1;
+    const uint32 width = (output_width + 1) & ~1;
+    const uint32 height = (output_height + 1) & ~1;
     const int32 delta_pitch_in_dwords = (output_pitch_in_bytes >> 2) - (width << 1);
 
     if (m_block_buffer.size() < width)
@@ -3349,8 +3349,8 @@ class crn_unpacker {
   bool unpack_dxt5(uint8** pDst, uint32 row_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_color_endpoints = m_color_endpoints.size();
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const uint32 width = output_width + 1 & ~1;
-    const uint32 height = output_height + 1 & ~1;
+    const uint32 width = (output_width + 1) & ~1;
+    const uint32 height = (output_height + 1) & ~1;
     const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (width << 2);
 
     if (m_block_buffer.size() < width)
@@ -3411,8 +3411,8 @@ class crn_unpacker {
 
   bool unpack_dxn(uint8** pDst, uint32 row_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const uint32 width = output_width + 1 & ~1;
-    const uint32 height = output_height + 1 & ~1;
+    const uint32 width = (output_width + 1) & ~1;
+    const uint32 height = (output_height + 1) & ~1;
     const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (width << 2);
 
     if (m_block_buffer.size() < width)
@@ -3474,8 +3474,8 @@ class crn_unpacker {
 
   bool unpack_dxt5a(uint8** pDst, uint32 row_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const uint32 width = output_width + 1 & ~1;
-    const uint32 height = output_height + 1 & ~1;
+    const uint32 width = (output_width + 1) & ~1;
+    const uint32 height = (output_height + 1) & ~1;
     const int32 delta_pitch_in_dwords = (row_pitch_in_bytes >> 2) - (width << 1);
 
     if (m_block_buffer.size() < width)
@@ -3526,8 +3526,8 @@ class crn_unpacker {
 
   bool unpack_etc1(uint8** pDst, uint32 output_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_color_endpoints = m_color_endpoints.size();
-    const uint32 width = output_width + 1 & ~1;
-    const uint32 height = output_height + 1 & ~1;
+    const uint32 width = (output_width + 1) & ~1;
+    const uint32 height = (output_height + 1) & ~1;
     const int32 delta_pitch_in_dwords = (output_pitch_in_bytes >> 2) - (width << 1);
 
     if (m_block_buffer.size() < width << 1)
@@ -3593,8 +3593,8 @@ class crn_unpacker {
   bool unpack_etc2a(uint8** pDst, uint32 output_pitch_in_bytes, uint32 output_width, uint32 output_height) {
     const uint32 num_color_endpoints = m_color_endpoints.size();
     const uint32 num_alpha_endpoints = m_alpha_endpoints.size();
-    const uint32 width = output_width + 1 & ~1;
-    const uint32 height = output_height + 1 & ~1;
+    const uint32 width = (output_width + 1) & ~1;
+    const uint32 height = (output_height + 1) & ~1;
     const int32 delta_pitch_in_dwords = (output_pitch_in_bytes >> 2) - (width << 2);
 
     if (m_block_buffer.size() < width << 1)
