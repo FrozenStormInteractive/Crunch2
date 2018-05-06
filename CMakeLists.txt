@@ -10,12 +10,10 @@ option(BUILD_SHARED_LIBS "Build crunchlib as shared library and link executables
 option(BUILD_EXAMPLES "Build examples." OFF)
 
 if (BUILD_EXAMPLES)
-	add_subdirectory(example1)
-	add_subdirectory(example2)
-	add_subdirectory(example3)
+  add_subdirectory(example1)
+  add_subdirectory(example2)
+  add_subdirectory(example3)
 endif(BUILD_EXAMPLES)
 
 add_subdirectory(crunch)
 add_subdirectory(crnlib)
-
-
