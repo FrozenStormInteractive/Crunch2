@@ -164,8 +164,6 @@ set(CRNLIB_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_CpuArch.h
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFind.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFind.h
-	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFindMt.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFindMt.h
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzHash.h
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaDec.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaDec.h
@@ -174,8 +172,6 @@ set(CRNLIB_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaLib.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaLib.h
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_MyVersion.h
-	${CMAKE_CURRENT_SOURCE_DIR}/lzma_Threads.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/lzma_Threads.h
 	${CMAKE_CURRENT_SOURCE_DIR}/lzma_Types.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../inc/crn_decomp.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../inc/crnlib.h
@@ -183,20 +179,23 @@ set(CRNLIB_SRCS
 )
 
 if(WIN32)
-set(CRNLIB_THREAD_SRCS
+  set(CRNLIB_THREAD_SRCS
+	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFindMt.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFindMt.h
+	${CMAKE_CURRENT_SOURCE_DIR}/lzma_Threads.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/lzma_Threads.h
 	${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_win32.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_win32.h
-)
+  )
 else(WIN32)
-set(CRNLIB_THREAD_SRCS
+  set(CRNLIB_THREAD_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_pthreads.h
 	${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_pthreads.cpp
-)
+  )
 endif()
 
 if (BUILD_SHARED_LIBS) 
-add_library(${CRUNCH_LIBRARY_NAME} SHARED ${CRNLIB_SRCS} ${CRNLIB_THREAD_SRCS})
+  add_library(${CRUNCH_LIBRARY_NAME} SHARED ${CRNLIB_SRCS} ${CRNLIB_THREAD_SRCS})
 else()
-add_library(${CRUNCH_LIBRARY_NAME} STATIC ${CRNLIB_SRCS} ${CRNLIB_THREAD_SRCS})
+  add_library(${CRUNCH_LIBRARY_NAME} STATIC ${CRNLIB_SRCS} ${CRNLIB_THREAD_SRCS})
 endif()
-
