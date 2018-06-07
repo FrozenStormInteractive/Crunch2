@@ -45,6 +45,8 @@ enum dxt_format {
   cETC1,
   cETC2,
   cETC2A,
+  cETC1S,
+  cETC2AS,
 };
 
 const float cDXT1MaxLinearValue = 3.0f;

@@ -100,7 +100,7 @@ bool dxt_image::init_internal(dxt_format fmt, uint width, uint height) {
   m_blocks_y = (m_height + 3) >> cDXTBlockShift;
 
   m_num_elements_per_block = 2;
-  if ((fmt == cDXT1) || (fmt == cDXT1A) || (fmt == cDXT5A) || (fmt == cETC1) || (fmt == cETC2))
+  if ((fmt == cDXT1) || (fmt == cDXT1A) || (fmt == cDXT5A) || (fmt == cETC1) || (fmt == cETC2) || (fmt == cETC1S))
     m_num_elements_per_block = 1;
 
   m_total_blocks = m_blocks_x * m_blocks_y;
@@ -151,7 +151,8 @@ bool dxt_image::init_internal(dxt_format fmt, uint width, uint height) {
       m_element_component_index[1] = 0;
       break;
     }
-    case cETC1: {
+    case cETC1:
+    case cETC1S: {
       m_element_type[0] = cColorETC1;
       m_element_component_index[0] = -1;
       break;
@@ -161,7 +162,8 @@ bool dxt_image::init_internal(dxt_format fmt, uint width, uint height) {
       m_element_component_index[0] = -1;
       break;
     }
-    case cETC2A: {
+    case cETC2A:
+    case cETC2AS: {
       m_element_type[0] = cAlphaETC2;
       m_element_type[1] = cColorETC2;
       m_element_component_index[0] = 3;
@@ -491,6 +493,7 @@ bool dxt_image::has_alpha() const {
     case cDXT5:
     case cDXT5A:
     case cETC2A:
+    case cETC2AS:
       return true;
     default:
       break;
@@ -1498,7 +1501,7 @@ void dxt_image::flip_row(uint y) {
 }
 
 bool dxt_image::can_flip(uint axis_index) {
-  if (m_format == cETC1 || m_format == cETC2 || m_format == cETC2A) {
+  if (m_format == cETC1 || m_format == cETC2 || m_format == cETC2A || m_format == cETC1S || m_format == cETC2AS) {
     // Can't reliably flip ETCn textures (because of asymmetry in the 555/333 differential coding of subblock colors).
     return false;
   }
@@ -1518,7 +1521,7 @@ bool dxt_image::can_flip(uint axis_index) {
 }
 
 bool dxt_image::flip_x() {
-  if (m_format == cETC1 || m_format == cETC2 || m_format == cETC2A) {
+  if (m_format == cETC1 || m_format == cETC2 || m_format == cETC2A || m_format == cETC1S || m_format == cETC2AS) {
     // Can't reliably flip ETCn textures (because of asymmetry in the 555/333 differential coding of subblock colors).
     return false;
   }
@@ -1562,7 +1565,7 @@ bool dxt_image::flip_x() {
 }
 
 bool dxt_image::flip_y() {
-  if (m_format == cETC1 || m_format == cETC2 || m_format == cETC2A) {
+  if (m_format == cETC1 || m_format == cETC2 || m_format == cETC2A || m_format == cETC1S || m_format == cETC2AS) {
     // Can't reliably flip ETCn textures (because of asymmetry in the 555/333 differential coding of subblock colors).
     return false;
   }

@@ -272,7 +272,7 @@ bool crn_comp::pack_blocks(
   uint block_width = m_levels[group].block_width;
   for (uint by = 0, b = m_levels[group].first_block, bEnd = b + m_levels[group].num_blocks; b < bEnd; by++) {
     for (uint bx = 0; bx < block_width; bx++, b++) {
-      const bool secondary_etc_subblock = m_has_etc_color_blocks && bx & 1;
+      const bool secondary_etc_subblock = m_has_subblocks && bx & 1;
       if (!(by & 1) && !(bx & 1)) {
         uint8 reference_group = m_endpoint_indices[b].reference | m_endpoint_indices[b + block_width].reference << 2 |
           m_endpoint_indices[b + 1].reference << 4 | m_endpoint_indices[b + block_width + 1].reference << 6;
@@ -336,7 +336,7 @@ bool crn_comp::alias_images() {
   m_total_blocks = 0;
   for (uint level = 0; level < m_pParams->m_levels; level++) {
     uint blockHeight = ((math::maximum(1U, m_pParams->m_height >> level) + 7) & ~7) >> 2;
-    m_levels[level].block_width = ((math::maximum(1U, m_pParams->m_width >> level) + 7) & ~7) >> (m_has_etc_color_blocks ? 1 : 2);
+    m_levels[level].block_width = ((math::maximum(1U, m_pParams->m_width >> level) + 7) & ~7) >> (m_has_subblocks ? 1 : 2);
     m_levels[level].first_block = m_total_blocks;
     m_levels[level].num_blocks = m_pParams->m_faces * m_levels[level].block_width * blockHeight;
     m_total_blocks += m_levels[level].num_blocks;
@@ -354,6 +354,7 @@ void crn_comp::clear() {
 
   utils::zero_object(m_has_comp);
   m_has_etc_color_blocks = false;
+  m_has_subblocks = false;
 
   m_levels.clear();
 
@@ -413,8 +414,8 @@ bool crn_comp::quantize_images() {
     float color_quality_power_mul = 1.0f;
     float alpha_quality_power_mul = 1.0f;
     if (m_has_etc_color_blocks) {
-      color_quality_power_mul = 1.31f;
-      params.m_adaptive_tile_color_psnr_derating = 5.0f;
+      color_quality_power_mul = m_has_subblocks ? 1.31f : 0.7f;
+      params.m_adaptive_tile_color_psnr_derating = m_has_subblocks ? 5.0f : 2.0f;
     }
     if (m_pParams->m_format == cCRNFmtDXT5_CCxY) {
       color_quality_power_mul = 3.5f;
@@ -525,6 +526,18 @@ bool crn_comp::quantize_images() {
     }
     case cCRNFmtETC2A: {
       params.m_format = cETC2A;
+      params.m_alpha_component_indices[0] = m_pParams->m_alpha_component;
+      m_has_comp[cColor] = true;
+      m_has_comp[cAlpha0] = true;
+      break;
+    }
+    case cCRNFmtETC1S: {
+      params.m_format = cETC1S;
+      m_has_comp[cColor] = true;
+      break;
+    }
+    case cCRNFmtETC2AS: {
+      params.m_format = cETC2AS;
       params.m_alpha_component_indices[0] = m_pParams->m_alpha_component;
       m_has_comp[cColor] = true;
       m_has_comp[cAlpha0] = true;
@@ -695,7 +708,7 @@ void crn_comp::optimize_color_endpoints_task(uint64 data, void* pData_ptr) {
   for (uint level = 0; level < m_levels.size(); level++) {
     for (uint endpoint_index = 0, b = m_levels[level].first_block, bEnd = b + m_levels[level].num_blocks; b < bEnd; b++) {
       uint index = remapping[m_endpoint_indices[b].component[cColor]];
-      if (m_has_etc_color_blocks && b & 1 ? m_endpoint_indices[b].reference : !m_endpoint_indices[b].reference) {
+      if (m_has_subblocks && b & 1 ? m_endpoint_indices[b].reference : !m_endpoint_indices[b].reference) {
         int sym = index - endpoint_index;
         hist[sym < 0 ? sym + n : sym]++;
       }
@@ -773,7 +786,7 @@ void crn_comp::optimize_color() {
   crnlib::vector<uint> sum(n);
   for (uint i, i_prev = 0, b = 0; b < m_endpoint_indices.size(); b++, i_prev = i) {
     i = m_endpoint_indices[b].color;
-    if ((m_has_etc_color_blocks && b & 1 ? m_endpoint_indices[b].reference : !m_endpoint_indices[b].reference) && i != i_prev) {
+    if ((m_has_subblocks && b & 1 ? m_endpoint_indices[b].reference : !m_endpoint_indices[b].reference) && i != i_prev) {
       hist[i * n + i_prev]++;
       hist[i_prev * n + i]++;
       sum[i]++;
@@ -1279,7 +1292,8 @@ bool crn_comp::compress_pass(const crn_comp_params& params, float* pEffective_bi
     *pEffective_bitrate = 0.0f;
 
   m_pParams = &params;
-  m_has_etc_color_blocks = params.m_format == cCRNFmtETC1 || params.m_format == cCRNFmtETC2 || params.m_format == cCRNFmtETC2A;
+  m_has_etc_color_blocks = params.m_format == cCRNFmtETC1 || params.m_format == cCRNFmtETC2 || params.m_format == cCRNFmtETC2A || params.m_format == cCRNFmtETC1S || params.m_format == cCRNFmtETC2AS;
+  m_has_subblocks = params.m_format == cCRNFmtETC1 || params.m_format == cCRNFmtETC2 || params.m_format == cCRNFmtETC2A;
 
   if ((math::minimum(m_pParams->m_width, m_pParams->m_height) < 1) || (math::maximum(m_pParams->m_width, m_pParams->m_height) > cCRNMaxLevelResolution))
     return false;
