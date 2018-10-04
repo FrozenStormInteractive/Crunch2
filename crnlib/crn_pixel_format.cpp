@@ -24,6 +24,8 @@ const pixel_format g_all_pixel_formats[] =
         PIXEL_FMT_ETC1,
         PIXEL_FMT_ETC2,
         PIXEL_FMT_ETC2A,
+        PIXEL_FMT_ETC1S,
+        PIXEL_FMT_ETC2AS,
         PIXEL_FMT_R8G8B8,
         PIXEL_FMT_L8,
         PIXEL_FMT_A8,
@@ -75,6 +77,10 @@ const char* get_pixel_format_string(pixel_format fmt) {
       return "ETC2";
     case PIXEL_FMT_ETC2A:
       return "ETC2A";
+    case PIXEL_FMT_ETC1S:
+      return "ETC1S";
+    case PIXEL_FMT_ETC2AS:
+      return "ETC2AS";
     case PIXEL_FMT_R8G8B8:
       return "R8G8B8";
     case PIXEL_FMT_A8R8G8B8:
@@ -120,6 +126,10 @@ const char* get_crn_format_string(crn_format fmt) {
       return "ETC2";
     case cCRNFmtETC2A:
       return "ETC2A";
+    case cCRNFmtETC1S:
+      return "ETC1S";
+    case cCRNFmtETC2AS:
+      return "ETC2AS";
     default:
       break;
   }
@@ -134,7 +144,8 @@ component_flags get_component_flags(pixel_format fmt) {
   switch (fmt) {
     case PIXEL_FMT_DXT1:
     case PIXEL_FMT_ETC1:
-    case PIXEL_FMT_ETC2: {
+    case PIXEL_FMT_ETC2:
+    case PIXEL_FMT_ETC1S: {
       flags = cCompFlagRValid | cCompFlagGValid | cCompFlagBValid;
       break;
     }
@@ -149,7 +160,8 @@ component_flags get_component_flags(pixel_format fmt) {
     }
     case PIXEL_FMT_DXT4:
     case PIXEL_FMT_DXT5:
-    case PIXEL_FMT_ETC2A: {
+    case PIXEL_FMT_ETC2A:
+    case PIXEL_FMT_ETC2AS: {
       flags = cCompFlagRValid | cCompFlagGValid | cCompFlagBValid | cCompFlagAValid;
       break;
     }
@@ -261,6 +273,12 @@ crn_format convert_pixel_format_to_best_crn_format(pixel_format crn_fmt) {
     case PIXEL_FMT_ETC2A:
       fmt = cCRNFmtETC2A;
       break;
+    case PIXEL_FMT_ETC1S:
+      fmt = cCRNFmtETC1S;
+      break;
+    case PIXEL_FMT_ETC2AS:
+      fmt = cCRNFmtETC2AS;
+      break;
     default: {
       CRNLIB_ASSERT(false);
       break;
@@ -297,6 +315,10 @@ pixel_format convert_crn_format_to_pixel_format(crn_format fmt) {
       return PIXEL_FMT_ETC2;
     case cCRNFmtETC2A:
       return PIXEL_FMT_ETC2A;
+    case cCRNFmtETC1S:
+      return PIXEL_FMT_ETC1S;
+    case cCRNFmtETC2AS:
+      return PIXEL_FMT_ETC2AS;
     default: {
       CRNLIB_ASSERT(false);
       break;

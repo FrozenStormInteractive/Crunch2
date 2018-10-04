@@ -149,6 +149,7 @@ class dxt_hc {
   uint m_num_alpha_blocks;
   bool m_has_color_blocks;
   bool m_has_etc_color_blocks;
+  bool m_has_subblocks;
 
   enum {
     cColor = 0,
