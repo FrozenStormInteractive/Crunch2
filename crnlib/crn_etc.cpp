@@ -1580,4 +1580,47 @@ uint64 pack_etc1_block(etc1_block& dst_block, const color_quad_u8* pSrc_pixels, 
   return best_error;
 }
 
+uint64 pack_etc1s_block(etc1_block& dst_block, const color_quad_u8* pSrc_pixels, crn_etc1_pack_params& pack_params) {
+  uint8 selectors[16];
+  etc1_optimizer optimizer;
+  etc1_optimizer::params params;
+  params.m_pSrc_pixels = pSrc_pixels;
+  params.m_num_src_pixels = 16;
+  params.m_use_color4 = false;
+  params.m_constrain_against_base_color5 = false;
+  etc1_optimizer::results results;
+  results.m_pSelectors = selectors;
+  results.m_n = 16;
+  optimizer.init(params, results);
+
+  const int scan[] = {-4, -3, -2, -1, 0, 1, 2, 3, 4};
+  params.m_scan_delta_size = pack_params.m_quality == cCRNETCQualitySlow ? CRNLIB_ARRAY_SIZE(scan) : pack_params.m_quality == cCRNETCQualityMedium ? 3 : 1;
+  params.m_pScan_deltas = scan + ((CRNLIB_ARRAY_SIZE(scan) - params.m_scan_delta_size) >> 1);
+  optimizer.compute();
+
+  if (params.m_quality >= cCRNETCQualityMedium && results.m_error > 6000) {
+    const int refine_medium[] = {-3, -2, 2, 3};
+    const int refine_high[] = {-8, -7, -6, -5, 5, 6, 7, 8};
+    if (params.m_quality == cCRNETCQualityMedium) {
+      params.m_scan_delta_size = CRNLIB_ARRAY_SIZE(refine_medium);
+      params.m_pScan_deltas = refine_medium;
+    } else {
+      params.m_scan_delta_size = results.m_error > 12000 ? CRNLIB_ARRAY_SIZE(refine_high) : 2;
+      params.m_pScan_deltas = refine_high + ((CRNLIB_ARRAY_SIZE(refine_high) - params.m_scan_delta_size) >> 1);
+    }
+    optimizer.compute();
+  }
+
+  uint32 selector = 0;
+  for (uint32 i = 0, t = 8, h = 0; h < 4; h++, t -= 15) {
+    for (uint32 w = 0; w < 4; w++, t += 4, i++) {
+      uint32 s = g_selector_index_to_etc1[selectors[i]];
+      selector |= (s >> 1 | (s & 1) << 16) << (t & 15);
+    }
+  }
+
+  dst_block.m_uint64 = (uint64)selector << 32 | results.m_block_inten_table << 29 | results.m_block_inten_table << 26 | 1 << 25 | (results.m_block_color_unscaled.m_u32 & 0xFFFFFF) << 3;
+  return results.m_error;
+}
+
 }  // namespace crnlib

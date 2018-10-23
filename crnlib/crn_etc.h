@@ -538,5 +538,6 @@ struct pack_etc1_block_context {
 void pack_etc1_block_init();
 
 uint64 pack_etc1_block(etc1_block& block, const color_quad_u8* pSrc_pixels, crn_etc1_pack_params& pack_params, pack_etc1_block_context& context);
+uint64 pack_etc1s_block(etc1_block& block, const color_quad_u8* pSrc_pixels, crn_etc1_pack_params& pack_params);
 
 }  // namespace crnlib
