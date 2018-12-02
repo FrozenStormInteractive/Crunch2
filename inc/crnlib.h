@@ -92,7 +92,7 @@ enum crn_limits {
   cCRNMaxFaces = 6,
   cCRNMaxLevels = 16,
 
-  cCRNMaxHelperThreads = 16,
+  cCRNMaxHelperThreads = 15,
 
   cCRNMinQualityLevel = 0,
   cCRNMaxQualityLevel = 255

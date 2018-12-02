@@ -1040,6 +1040,30 @@ void dxt_image::set_block_pixels(
         rg_etc1::pack_etc1_block(pElement, (uint32*)pPixels, pack_params);
       }
     }
+
+  } else if (m_format == cETC1S) {
+    crn_etc1_pack_params pack_params;
+    pack_params.m_perceptual = p.m_perceptual;
+    pack_params.m_dithering = p.m_dithering;
+    pack_params.m_quality = p.m_quality <= cCRNDXTQualityFast ? cCRNETCQualityFast : p.m_quality <= cCRNDXTQualityNormal ? cCRNETCQualityMedium : cCRNETCQualitySlow;
+    pack_etc1s_block(*(etc1_block*)pElement, pPixels, pack_params);
+
+  } else if (m_format == cETC2AS) {
+    for (uint element_index = 0; element_index < m_num_elements_per_block; element_index++, pElement++) {
+      if (m_element_type[element_index] == cAlphaETC2) {
+        rg_etc1::etc2a_pack_params pack_params;
+        pack_params.m_quality = p.m_quality <= cCRNDXTQualityFast ? rg_etc1::cLowQuality : p.m_quality <= cCRNDXTQualityNormal ? rg_etc1::cMediumQuality : rg_etc1::cHighQuality;
+        pack_params.comp_index = m_element_component_index[element_index];
+        rg_etc1::pack_etc2_alpha(pElement, (uint32*)pPixels, pack_params);
+      } else {
+        crn_etc1_pack_params pack_params;
+        pack_params.m_perceptual = p.m_perceptual;
+        pack_params.m_dithering = p.m_dithering;
+        pack_params.m_quality = p.m_quality <= cCRNDXTQualityFast ? cCRNETCQualityFast : p.m_quality <= cCRNDXTQualityNormal ? cCRNETCQualityMedium : cCRNETCQualitySlow;
+        pack_etc1s_block(*(etc1_block*)pElement, pPixels, pack_params);
+      }
+    }
+
   } else
 #if CRNLIB_SUPPORT_SQUISH
       if ((p.m_compressor == cCRNDXTCompressorSquish) && ((m_format == cDXT1) || (m_format == cDXT1A) || (m_format == cDXT3) || (m_format == cDXT5) || (m_format == cDXT5A))) {
