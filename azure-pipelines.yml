@@ -27,14 +27,14 @@ stages:
               BUILD_ARCH: x64
               BUILD_CONFIG: MinSizeRel
               BUILD_SHARED: OFF
-            2019 x8 Shared Release:
+            2019 x86 Shared Release:
               VM_IMAGE: 'windows-2019'
               GENERATOR: Visual Studio 16 2019
               GENERATOR_ARCH: Win32
               BUILD_ARCH: x86
               BUILD_CONFIG: MinSizeRel
               BUILD_SHARED: ON
-            2019 x8 Static Release:
+            2019 x86 Static Release:
               VM_IMAGE: 'windows-2019'
               GENERATOR: Visual Studio 16 2019
               GENERATOR_ARCH: Win32
@@ -69,8 +69,14 @@ stages:
         displayName: Linux
         strategy:
           matrix:
-            x86_64:
+            x86_64 Shared Release:
               ARCH: x64
+              BUILD_CONFIG: MinSizeRel
+              BUILD_SHARED: ON
+            x86_64 Static Release:
+              ARCH: x64
+              BUILD_CONFIG: MinSizeRel
+              BUILD_SHARED: OFF
         pool:
           vmImage: 'ubuntu-latest'
         steps:
@@ -82,42 +88,52 @@ stages:
           - task: CMake@1
             displayName: Configure
             inputs:
-              cmakeArgs: -G Ninja -S $(Build.SourcesDirectory) -B . -DCMAKE_BUILD_TYPE=MinSizeRel -DCRN_BUILD_EXAMPLES=OFF
-                -DCRN_BUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$(Build.ArtifactStagingDirectory)
+              cmakeArgs: -G Ninja -S $(Build.SourcesDirectory) -B . -DCMAKE_BUILD_TYPE=$(BUILD_CONFIG) -DCRN_BUILD_EXAMPLES=OFF
+                -DCRN_BUILD_SHARED_LIBS=$(BUILD_SHARED) -DCMAKE_INSTALL_PREFIX=$(Build.ArtifactStagingDirectory)
 
           - task: CMake@1
             displayName: Build
             inputs:
-              cmakeArgs: --build . --config MinSizeRel
+              cmakeArgs: --build . --config $(BUILD_CONFIG)
 
           - task: CMake@1
             displayName: Install
             inputs:
-              cmakeArgs: --install . --config MinSizeRel
+              cmakeArgs: --install . --config $(BUILD_CONFIG)
 
           - publish: $(Build.ArtifactStagingDirectory)
-            artifact: Linux $(ARCH)
+            artifact: $(System.JobDisplayName)
 
       - job: build_macos
         displayName: macOS
+        strategy:
+          matrix:
+            x86_64 Shared Release:
+              ARCH: x64
+              BUILD_CONFIG: MinSizeRel
+              BUILD_SHARED: ON
+            x86_64 Static Release:
+              ARCH: x64
+              BUILD_CONFIG: MinSizeRel
+              BUILD_SHARED: OFF
         pool:
           vmImage: 'macOS-latest'
         steps:
           - task: CMake@1
             displayName: Configure
             inputs:
-              cmakeArgs: -G Xcode -S $(Build.SourcesDirectory) -B . -DCMAKE_BUILD_TYPE=MinSizeRel -DCRN_BUILD_EXAMPLES=OFF
-                -DCRN_BUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$(Build.ArtifactStagingDirectory)
+              cmakeArgs: -G Xcode -S $(Build.SourcesDirectory) -B . -DCMAKE_BUILD_TYPE=$(BUILD_CONFIG) -DCRN_BUILD_EXAMPLES=OFF
+                -DCRN_BUILD_SHARED_LIBS=$(BUILD_SHARED) -DCMAKE_INSTALL_PREFIX=$(Build.ArtifactStagingDirectory)
 
           - task: CMake@1
             displayName: Build
             inputs:
-              cmakeArgs: --build . --config MinSizeRel
+              cmakeArgs: --build . --config $(BUILD_CONFIG)
 
           - task: CMake@1
             displayName: Install
             inputs:
-              cmakeArgs: --install . --config MinSizeRel
+              cmakeArgs: --install . --config $(BUILD_CONFIG)
 
           - publish: $(Build.ArtifactStagingDirectory)
-            artifact: macOS x86_64
+            artifact: $(System.JobDisplayName)
