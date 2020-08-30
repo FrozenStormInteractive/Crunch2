@@ -9,7 +9,7 @@ stages:
   - stage: build
     displayName: Build
     jobs:
-      - job: build_windows
+      - job: windows
         displayName: Windows
         strategy:
           matrix:
@@ -65,7 +65,7 @@ stages:
           - publish: $(Build.ArtifactStagingDirectory)
             artifact: $(System.JobDisplayName)
 
-      - job: build_linux
+      - job: linux
         displayName: Linux
         strategy:
           matrix:
@@ -104,7 +104,7 @@ stages:
           - publish: $(Build.ArtifactStagingDirectory)
             artifact: $(System.JobDisplayName)
 
-      - job: build_macos
+      - job: macos
         displayName: macOS
         strategy:
           matrix:
