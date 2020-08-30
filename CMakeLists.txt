@@ -12,5 +12,6 @@ add_subdirectory(crnlib)
 add_subdirectory(crunch)
 
 if (CRN_BUILD_EXAMPLES)
+    add_subdirectory(3rdparty/stb)
 	add_subdirectory(examples)
 endif(CRN_BUILD_EXAMPLES)

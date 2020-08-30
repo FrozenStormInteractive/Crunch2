@@ -19,7 +19,11 @@
 #pragma warning(disable : 4244)  // conversion from 'int' to 'uint8', possible loss of data
 #pragma warning(disable : 4100)  // unreferenced formal parameter
 #endif
+
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 // windows.h is only needed here for GetSystemInfo().
 #define WIN32_LEAN_AND_MEAN
@@ -264,7 +268,7 @@ int main(int argc, char* argv[]) {
         enable_dxt1a = true;
         fmt = cCRNFmtDXT1;
       } else {
-        uint f;
+        unsigned int f;
         for (f = 0; f < cCRNFmtTotal; f++) {
           if (!_stricmp(argv[i], crn_get_format_string(static_cast<crn_format>(f)))) {
             fmt = static_cast<crn_format>(f);

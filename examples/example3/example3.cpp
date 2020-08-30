@@ -20,11 +20,15 @@
 #pragma warning(disable : 4100)  // unreferenced formal parameter
 #pragma warning(disable : 4127)  // conditional expression is constant
 #endif
+
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 using namespace crnlib;
 
-const uint cDXTBlockSize = 4;
+const unsigned int cDXTBlockSize = 4;
 
 static int print_usage() {
   printf("Description: Simple .DDS DXTn block compression using crnlib.\n");
@@ -88,7 +92,7 @@ int main(int argc, char* argv[]) {
       if (++i >= argc)
         return error("Expected pixel format!");
 
-      uint f;
+      unsigned int f;
       for (f = 0; f < cCRNFmtTotal; f++) {
         crn_format actual_fmt = crn_get_fundamental_dxt_format(static_cast<crn_format>(f));
         if (!_stricmp(argv[i], crn_get_format_string(actual_fmt))) {
@@ -102,7 +106,7 @@ int main(int argc, char* argv[]) {
       if (++i >= argc)
         return error("Expected DXTn quality!\n");
 
-      uint q;
+      unsigned int q;
       for (q = 0; q < cCRNDXTQualityTotal; q++) {
         if (!_stricmp(argv[i], crn_get_dxt_quality_string(static_cast<crn_dxt_quality>(q)))) {
           dxt_quality = static_cast<crn_dxt_quality>(q);
@@ -158,10 +162,10 @@ int main(int argc, char* argv[]) {
 
   printf("Source Dimensions: %ux%u, Actual Components: %u\n", width, height, actual_comps);
 
-  const uint num_blocks_x = (width + cDXTBlockSize - 1) / cDXTBlockSize;
-  const uint num_blocks_y = (height + cDXTBlockSize - 1) / cDXTBlockSize;
-  const uint bytes_per_block = crn_get_bytes_per_dxt_block(fmt);
-  const uint total_compressed_size = num_blocks_x * num_blocks_y * bytes_per_block;
+  const unsigned int num_blocks_x = (width + cDXTBlockSize - 1) / cDXTBlockSize;
+  const unsigned int num_blocks_y = (height + cDXTBlockSize - 1) / cDXTBlockSize;
+  const unsigned int bytes_per_block = crn_get_bytes_per_dxt_block(fmt);
+  const unsigned int total_compressed_size = num_blocks_x * num_blocks_y * bytes_per_block;
 
   printf("Block Dimensions: %ux%u, BytesPerBlock: %u, Total Compressed Size: %u\n", num_blocks_x, num_blocks_y, bytes_per_block, total_compressed_size);
 
@@ -189,9 +193,9 @@ int main(int argc, char* argv[]) {
       // Exact block from image, clamping at the sides of non-divisible by 4 images to avoid artifacts.
       crn_uint32* pDst_pixels = pixels;
       for (int y = 0; y < cDXTBlockSize; y++) {
-        const uint actual_y = min(height - 1U, (block_y * cDXTBlockSize) + y);
+        const unsigned int actual_y = min(height - 1U, (block_y * cDXTBlockSize) + y);
         for (int x = 0; x < cDXTBlockSize; x++) {
-          const uint actual_x = min(width - 1U, (block_x * cDXTBlockSize) + x);
+          const unsigned int actual_x = min(width - 1U, (block_x * cDXTBlockSize) + x);
           *pDst_pixels++ = pSrc_image[actual_x + actual_y * width];
         }
       }
@@ -243,7 +247,7 @@ int main(int argc, char* argv[]) {
   dds_desc.ddsCaps.dwCaps = DDSCAPS_TEXTURE;
 
   // Set pitch/linearsize field (some DDS readers require this field to be non-zero).
-  uint bits_per_pixel = crn_get_format_bits_per_texel(fmt);
+  unsigned int bits_per_pixel = crn_get_format_bits_per_texel(fmt);
   dds_desc.lPitch = (((dds_desc.dwWidth + 3) & ~3) * ((dds_desc.dwHeight + 3) & ~3) * bits_per_pixel) >> 3;
   dds_desc.dwFlags |= DDSD_LINEARSIZE;
 
