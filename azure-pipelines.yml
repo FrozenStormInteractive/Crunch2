@@ -27,7 +27,7 @@ stages:
           - task: CMake@1
             displayName: Configure
             inputs:
-              cmakeArgs: -G "Visual Studio 16 2019" -A $(GENERATOR_ARCH) -S $(Build.SourcesDirectory) -B . -DCMAKE_BUILD_TYPE=MinSizeRel
+              cmakeArgs: -G "Visual Studio 16 2019" -A $(GENERATOR_ARCH) -S . -B . -DCMAKE_BUILD_TYPE=MinSizeRel
                 -DCRN_BUILD_EXAMPLES=OFF -DCRN_BUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$(Build.ArtifactStagingDirectory)
 
           - task: CMake@1
@@ -53,6 +53,9 @@ stages:
           vmImage: 'ubuntu-latest'
         steps:
           - checkout: self
+
+          - bash: sudo apt-get update -yqq && sudo apt install -y ninja-build
+            displayName: Install Ninja
 
           - task: CMake@1
             displayName: Configure
@@ -81,7 +84,7 @@ stages:
           - task: CMake@1
             displayName: Configure
             inputs:
-              cmakeArgs: -G XCode -S . -B . -DCMAKE_BUILD_TYPE=MinSizeRel -DCRN_BUILD_EXAMPLES=OFF
+              cmakeArgs: -G Xcode -S . -B . -DCMAKE_BUILD_TYPE=MinSizeRel -DCRN_BUILD_EXAMPLES=OFF
                 -DCRN_BUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$(Build.ArtifactStagingDirectory)
 
           - task: CMake@1
