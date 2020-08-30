@@ -11,7 +11,7 @@
   <a href="https://github.com/FrozenStormInteractive/crunch/pulls"><img src="https://img.shields.io/github/issues-pr/FrozenStormInteractive/crunch"></a>
   <a href="https://github.com/FrozenStormInteractive/crunch/graphs/contributors"><img src="https://img.shields.io/github/contributors-anon/FrozenStormInteractive/crunch.svg"></a>
   <a href="https://github.com/FrozenStormInteractive/crunch/issues"><img src="https://img.shields.io/badge/contributions-welcome-orange.svg"></a>
-  <a href="License.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="License.md"><img src="https://img.shields.io/badge/license-Zlib-blue.svg"></a>
 </p>
 
 ## Table of Contents
@@ -21,7 +21,7 @@
 * [Building](#building)
 * [Usage](#usage)
 * [Examples](#examples)
-* [Known Issues / Bugs](#known-issuesbugs)
+* [Known Issues / Bugs](#known-issues--bugs)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -320,6 +320,11 @@ hasn't been tuned for max. quality yet.
 * Clustered (or rate distortion optimized) DXTc compression is only
 supported when writing to .DDS, not .KTX. Also, only plain block by block
 compression is supported when writing to ETC1, and .CRN does not support ETC1.
+
+
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
 
 ## License
 
