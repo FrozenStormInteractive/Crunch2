@@ -29,8 +29,8 @@
 
 | Branch  | Windows | Linux | macOS |
 |:-------:|:-------:|:-----:|:-----:|
-| Master | ![Master branch build status on Windows][Build Status Master Windows] | ![Master branch build status on Linux][Build Status Master Linux] | ![Master branch build status on macOS][Build Status Master macOS] |
-| Develop | ![Develop branch build status on Windows][Build Status Develop Windows] | ![Develop branch build status on Linux][Build Status Develop Linux] | ![Develop branch build status on macOS][Build Status Develop macOS] |
+| Master | [![Master branch build status on Windows][Build Status Master Windows]][Latest Master Build] | [![Master branch build status on Linux][Build Status Master Linux]][Latest Master Build] | [![Master branch build status on macOS][Build Status Master macOS]][Latest Master Build] |
+| Develop | [![Develop branch build status on Windows][Build Status Develop Windows]][Latest Develop Build] | [![Develop branch build status on Linux][Build Status Develop Linux]][Latest Develop Build] | [![Develop branch build status on macOS][Build Status Develop macOS]][Latest Develop Build] |
 
 ## Overview
 
@@ -343,3 +343,6 @@ written by Igor Pavlov (LZMA), RYG (crn_ryg_dxt*), and Sean Barrett (stb_image.c
 [Build Status Develop Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=Windows "Build Status Develop Windows"
 [Build Status Develop Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=Linux "Build Status Develop Linux"
 [Build Status Develop macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=MacOS "Build Status Develop macOS"
+
+[Latest Master Build]: https://dev.azure.com/FrozenStormInteractive/Crunch/_build/latest?definitionId=7&branchName=master
+[Latest Develop Build]: https://dev.azure.com/FrozenStormInteractive/Crunch/_build/latest?definitionId=7&branchName=develop
