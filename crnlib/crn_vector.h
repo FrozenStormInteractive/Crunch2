@@ -2,8 +2,10 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
-struct elemental_vector {
+struct CRN_EXPORT elemental_vector {
   void* m_p;
   uint m_size;
   uint m_capacity;

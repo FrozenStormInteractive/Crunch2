@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../inc/crnlib.h"
+#include "crn_export.h"
 
 namespace crnlib {
 class mipmapped_texture;
@@ -24,8 +25,8 @@ class itexture_comp {
   virtual crnlib::vector<uint8>& get_comp_data() = 0;
 };
 
-bool create_compressed_texture(const crn_comp_params& params, crnlib::vector<uint8>& comp_data, uint32* pActual_quality_level, float* pActual_bitrate);
-bool create_texture_mipmaps(mipmapped_texture& work_tex, const crn_comp_params& params, const crn_mipmap_params& mipmap_params, bool generate_mipmaps);
-bool create_compressed_texture(const crn_comp_params& params, const crn_mipmap_params& mipmap_params, crnlib::vector<uint8>& comp_data, uint32* pActual_quality_level, float* pActual_bitrate);
+CRN_EXPORT bool create_compressed_texture(const crn_comp_params& params, crnlib::vector<uint8>& comp_data, uint32* pActual_quality_level, float* pActual_bitrate);
+CRN_EXPORT bool create_texture_mipmaps(mipmapped_texture& work_tex, const crn_comp_params& params, const crn_mipmap_params& mipmap_params, bool generate_mipmaps);
+CRN_EXPORT bool create_compressed_texture(const crn_comp_params& params, const crn_mipmap_params& mipmap_params, crnlib::vector<uint8>& comp_data, uint32* pActual_quality_level, float* pActual_bitrate);
 
 }  // namespace crnlib

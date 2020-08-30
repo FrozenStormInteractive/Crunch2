@@ -2,6 +2,7 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 #include "crn_prefix_coding.h"
+#include "crn_export.h"
 
 namespace crnlib {
 class symbol_codec;
@@ -17,7 +18,7 @@ const uint cSymbolCodecArithProbMoveBits = 5;
 const uint cSymbolCodecArithProbMulBits = 8;
 const uint cSymbolCodecArithProbMulScale = 1 << cSymbolCodecArithProbMulBits;
 
-class symbol_histogram {
+class CRN_EXPORT symbol_histogram {
  public:
   inline symbol_histogram(uint size = 0)
       : m_hist(size) {}
@@ -52,7 +53,7 @@ class symbol_histogram {
   crnlib::vector<uint> m_hist;
 };
 
-class adaptive_huffman_data_model {
+class CRN_EXPORT adaptive_huffman_data_model {
  public:
   adaptive_huffman_data_model(bool encoding = true, uint total_syms = 0);
   adaptive_huffman_data_model(const adaptive_huffman_data_model& other);
@@ -93,7 +94,7 @@ class adaptive_huffman_data_model {
   friend class symbol_codec;
 };
 
-class static_huffman_data_model {
+class CRN_EXPORT static_huffman_data_model {
  public:
   static_huffman_data_model();
   static_huffman_data_model(const static_huffman_data_model& other);
@@ -129,7 +130,7 @@ class static_huffman_data_model {
   friend class symbol_codec;
 };
 
-class adaptive_bit_model {
+class CRN_EXPORT adaptive_bit_model {
  public:
   adaptive_bit_model();
   adaptive_bit_model(float prob0);
@@ -150,7 +151,7 @@ class adaptive_bit_model {
   friend class adaptive_arith_data_model;
 };
 
-class adaptive_arith_data_model {
+class CRN_EXPORT adaptive_arith_data_model {
  public:
   adaptive_arith_data_model(bool encoding = true, uint total_syms = 0);
   adaptive_arith_data_model(const adaptive_arith_data_model& other);
@@ -180,7 +181,7 @@ class adaptive_arith_data_model {
 #define CRNLIB_SYMBOL_CODEC_USE_64_BIT_BUFFER 0
 #endif
 
-class symbol_codec {
+class CRN_EXPORT symbol_codec {
  public:
   symbol_codec();
 

@@ -7,6 +7,7 @@
 #include "crn_hash.h"
 #include "crn_threaded_clusterizer.h"
 #include "crn_dxt_image.h"
+#include "crn_export.h"
 
 namespace crnlib {
 struct qdxt1_params {
@@ -64,7 +65,7 @@ struct qdxt1_params {
   uint m_progress_range;
 };
 
-class qdxt1 {
+class CRN_EXPORT qdxt1 {
   CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(qdxt1);
 
  public:

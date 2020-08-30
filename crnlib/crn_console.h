@@ -2,6 +2,7 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 #include "crn_dynamic_string.h"
+#include "crn_export.h"
 
 #ifdef WIN32
 #include <tchar.h>
@@ -28,38 +29,38 @@ typedef bool (*console_output_func)(eConsoleMessageType type, const char* pMsg, 
 
 class console {
  public:
-  static void init();
-  static void deinit();
+     CRN_EXPORT static void init();
+     CRN_EXPORT static void deinit();
 
-  static bool is_initialized() { return m_pMutex != NULL; }
+     static bool is_initialized() { return m_pMutex != NULL; }
 
-  static void set_default_category(eConsoleMessageType category);
-  static eConsoleMessageType get_default_category();
+     CRN_EXPORT static void set_default_category(eConsoleMessageType category);
+     CRN_EXPORT static eConsoleMessageType get_default_category();
 
-  static void add_console_output_func(console_output_func pFunc, void* pData);
-  static void remove_console_output_func(console_output_func pFunc);
+     CRN_EXPORT static void add_console_output_func(console_output_func pFunc, void* pData);
+     CRN_EXPORT static void remove_console_output_func(console_output_func pFunc);
 
-  static void printf(const char* p, ...);
+     CRN_EXPORT static void printf(const char* p, ...);
 
-  static void vprintf(eConsoleMessageType type, const char* p, va_list args);
-  static void printf(eConsoleMessageType type, const char* p, ...);
+     CRN_EXPORT static void vprintf(eConsoleMessageType type, const char* p, va_list args);
+     CRN_EXPORT static void printf(eConsoleMessageType type, const char* p, ...);
 
-  static void cons(const char* p, ...);
-  static void debug(const char* p, ...);
-  static void progress(const char* p, ...);
-  static void info(const char* p, ...);
-  static void message(const char* p, ...);
-  static void warning(const char* p, ...);
-  static void error(const char* p, ...);
+     CRN_EXPORT static void cons(const char* p, ...);
+     CRN_EXPORT static void debug(const char* p, ...);
+     CRN_EXPORT static void progress(const char* p, ...);
+     CRN_EXPORT static void info(const char* p, ...);
+     CRN_EXPORT static void message(const char* p, ...);
+     CRN_EXPORT static void warning(const char* p, ...);
+     CRN_EXPORT static void error(const char* p, ...);
 
   // FIXME: All console state is currently global!
-  static void disable_prefixes();
-  static void enable_prefixes();
-  static bool get_prefixes() { return m_prefixes; }
-  static bool get_at_beginning_of_line() { return m_at_beginning_of_line; }
+     CRN_EXPORT static void disable_prefixes();
+     CRN_EXPORT static void enable_prefixes();
+     static bool get_prefixes() { return m_prefixes; }
+     static bool get_at_beginning_of_line() { return m_at_beginning_of_line; }
 
-  static void disable_crlf();
-  static void enable_crlf();
+     CRN_EXPORT static void disable_crlf();
+  CRN_EXPORT static void enable_crlf();
   static bool get_crlf() { return m_crlf; }
 
   static void disable_output() { m_output_disabled = true; }
@@ -81,17 +82,17 @@ class console {
     console_output_func m_func;
     void* m_pData;
   };
-  static crnlib::vector<console_func> m_output_funcs;
+  CRN_EXPORT static crnlib::vector<console_func> m_output_funcs;
 
-  static bool m_crlf, m_prefixes, m_output_disabled;
+  CRN_EXPORT static bool m_crlf, m_prefixes, m_output_disabled;
 
-  static data_stream* m_pLog_stream;
+  CRN_EXPORT static data_stream* m_pLog_stream;
 
-  static mutex* m_pMutex;
+  CRN_EXPORT static mutex* m_pMutex;
 
-  static uint m_num_messages[cCMTTotal];
+  CRN_EXPORT static uint m_num_messages[cCMTTotal];
 
-  static bool m_at_beginning_of_line;
+  CRN_EXPORT static bool m_at_beginning_of_line;
 };
 
 #if defined(WIN32)

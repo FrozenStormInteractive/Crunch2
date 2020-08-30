@@ -2,8 +2,10 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
-class kiss99 {
+class CRN_EXPORT kiss99 {
  public:
   kiss99();
 
@@ -18,7 +20,7 @@ class kiss99 {
   uint32 c;
 };
 
-class well512 {
+class CRN_EXPORT well512 {
  public:
   well512();
 
@@ -34,7 +36,7 @@ class well512 {
   uint32 m_index;
 };
 
-class ranctx {
+class CRN_EXPORT ranctx {
  public:
   ranctx() { seed(0xDE149737); }
 
@@ -49,7 +51,7 @@ class ranctx {
   uint32 d;
 };
 
-class random {
+class CRN_EXPORT random {
  public:
   random();
   random(uint32 i);
@@ -87,7 +89,7 @@ class random {
 };
 
 // Simpler, minimal state PRNG
-class fast_random {
+class CRN_EXPORT fast_random {
  public:
   fast_random();
   fast_random(uint32 i);

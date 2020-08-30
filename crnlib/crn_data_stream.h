@@ -2,6 +2,8 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
 enum data_stream_attribs {
   cDataStreamReadable = 1,
@@ -12,7 +14,7 @@ enum data_stream_attribs {
 const int64 DATA_STREAM_SIZE_UNKNOWN = cINT64_MAX;
 const int64 DATA_STREAM_SIZE_INFINITE = cUINT64_MAX;
 
-class data_stream {
+class CRN_EXPORT data_stream {
   data_stream(const data_stream&);
   data_stream& operator=(const data_stream&);
 

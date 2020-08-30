@@ -2,6 +2,8 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 #ifndef CRNLIB_MIN_ALLOC_ALIGNMENT
 #define CRNLIB_MIN_ALLOC_ALIGNMENT sizeof(size_t) * 2
 #endif
@@ -13,14 +15,14 @@ const uint64 CRNLIB_MAX_POSSIBLE_BLOCK_SIZE = 0x400000000ULL;
 const uint32 CRNLIB_MAX_POSSIBLE_BLOCK_SIZE = 0x7FFF0000U;
 #endif
 
-void* crnlib_malloc(size_t size);
-void* crnlib_malloc(size_t size, size_t* pActual_size);
-void* crnlib_realloc(void* p, size_t size, size_t* pActual_size = NULL, bool movable = true);
-void* crnlib_calloc(size_t count, size_t size, size_t* pActual_size = NULL);
-void crnlib_free(void* p);
-size_t crnlib_msize(void* p);
-void crnlib_print_mem_stats();
-void crnlib_mem_error(const char* p_msg);
+CRN_EXPORT void* crnlib_malloc(size_t size);
+CRN_EXPORT void* crnlib_malloc(size_t size, size_t* pActual_size);
+CRN_EXPORT void* crnlib_realloc(void* p, size_t size, size_t* pActual_size = NULL, bool movable = true);
+CRN_EXPORT void* crnlib_calloc(size_t count, size_t size, size_t* pActual_size = NULL);
+CRN_EXPORT void crnlib_free(void* p);
+CRN_EXPORT size_t crnlib_msize(void* p);
+CRN_EXPORT void crnlib_print_mem_stats();
+CRN_EXPORT void crnlib_mem_error(const char* p_msg);
 
 // omfg - there must be a better way
 

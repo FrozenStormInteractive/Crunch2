@@ -8,6 +8,7 @@
 #include "crn_sparse_bit_array.h"
 #include "crn_hash_map.h"
 #include <map>
+#include "crn_export.h"
 
 #define CRNLIB_DXT_ALT_ROUNDING 1
 
@@ -56,29 +57,29 @@ const float cDXT5MaxLinearValue = 7.0f;
 const float cDXT5InvMaxLinearValue = 1.0f / 7.0f;
 
 // Converts DXT1 raw color selector index to a linear value.
-extern const uint8 g_dxt1_to_linear[cDXT1SelectorValues];
+CRN_EXPORT extern const uint8 g_dxt1_to_linear[cDXT1SelectorValues];
 
 // Converts DXT5 raw alpha selector index to a linear value.
-extern const uint8 g_dxt5_to_linear[cDXT5SelectorValues];
+CRN_EXPORT extern const uint8 g_dxt5_to_linear[cDXT5SelectorValues];
 
 // Converts DXT1 linear color selector index to a raw value (inverse of g_dxt1_to_linear).
-extern const uint8 g_dxt1_from_linear[cDXT1SelectorValues];
+CRN_EXPORT extern const uint8 g_dxt1_from_linear[cDXT1SelectorValues];
 
 // Converts DXT5 linear alpha selector index to a raw value (inverse of g_dxt5_to_linear).
-extern const uint8 g_dxt5_from_linear[cDXT5SelectorValues];
+CRN_EXPORT extern const uint8 g_dxt5_from_linear[cDXT5SelectorValues];
 
-extern const uint8 g_dxt5_alpha6_to_linear[cDXT5SelectorValues];
+CRN_EXPORT extern const uint8 g_dxt5_alpha6_to_linear[cDXT5SelectorValues];
 
-extern const uint8 g_six_alpha_invert_table[cDXT5SelectorValues];
-extern const uint8 g_eight_alpha_invert_table[cDXT5SelectorValues];
+CRN_EXPORT extern const uint8 g_six_alpha_invert_table[cDXT5SelectorValues];
+CRN_EXPORT extern const uint8 g_eight_alpha_invert_table[cDXT5SelectorValues];
 
-const char* get_dxt_format_string(dxt_format fmt);
-uint get_dxt_format_bits_per_pixel(dxt_format fmt);
-bool get_dxt_format_has_alpha(dxt_format fmt);
+CRN_EXPORT const char* get_dxt_format_string(dxt_format fmt);
+CRN_EXPORT uint get_dxt_format_bits_per_pixel(dxt_format fmt);
+CRN_EXPORT bool get_dxt_format_has_alpha(dxt_format fmt);
 
-const char* get_dxt_quality_string(crn_dxt_quality q);
+CRN_EXPORT const char* get_dxt_quality_string(crn_dxt_quality q);
 
-const char* get_dxt_compressor_name(crn_dxt_compressor_type c);
+CRN_EXPORT const char* get_dxt_compressor_name(crn_dxt_compressor_type c);
 
 struct dxt1_block {
   uint8 m_low_color[2];

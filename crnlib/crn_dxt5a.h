@@ -1,10 +1,12 @@
 // File: crn_dxt5a.h
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
+
 #include "crn_dxt.h"
+#include "crn_export.h"
 
 namespace crnlib {
-class dxt5_endpoint_optimizer {
+class CRN_EXPORT dxt5_endpoint_optimizer {
  public:
   dxt5_endpoint_optimizer();
 

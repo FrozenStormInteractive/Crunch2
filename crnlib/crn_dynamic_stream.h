@@ -3,8 +3,10 @@
 #pragma once
 #include "crn_data_stream.h"
 
+#include "crn_export.h"
+
 namespace crnlib {
-class dynamic_stream : public data_stream {
+class CRN_EXPORT dynamic_stream : public data_stream {
  public:
   dynamic_stream(uint initial_size, const char* pName = "dynamic_stream", uint attribs = cDataStreamSeekable | cDataStreamWritable | cDataStreamReadable)
       : data_stream(pName, attribs),

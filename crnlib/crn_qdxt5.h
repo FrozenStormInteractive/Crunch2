@@ -7,6 +7,7 @@
 #include "crn_threaded_clusterizer.h"
 #include "crn_dxt.h"
 #include "crn_dxt_image.h"
+#include "crn_export.h"
 
 namespace crnlib {
 struct qdxt5_params {
@@ -65,7 +66,7 @@ struct qdxt5_params {
   bool m_use_both_block_types;
 };
 
-class qdxt5 {
+class CRN_EXPORT qdxt5 {
   CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(qdxt5);
 
  public:

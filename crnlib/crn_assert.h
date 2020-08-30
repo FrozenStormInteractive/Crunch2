@@ -2,11 +2,13 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
-const unsigned int CRNLIB_FAIL_EXCEPTION_CODE = 256U;
-void crnlib_enable_fail_exceptions(bool enabled);
+#include "crn_export.h"
 
-void crnlib_assert(const char* pExp, const char* pFile, unsigned line);
-void crnlib_fail(const char* pExp, const char* pFile, unsigned line);
+const unsigned int CRNLIB_FAIL_EXCEPTION_CODE = 256U;
+CRN_EXPORT void crnlib_enable_fail_exceptions(bool enabled);
+
+CRN_EXPORT void crnlib_assert(const char* pExp, const char* pFile, unsigned line);
+CRN_EXPORT void crnlib_fail(const char* pExp, const char* pFile, unsigned line);
 
 #ifdef NDEBUG
 #define CRNLIB_ASSERT(x) ((void)0)
@@ -26,8 +28,8 @@ void crnlib_fail(const char* pExp, const char* pFile, unsigned line);
 #define CRNLIB_ASSERT_OPEN_RANGE(x, l, h) CRNLIB_ASSERT((x >= l) && (x < h))
 #define CRNLIB_ASSERT_CLOSED_RANGE(x, l, h) CRNLIB_ASSERT((x >= l) && (x <= h))
 
-void trace(const char* pFmt, va_list args);
-void trace(const char* pFmt, ...);
+CRN_EXPORT void trace(const char* pFmt, va_list args);
+CRN_EXPORT void trace(const char* pFmt, ...);
 
 // Borrowed from boost libraries.
 template <bool x>

@@ -2,13 +2,13 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
-bool crnlib_is_debugger_present(void);
-void crnlib_debug_break(void);
-void crnlib_output_debug_string(const char* p);
+CRN_EXPORT bool crnlib_is_debugger_present(void);
+CRN_EXPORT void crnlib_debug_break(void);
+CRN_EXPORT void crnlib_output_debug_string(const char* p);
 
 // actually in crnlib_assert.cpp
-void crnlib_assert(const char* pExp, const char* pFile, unsigned line);
-void crnlib_fail(const char* pExp, const char* pFile, unsigned line);
+CRN_EXPORT void crnlib_assert(const char* pExp, const char* pFile, unsigned line);
+CRN_EXPORT void crnlib_fail(const char* pExp, const char* pFile, unsigned line);
 
 #if CRNLIB_LITTLE_ENDIAN_CPU
 const bool c_crnlib_little_endian_platform = true;

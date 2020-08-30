@@ -3,6 +3,7 @@
 
 // Include crnlib.h (only to bring in some basic CRN-related types).
 #include "crnlib.h"
+#include "crn_export.h"
 
 #define CRND_LIB_VERSION 104
 #define CRND_VERSION_STRING "01.04"
@@ -53,7 +54,7 @@ typedef size_t (*crnd_msize_func)(void* p, void* pUser_data);
 // crnd_set_memory_callbacks() - Use to override the crnd library's memory allocation functions.
 // If any input parameters are NULL, the memory callback functions are reset to the default functions.
 // The default functions call malloc(), free(),  _msize(), _expand(), etc.
-void crnd_set_memory_callbacks(crnd_realloc_func pRealloc, crnd_msize_func pMSize, void* pUser_data);
+CRN_EXPORT void crnd_set_memory_callbacks(crnd_realloc_func pRealloc, crnd_msize_func pMSize, void* pUser_data);
 
 struct crn_file_info {
   inline crn_file_info()
@@ -102,29 +103,29 @@ struct crn_level_info {
 };
 
 // Returns the FOURCC format code corresponding to the specified CRN format.
-uint32 crnd_crn_format_to_fourcc(crn_format fmt);
+CRN_EXPORT uint32 crnd_crn_format_to_fourcc(crn_format fmt);
 
 // Returns the fundamental GPU format given a potentially swizzled DXT5 crn_format.
-crn_format crnd_get_fundamental_dxt_format(crn_format fmt);
+CRN_EXPORT crn_format crnd_get_fundamental_dxt_format(crn_format fmt);
 
 // Returns the size of the crn_format in bits/texel (either 4 or 8).
-uint32 crnd_get_crn_format_bits_per_texel(crn_format fmt);
+CRN_EXPORT uint32 crnd_get_crn_format_bits_per_texel(crn_format fmt);
 
 // Returns the number of bytes per DXTn block (8 or 16).
-uint32 crnd_get_bytes_per_dxt_block(crn_format fmt);
+CRN_EXPORT uint32 crnd_get_bytes_per_dxt_block(crn_format fmt);
 
 // Validates the entire file by checking the header and data CRC's.
 // This is not something you want to be doing much!
 // The crn_file_info.m_struct_size field must be set before calling this function.
-bool crnd_validate_file(const void* pData, uint32 data_size, crn_file_info* pFile_info);
+CRN_EXPORT bool crnd_validate_file(const void* pData, uint32 data_size, crn_file_info* pFile_info);
 
 // Retrieves texture information from the CRN file.
 // The crn_texture_info.m_struct_size field must be set before calling this function.
-bool crnd_get_texture_info(const void* pData, uint32 data_size, crn_texture_info* pTexture_info);
+CRN_EXPORT bool crnd_get_texture_info(const void* pData, uint32 data_size, crn_texture_info* pTexture_info);
 
 // Retrieves mipmap level specific information from the CRN file.
 // The crn_level_info.m_struct_size field must be set before calling this function.
-bool crnd_get_level_info(const void* pData, uint32 data_size, uint32 level_index, crn_level_info* pLevel_info);
+CRN_EXPORT bool crnd_get_level_info(const void* pData, uint32 data_size, uint32 level_index, crn_level_info* pLevel_info);
 
 // Transcode/unpack context handle.
 typedef void* crnd_unpack_context;
@@ -137,11 +138,11 @@ typedef void* crnd_unpack_context;
 // pData must point to a buffer holding all of the compressed .CRN file data.
 // This buffer must be stable until crnd_unpack_end() is called.
 // Returns NULL if out of memory, or if any of the input parameters are invalid.
-crnd_unpack_context crnd_unpack_begin(const void* pData, uint32 data_size);
+CRN_EXPORT crnd_unpack_context crnd_unpack_begin(const void* pData, uint32 data_size);
 
 // Returns a pointer to the compressed .CRN data associated with a crnd_unpack_context.
 // Returns false if any of the input parameters are invalid.
-bool crnd_get_data(crnd_unpack_context pContext, const void** ppData, uint32* pData_size);
+CRN_EXPORT bool crnd_get_data(crnd_unpack_context pContext, const void** ppData, uint32* pData_size);
 
 // crnd_unpack_level() - Transcodes the specified mipmap level to a destination buffer in cached or write combined memory.
 // pContext - Context created by a call to crnd_unpack_begin().
@@ -151,7 +152,7 @@ bool crnd_get_data(crnd_unpack_context pContext, const void** ppData, uint32* pD
 // level_index - mipmap level index, where 0 is the largest/first level.
 // Returns false if any of the input parameters, or the compressed stream, are invalid.
 // This function does not allocate any memory.
-bool crnd_unpack_level(
+CRN_EXPORT bool crnd_unpack_level(
     crnd_unpack_context pContext,
     void** ppDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes,
     uint32 level_index);
@@ -159,7 +160,7 @@ bool crnd_unpack_level(
 // crnd_unpack_level_segmented() - Unpacks the specified mipmap level from a "segmented" CRN file.
 // See the crnd_create_segmented_file() API below.
 // Segmented files allow the user to control where the compressed mipmap data is stored.
-bool crnd_unpack_level_segmented(
+CRN_EXPORT bool crnd_unpack_level_segmented(
     crnd_unpack_context pContext,
     const void* pSrc, uint32 src_size_in_bytes,
     void** ppDst, uint32 dst_size_in_bytes, uint32 row_pitch_in_bytes,
@@ -168,7 +169,7 @@ bool crnd_unpack_level_segmented(
 // crnd_unpack_end() - Frees the decompress tables and unpacked palettes associated with the specified unpack context.
 // Returns false if the context is NULL, or if it points to an invalid context.
 // This function frees all memory associated with the context.
-bool crnd_unpack_end(crnd_unpack_context pContext);
+CRN_EXPORT bool crnd_unpack_end(crnd_unpack_context pContext);
 
 // The following API's allow the user to create "segmented" CRN files. A segmented file contains multiple pieces:
 // - Base data: Header + compression tables
@@ -176,15 +177,15 @@ bool crnd_unpack_end(crnd_unpack_context pContext);
 // This allows mipmap levels from multiple CRN files to be tightly packed together into single files.
 
 // Returns a pointer to the level's compressed data, and optionally returns the level's compressed data size if pSize is not NULL.
-const void* crnd_get_level_data(const void* pData, uint32 data_size, uint32 level_index, uint32* pSize);
+CRN_EXPORT const void* crnd_get_level_data(const void* pData, uint32 data_size, uint32 level_index, uint32* pSize);
 
 // Returns the compressed size of the texture's header and compression tables (but no levels).
-uint32 crnd_get_segmented_file_size(const void* pData, uint32 data_size);
+CRN_EXPORT uint32 crnd_get_segmented_file_size(const void* pData, uint32 data_size);
 
 // Creates a "segmented" CRN texture from a normal CRN texture. The new texture will be created at pBase_data, and will be crnd_get_base_data_size() bytes long.
 // base_data_size must be >= crnd_get_base_data_size().
 // The base data will contain the CRN header and compression tables, but no mipmap data.
-bool crnd_create_segmented_file(const void* pData, uint32 data_size, void* pBase_data, uint base_data_size);
+CRN_EXPORT bool crnd_create_segmented_file(const void* pData, uint32 data_size, void* pBase_data, uint base_data_size);
 
 }  // namespace crnd
 

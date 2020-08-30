@@ -2,6 +2,8 @@
 // RG: This is public domain code, originally derived from Graphics Gems 3, see: http://code.google.com/p/imageresampler/
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
 #define CRNLIB_RESAMPLER_DEBUG_OPS 0
 #define CRNLIB_RESAMPLER_DEFAULT_FILTER "lanczos4"
@@ -11,7 +13,7 @@ namespace crnlib {
 // float or double
 typedef float Resample_Real;
 
-class Resampler {
+class CRN_EXPORT Resampler {
  public:
   typedef Resample_Real Sample;
 

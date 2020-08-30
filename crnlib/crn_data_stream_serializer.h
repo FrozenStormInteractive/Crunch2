@@ -2,10 +2,11 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 #include "crn_data_stream.h"
+#include "crn_export.h"
 
 namespace crnlib {
 // Defaults to little endian mode.
-class data_stream_serializer {
+class CRN_EXPORT data_stream_serializer {
  public:
   data_stream_serializer()
       : m_pStream(NULL), m_little_endian(true) {}

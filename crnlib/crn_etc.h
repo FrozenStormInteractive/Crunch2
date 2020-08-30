@@ -3,6 +3,7 @@
 #pragma once
 #include "../inc/crnlib.h"
 #include "crn_dxt.h"
+#include "crn_export.h"
 
 namespace crnlib {
 enum etc_constants {
@@ -63,16 +64,16 @@ enum etc_constants {
   // 0   1   2   3   -4  -3  -2  -1
 };
 
-extern const int g_etc1_inten_tables[cETC1IntenModifierValues][cETC1SelectorValues];
-extern const uint8 g_etc1_to_selector_index[cETC1SelectorValues];
-extern const uint8 g_selector_index_to_etc1[cETC1SelectorValues];
+CRN_EXPORT extern const int g_etc1_inten_tables[cETC1IntenModifierValues][cETC1SelectorValues];
+CRN_EXPORT extern const uint8 g_etc1_to_selector_index[cETC1SelectorValues];
+CRN_EXPORT extern const uint8 g_selector_index_to_etc1[cETC1SelectorValues];
 
 struct etc1_coord2 {
   uint8 m_x, m_y;
 };
-extern const etc1_coord2 g_etc1_pixel_coords[2][2][8];  // [flipped][subblock][subblock_pixel]
+CRN_EXPORT extern const etc1_coord2 g_etc1_pixel_coords[2][2][8];  // [flipped][subblock][subblock_pixel]
 
-struct etc1_block {
+struct CRN_EXPORT etc1_block {
   // big endian uint64:
   // bit ofs:  56  48  40  32  24  16   8   0
   // byte ofs: b0, b1, b2, b3, b4, b5, b6, b7
@@ -302,7 +303,7 @@ struct etc1_block {
 CRNLIB_DEFINE_BITWISE_COPYABLE(etc1_block);
 
 // Returns false if the block is invalid (it will still be unpacked with clamping).
-bool unpack_etc1(const etc1_block& block, color_quad_u8* pDst, bool preserve_alpha = false);
+CRN_EXPORT bool unpack_etc1(const etc1_block& block, color_quad_u8* pDst, bool preserve_alpha = false);
 
 enum crn_etc_quality {
   cCRNETCQualityFast,
@@ -314,7 +315,7 @@ enum crn_etc_quality {
   cCRNETCQualityForceDWORD = 0xFFFFFFFF
 };
 
-struct crn_etc1_pack_params {
+struct CRN_EXPORT crn_etc1_pack_params {
   crn_etc_quality m_quality;
   bool m_perceptual;
   bool m_dithering;
@@ -330,7 +331,7 @@ struct crn_etc1_pack_params {
   }
 };
 
-struct etc1_solution_coordinates {
+struct CRN_EXPORT etc1_solution_coordinates {
   inline etc1_solution_coordinates()
       : m_unscaled_color(0, 0, 0, 0),
         m_inten_table(0),
@@ -403,7 +404,7 @@ struct etc1_solution_coordinates {
   bool m_color4;
 };
 
-class etc1_optimizer {
+class CRN_EXPORT etc1_optimizer {
   CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(etc1_optimizer);
 
  public:
@@ -531,13 +532,13 @@ class etc1_optimizer {
   bool evaluate_solution_fast(const etc1_solution_coordinates& coords, potential_solution& trial_solution, potential_solution* pBest_solution);
 };
 
-struct pack_etc1_block_context {
+struct CRN_EXPORT pack_etc1_block_context {
   etc1_optimizer m_optimizer;
 };
 
-void pack_etc1_block_init();
+CRN_EXPORT void pack_etc1_block_init();
 
-uint64 pack_etc1_block(etc1_block& block, const color_quad_u8* pSrc_pixels, crn_etc1_pack_params& pack_params, pack_etc1_block_context& context);
-uint64 pack_etc1s_block(etc1_block& block, const color_quad_u8* pSrc_pixels, crn_etc1_pack_params& pack_params);
+CRN_EXPORT uint64 pack_etc1_block(etc1_block& block, const color_quad_u8* pSrc_pixels, crn_etc1_pack_params& pack_params, pack_etc1_block_context& context);
+CRN_EXPORT uint64 pack_etc1s_block(etc1_block& block, const color_quad_u8* pSrc_pixels, crn_etc1_pack_params& pack_params);
 
 }  // namespace crnlib

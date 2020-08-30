@@ -14,6 +14,7 @@
 
 // Include crn_defs.h (only to bring in some basic CRN-related types and structures).
 #include "crn_defs.h"
+#include "crn_export.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -121,19 +122,19 @@ struct empty_type {};
 // File: crnd_platform.h
 namespace crnd {
 
-bool crnd_is_debugger_present();
-void crnd_debug_break();
-void crnd_output_debug_string(const char* p);
+    bool crnd_is_debugger_present();
+    void crnd_debug_break();
+    void crnd_output_debug_string(const char* p);
 
-// actually in crnd_assert.cpp
-void crnd_assert(const char* pExp, const char* pFile, unsigned line);
-void crnd_fail(const char* pExp, const char* pFile, unsigned line);
+    // actually in crnd_assert.cpp
+    CRN_EXPORT void crnd_assert(const char* pExp, const char* pFile, unsigned line);
+    CRN_EXPORT void crnd_fail(const char* pExp, const char* pFile, unsigned line);
 
 }  // namespace crnd
 
 // File: crnd_assert.h
 namespace crnd {
-void crnd_assert(const char* pExp, const char* pFile, unsigned line);
+    CRN_EXPORT void crnd_assert(const char* pExp, const char* pFile, unsigned line);
 
 // Define CRND_ASSERT if there is no user-supplied definition.
 // Note that if there is a user-supplied definition, it is used even if NDEBUG is defined.

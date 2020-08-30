@@ -7,12 +7,12 @@
 
 namespace crnlib {
 namespace pixel_format_helpers {
-uint get_num_formats();
-pixel_format get_pixel_format_by_index(uint index);
+    CRN_EXPORT uint get_num_formats();
+    CRN_EXPORT pixel_format get_pixel_format_by_index(uint index);
 
-const char* get_pixel_format_string(pixel_format fmt);
+    CRN_EXPORT const char* get_pixel_format_string(pixel_format fmt);
 
-const char* get_crn_format_string(crn_format fmt);
+    CRN_EXPORT const char* get_crn_format_string(crn_format fmt);
 
 inline bool is_grayscale(pixel_format fmt) {
   switch (fmt) {
@@ -341,11 +341,11 @@ enum component_flags {
   cDefaultCompFlags = cCompFlagRValid | cCompFlagGValid | cCompFlagBValid | cCompFlagAValid
 };
 
-component_flags get_component_flags(pixel_format fmt);
+CRN_EXPORT component_flags get_component_flags(pixel_format fmt);
 
-crn_format convert_pixel_format_to_best_crn_format(pixel_format crn_fmt);
+CRN_EXPORT crn_format convert_pixel_format_to_best_crn_format(pixel_format crn_fmt);
 
-pixel_format convert_crn_format_to_pixel_format(crn_format fmt);
+CRN_EXPORT pixel_format convert_crn_format_to_pixel_format(crn_format fmt);
 
 }  // namespace pixel_format_helpers
 

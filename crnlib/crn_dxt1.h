@@ -1,10 +1,12 @@
 // File: crn_dxt1.h
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
+
 #include "crn_dxt.h"
+#include "crn_export.h"
 
 namespace crnlib {
-struct dxt1_solution_coordinates {
+struct CRN_EXPORT dxt1_solution_coordinates {
   inline dxt1_solution_coordinates()
       : m_low_color(0), m_high_color(0) {}
 
@@ -85,7 +87,7 @@ typedef crnlib::vector<dxt1_solution_coordinates> dxt1_solution_coordinates_vec;
 
 CRNLIB_DEFINE_BITWISE_COPYABLE(dxt1_solution_coordinates);
 
-struct unique_color {
+struct CRN_EXPORT unique_color {
   inline unique_color() {}
   inline unique_color(const color_quad_u8& color, uint weight)
       : m_color(color), m_weight(weight) {}
@@ -104,7 +106,7 @@ struct unique_color {
 
 CRNLIB_DEFINE_BITWISE_COPYABLE(unique_color);
 
-class dxt1_endpoint_optimizer {
+class CRN_EXPORT dxt1_endpoint_optimizer {
  public:
   dxt1_endpoint_optimizer();
 

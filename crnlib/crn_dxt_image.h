@@ -8,13 +8,14 @@
 #include "crn_etc_a1.h"
 #endif
 #include "crn_image.h"
+#include "crn_export.h"
 
 #define CRNLIB_SUPPORT_ATI_COMPRESS 0
 
 namespace crnlib {
 class task_pool;
 
-class dxt_image {
+class CRN_EXPORT dxt_image {
  public:
   dxt_image();
   dxt_image(const dxt_image& other);

@@ -2,7 +2,8 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
-namespace crnlib {
+namespace crnlib 
+{
 template <typename T, uint Log2N>
 class sparse_array_traits {
  public:

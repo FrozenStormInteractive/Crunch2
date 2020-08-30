@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <setjmp.h>
 
+#include "crn_export.h"
+
 #ifdef _MSC_VER
 #define JPGD_NORETURN __declspec(noreturn)
 #elif defined(__GNUC__)
@@ -27,8 +29,8 @@ typedef signed int int32;
 // On return, width/height will be set to the image's dimensions, and actual_comps will be set to the either 1 (grayscale) or 3 (RGB).
 // Notes: For more control over where and how the source data is read, see the decompress_jpeg_image_from_stream() function below, or call the jpeg_decoder class directly.
 // Requesting a 8 or 32bpp image is currently a little faster than 24bpp because the jpeg_decoder class itself currently always unpacks to either 8 or 32bpp.
-unsigned char* decompress_jpeg_image_from_memory(const unsigned char* pSrc_data, int src_data_size, int* width, int* height, int* actual_comps, int req_comps);
-unsigned char* decompress_jpeg_image_from_file(const char* pSrc_filename, int* width, int* height, int* actual_comps, int req_comps);
+CRN_EXPORT unsigned char* decompress_jpeg_image_from_memory(const unsigned char* pSrc_data, int src_data_size, int* width, int* height, int* actual_comps, int req_comps);
+CRN_EXPORT unsigned char* decompress_jpeg_image_from_file(const char* pSrc_filename, int* width, int* height, int* actual_comps, int req_comps);
 
 // Success/failure error codes.
 enum jpgd_status {
@@ -75,7 +77,7 @@ enum jpgd_status {
 // The decoder is rather greedy: it will keep on calling this method until its internal input buffer is full, or until the EOF flag is set.
 // It the input stream contains data after the JPEG stream's EOI (end of image) marker it will probably be pulled into the internal buffer.
 // Call the get_total_bytes_read() method to determine the actual size of the JPEG stream after successful decoding.
-class jpeg_decoder_stream {
+class CRN_EXPORT jpeg_decoder_stream {
  public:
   jpeg_decoder_stream() {}
   virtual ~jpeg_decoder_stream() {}
@@ -91,7 +93,7 @@ class jpeg_decoder_stream {
 };
 
 // stdio FILE stream class.
-class jpeg_decoder_file_stream : public jpeg_decoder_stream {
+class CRN_EXPORT jpeg_decoder_file_stream : public jpeg_decoder_stream {
   jpeg_decoder_file_stream(const jpeg_decoder_file_stream&);
   jpeg_decoder_file_stream& operator=(const jpeg_decoder_file_stream&);
 
@@ -109,7 +111,7 @@ class jpeg_decoder_file_stream : public jpeg_decoder_stream {
 };
 
 // Memory stream class.
-class jpeg_decoder_mem_stream : public jpeg_decoder_stream {
+class CRN_EXPORT jpeg_decoder_mem_stream : public jpeg_decoder_stream {
   const uint8* m_pSrc_data;
   uint m_ofs, m_size;
 
@@ -132,7 +134,7 @@ class jpeg_decoder_mem_stream : public jpeg_decoder_stream {
 };
 
 // Loads JPEG file from a jpeg_decoder_stream.
-unsigned char* decompress_jpeg_image_from_stream(jpeg_decoder_stream* pStream, int* width, int* height, int* actual_comps, int req_comps);
+CRN_EXPORT unsigned char* decompress_jpeg_image_from_stream(jpeg_decoder_stream* pStream, int* width, int* height, int* actual_comps, int req_comps);
 
 enum {
   JPGD_IN_BUF_SIZE = 8192,
@@ -149,7 +151,7 @@ enum {
 typedef int16 jpgd_quant_t;
 typedef int16 jpgd_block_t;
 
-class jpeg_decoder {
+class CRN_EXPORT jpeg_decoder {
  public:
   // Call get_error_code() after constructing to determine if the stream is valid or not. You may call the get_width(), get_height(), etc.
   // methods after the constructor is called. You may then either destruct the object, or begin decoding the image by calling begin_decoding(), then decode() on each scanline.

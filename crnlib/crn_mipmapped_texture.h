@@ -11,6 +11,7 @@
 #include "crn_qdxt5.h"
 #include "crn_texture_file_types.h"
 #include "crn_image_utils.h"
+#include "crn_export.h"
 
 namespace crnlib {
 extern const vec2I g_vertical_cross_image_offsets[6];
@@ -27,7 +28,7 @@ enum unpack_flags_t {
   cUnpackFlagUnflip = 2
 };
 
-class mip_level {
+class CRN_EXPORT mip_level {
   friend class mipmapped_texture;
 
  public:
@@ -112,7 +113,7 @@ typedef crnlib::vector<mip_level*> mip_ptr_vec;
 // And an array of one, six, or N faces make up a texture.
 typedef crnlib::vector<mip_ptr_vec> face_vec;
 
-class mipmapped_texture {
+class CRN_EXPORT mipmapped_texture {
  public:
   // Construction/destruction
   mipmapped_texture();

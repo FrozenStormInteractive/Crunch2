@@ -4,6 +4,8 @@
 #ifndef JPEG_ENCODER_H
 #define JPEG_ENCODER_H
 
+#include "crn_export.h"
+
 namespace jpge {
 typedef unsigned char uint8;
 typedef signed short int16;
@@ -50,12 +52,12 @@ struct params {
 
 // Writes JPEG image to a file.
 // num_channels must be 1 (Y) or 3 (RGB), image pitch must be width*num_channels.
-bool compress_image_to_jpeg_file(const char* pFilename, int width, int height, int num_channels, const uint8* pImage_data, const params& comp_params = params());
+CRN_EXPORT bool compress_image_to_jpeg_file(const char* pFilename, int width, int height, int num_channels, const uint8* pImage_data, const params& comp_params = params());
 
 // Writes JPEG image to memory buffer.
 // On entry, buf_size is the size of the output buffer pointed at by pBuf, which should be at least ~1024 bytes.
 // If return value is true, buf_size will be set to the size of the compressed data.
-bool compress_image_to_jpeg_file_in_memory(void* pBuf, int& buf_size, int width, int height, int num_channels, const uint8* pImage_data, const params& comp_params = params());
+CRN_EXPORT bool compress_image_to_jpeg_file_in_memory(void* pBuf, int& buf_size, int width, int height, int num_channels, const uint8* pImage_data, const params& comp_params = params());
 
 // Output stream abstract class - used by the jpeg_encoder class to write to the output stream.
 // put_buf() is generally called with len==JPGE_OUT_BUF_SIZE bytes, but for headers it'll be called with smaller amounts.
@@ -68,7 +70,7 @@ class output_stream {
 };
 
 // Lower level jpeg_encoder class - useful if more control is needed than the above helper functions.
-class jpeg_encoder {
+class CRN_EXPORT jpeg_encoder {
  public:
   jpeg_encoder();
   ~jpeg_encoder();

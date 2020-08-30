@@ -1,9 +1,11 @@
 // File: crn_value.h
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
+
 #include "crn_strutils.h"
 #include "crn_dynamic_string.h"
 #include "crn_vec.h"
+#include "crn_export.h"
 
 namespace crnlib {
 enum value_data_type {
@@ -19,9 +21,9 @@ enum value_data_type {
   cDTTotal
 };
 
-extern const char* gValueDataTypeStrings[cDTTotal + 1];
+CRN_EXPORT extern const char* gValueDataTypeStrings[cDTTotal + 1];
 
-class value {
+class CRN_EXPORT value {
  public:
   value()
       : m_type(cDTInvalid) {

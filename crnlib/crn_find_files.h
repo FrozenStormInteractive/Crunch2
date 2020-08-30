@@ -2,8 +2,10 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
-class find_files {
+class CRN_EXPORT find_files {
  public:
   struct file_desc {
     inline file_desc()

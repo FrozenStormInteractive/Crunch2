@@ -5,10 +5,11 @@
 #include "crn_mipmapped_texture.h"
 #include "crn_rect.h"
 #include "crn_lzma_codec.h"
+#include "crn_export.h"
 
 namespace crnlib {
 namespace texture_conversion {
-class convert_stats {
+class CRN_EXPORT convert_stats {
  public:
   convert_stats();
 
@@ -39,7 +40,7 @@ class convert_stats {
   uint64 m_output_comp_file_size;
 };
 
-class convert_params {
+class CRN_EXPORT convert_params {
  public:
   convert_params()
       : m_pInput_texture(NULL),
@@ -102,7 +103,7 @@ class convert_params {
   mutable bool m_canceled;
 };
 
-bool process(convert_params& params, convert_stats& stats);
+CRN_EXPORT bool process(convert_params& params, convert_stats& stats);
 
 }  // namespace texture_conversion
 

@@ -2,8 +2,10 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
-uint32 fast_hash(const void* p, int len);
+CRN_EXPORT uint32 fast_hash(const void* p, int len);
 
 // 4-byte integer hash, full avalanche
 inline uint32 bitmix32c(uint32 a) {

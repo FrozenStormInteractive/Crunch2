@@ -2,9 +2,11 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
 enum { cMaxDynamicStringLen = cUINT16_MAX - 1 };
-class dynamic_string {
+class CRN_EXPORT dynamic_string {
  public:
   inline dynamic_string()
       : m_buf_size(0), m_len(0), m_pStr(NULL) {}
@@ -100,9 +102,9 @@ class dynamic_string {
   dynamic_string& operator+=(const char* p) { return append(p); }
   dynamic_string& operator+=(const dynamic_string& other) { return append(other); }
 
-  friend dynamic_string operator+(const char* p, const dynamic_string& a);
-  friend dynamic_string operator+(const dynamic_string& a, const char* p);
-  friend dynamic_string operator+(const dynamic_string& a, const dynamic_string& b);
+  CRN_EXPORT friend dynamic_string operator+(const char* p, const dynamic_string& a);
+  CRN_EXPORT friend dynamic_string operator+(const dynamic_string& a, const char* p);
+  CRN_EXPORT friend dynamic_string operator+(const dynamic_string& a, const dynamic_string& b);
 
   dynamic_string& format_args(const char* p, va_list args);
   dynamic_string& format(const char* p, ...);
@@ -166,7 +168,7 @@ class dynamic_string {
 
 typedef crnlib::vector<dynamic_string> dynamic_string_array;
 
-extern dynamic_string g_empty_dynamic_string;
+CRN_EXPORT extern dynamic_string g_empty_dynamic_string;
 
 CRNLIB_DEFINE_BITWISE_MOVABLE(dynamic_string);
 

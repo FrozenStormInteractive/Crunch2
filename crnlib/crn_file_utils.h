@@ -2,8 +2,10 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
-struct file_utils {
+struct CRN_EXPORT file_utils {
   // Returns true if pSrcFilename is older than pDstFilename
   static bool is_read_only(const char* pFilename);
   static bool disable_read_only(const char* pFilename);

@@ -1,12 +1,14 @@
 // File: crn_threaded_resampler.h
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
+
 #include "crn_resampler.h"
 #include "crn_vec.h"
+#include "crn_export.h"
 
 namespace crnlib {
 class task_pool;
-class threaded_resampler {
+class CRN_EXPORT threaded_resampler {
   CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(threaded_resampler);
 
  public:

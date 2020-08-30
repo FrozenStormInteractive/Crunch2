@@ -2,6 +2,8 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 #if defined(_M_IX86) && defined(_MSC_VER)
 #include <intrin.h>
 #pragma intrinsic(__emulu)
@@ -263,10 +265,10 @@ inline uint64 emulu(uint32 a, uint32 b) {
 #endif
 }
 
-double compute_entropy(const uint8* p, uint n);
+CRN_EXPORT double compute_entropy(const uint8* p, uint n);
 
-void compute_lower_pow2_dim(int& width, int& height);
-void compute_upper_pow2_dim(int& width, int& height);
+CRN_EXPORT void compute_lower_pow2_dim(int& width, int& height);
+CRN_EXPORT void compute_upper_pow2_dim(int& width, int& height);
 
 inline bool equal_tol(float a, float b, float t) {
   return fabs(a - b) < ((maximum(fabs(a), fabs(b)) + 1.0f) * t);

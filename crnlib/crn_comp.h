@@ -10,9 +10,10 @@
 #include "crn_image.h"
 #include "crn_image_utils.h"
 #include "crn_texture_comp.h"
+#include "crn_export.h"
 
 namespace crnlib {
-class crn_comp : public itexture_comp {
+class CRN_EXPORT crn_comp : public itexture_comp {
   CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(crn_comp);
 
  public:

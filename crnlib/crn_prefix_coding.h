@@ -2,15 +2,17 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
 namespace prefix_coding {
 const uint cMaxExpectedCodeSize = 16;
 const uint cMaxSupportedSyms = 8192;
 const uint cMaxTableBits = 11;
 
-bool limit_max_code_size(uint num_syms, uint8* pCodesizes, uint max_code_size);
+CRN_EXPORT bool limit_max_code_size(uint num_syms, uint8* pCodesizes, uint max_code_size);
 
-bool generate_codes(uint num_syms, const uint8* pCodesizes, uint16* pCodes);
+CRN_EXPORT bool generate_codes(uint num_syms, const uint8* pCodesizes, uint16* pCodes);
 
 class decoder_tables {
  public:
@@ -96,7 +98,7 @@ class decoder_tables {
   }
 };
 
-bool generate_decoder_tables(uint num_syms, const uint8* pCodesizes, decoder_tables* pTables, uint table_bits);
+CRN_EXPORT bool generate_decoder_tables(uint num_syms, const uint8* pCodesizes, decoder_tables* pTables, uint table_bits);
 
 }  // namespace prefix_coding
 

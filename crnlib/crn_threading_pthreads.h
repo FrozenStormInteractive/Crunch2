@@ -14,20 +14,22 @@
 #include <semaphore.h>
 #include <unistd.h>
 
+#include "crn_export.h"
+
 namespace crnlib {
 // g_number_of_processors defaults to 1. Will be higher on multicore machines.
-extern uint g_number_of_processors;
+    CRN_EXPORT extern uint g_number_of_processors;
 
-void crn_threading_init();
+    CRN_EXPORT void crn_threading_init();
 
 typedef uint64 crn_thread_id_t;
-crn_thread_id_t crn_get_current_thread_id();
+CRN_EXPORT crn_thread_id_t crn_get_current_thread_id();
 
-void crn_sleep(unsigned int milliseconds);
+CRN_EXPORT void crn_sleep(unsigned int milliseconds);
 
-uint crn_get_max_helper_threads();
+CRN_EXPORT uint crn_get_max_helper_threads();
 
-class mutex {
+class CRN_EXPORT mutex {
   mutex(const mutex&);
   mutex& operator=(const mutex&);
 
@@ -46,7 +48,7 @@ class mutex {
 #endif
 };
 
-class scoped_mutex {
+class CRN_EXPORT scoped_mutex {
   scoped_mutex(const scoped_mutex&);
   scoped_mutex& operator=(const scoped_mutex&);
 
@@ -59,7 +61,7 @@ class scoped_mutex {
   mutex& m_mutex;
 };
 
-class semaphore {
+class CRN_EXPORT semaphore {
   CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(semaphore);
 
  public:
@@ -74,7 +76,7 @@ class semaphore {
   sem_t m_sem;
 };
 
-class spinlock {
+class CRN_EXPORT spinlock {
  public:
   spinlock();
   ~spinlock();
@@ -86,7 +88,7 @@ class spinlock {
   pthread_spinlock_t m_spinlock;
 };
 
-class scoped_spinlock {
+class CRN_EXPORT scoped_spinlock {
   scoped_spinlock(const scoped_spinlock&);
   scoped_spinlock& operator=(const scoped_spinlock&);
 
@@ -143,7 +145,7 @@ class tsstack {
   int m_top;
 };
 
-class task_pool {
+class CRN_EXPORT task_pool {
  public:
   task_pool();
   task_pool(uint num_threads);

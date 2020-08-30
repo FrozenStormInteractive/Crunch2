@@ -2,8 +2,10 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
-class sparse_bit_array {
+class CRN_EXPORT sparse_bit_array {
  public:
   sparse_bit_array();
   sparse_bit_array(uint size);

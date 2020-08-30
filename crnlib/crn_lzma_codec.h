@@ -1,10 +1,12 @@
 // File: crn_lzma_codec.h
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
+
 #include "crn_packed_uint.h"
+#include "crn_export.h"
 
 namespace crnlib {
-class lzma_codec {
+class CRN_EXPORT lzma_codec {
  public:
   lzma_codec();
   ~lzma_codec();

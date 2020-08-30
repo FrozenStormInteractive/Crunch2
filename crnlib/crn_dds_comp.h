@@ -4,9 +4,10 @@
 #include "crn_comp.h"
 #include "crn_mipmapped_texture.h"
 #include "crn_texture_comp.h"
+#include "crn_export.h"
 
 namespace crnlib {
-class dds_comp : public itexture_comp {
+class CRN_EXPORT dds_comp : public itexture_comp {
   CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(dds_comp);
 
  public:

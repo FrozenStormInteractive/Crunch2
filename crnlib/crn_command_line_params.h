@@ -3,13 +3,14 @@
 #pragma once
 #include "crn_value.h"
 #include <map>
+#include "crn_export.h"
 
 namespace crnlib {
 // Returns the command line passed to the app as a string.
 // On systems where this isn't trivial, this function combines together the separate arguments, quoting and adding spaces as needed.
-void get_command_line_as_single_string(dynamic_string& cmd_line, int argc, char* argv[]);
+    CRN_EXPORT void get_command_line_as_single_string(dynamic_string& cmd_line, int argc, char* argv[]);
 
-class command_line_params {
+class CRN_EXPORT command_line_params {
  public:
   struct param_value {
     inline param_value()

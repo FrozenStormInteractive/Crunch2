@@ -2,6 +2,8 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
 struct chunk_tile_desc {
   // These values are in pixels, and always a multiple of cBlockPixelWidth/cBlockPixelHeight.
@@ -31,10 +33,10 @@ const uint cBlockPixelWidth = 4;
 const uint cBlockPixelHeight = 4;
 
 const uint cNumChunkEncodings = 8;
-extern chunk_encoding_desc g_chunk_encodings[cNumChunkEncodings];
+CRN_EXPORT extern chunk_encoding_desc g_chunk_encodings[cNumChunkEncodings];
 
 const uint cNumChunkTileLayouts = 9;
 const uint cFirst4x4ChunkTileLayout = 5;
-extern chunk_tile_desc g_chunk_tile_layouts[cNumChunkTileLayouts];
+CRN_EXPORT extern chunk_tile_desc g_chunk_tile_layouts[cNumChunkTileLayouts];
 
 }  // namespace crnlib

@@ -2,10 +2,12 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_export.h"
+
 namespace crnlib {
 typedef unsigned long long timer_ticks;
 
-class timer {
+class CRN_EXPORT timer {
  public:
   timer();
   timer(timer_ticks start_ticks);
