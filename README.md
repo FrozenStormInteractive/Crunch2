@@ -1,24 +1,36 @@
-**Daemon fork of crunch: The Daemon engine uses the *master* branch, which currently tracks the
-[Unity fork](https://github.com/Unity-Technologies/crunch/tree/unity), with a few additional
-minor fixes.**
+<h1 align="center">
+  Crunch
+</h1>
 
----
+<h4 align="center">An advanced DXTn texture compression library</h4>
 
-crunch/crnlib v1.04 - Advanced DXTn texture compression library
-Copyright (C) 2010-2017 Richard Geldreich, Jr. and Binomial LLC http://binomial.info 
+<p align="center">
+  <a href="https://github.com/FrozenStormInteractive/crunch/releases"><img src="https://img.shields.io/github/v/release/FrozenStormInteractive/crunch?sort=semver" alt="Gitter"></a>
+  <a href="https://github.com/FrozenStormInteractive/crunch/stargazers"><img src="https://img.shields.io/github/stars/FrozenStormInteractive/crunch.svg"></a>
+  <a href="https://github.com/FrozenStormInteractive/crunch/issues"><img src="https://img.shields.io/github/issues/FrozenStormInteractive/crunch.svg"></a>
+  <a href="https://github.com/FrozenStormInteractive/crunch/pulls"><img src="https://img.shields.io/github/issues-pr/FrozenStormInteractive/crunch"></a>
+  <a href="https://github.com/FrozenStormInteractive/crunch/graphs/contributors"><img src="https://img.shields.io/github/contributors-anon/FrozenStormInteractive/crunch.svg"></a>
+  <a href="https://github.com/FrozenStormInteractive/crunch/issues"><img src="https://img.shields.io/badge/contributions-welcome-orange.svg"></a>
+  <a href="License.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+</p>
 
-For bugs or support contact Binomial <info@binomial.info>.
+## Table of Contents
 
-This software uses the ZLIB license, which is located in license.txt.
-http://opensource.org/licenses/Zlib
+* [Built Status](#built-status)
+* [Overview](#overview)
+* [Building](#building)
+* [Usage](#usage)
+* [Examples](#examples)
+* [Known Issues / Bugs](#known-issuesbugs)
+* [Contributing](#contributing)
+* [License](#license)
 
-Portions of this software make use of public domain code originally
-written by Igor Pavlov (LZMA), RYG (crn_ryg_dxt*), and Sean Barrett (stb_image.c).
+## Built Status
 
-If you use this software in a product, an acknowledgment in the product 
-documentation would be highly appreciated but is not required.
-
-Note: crunch originally used to live on Google Code: https://code.google.com/p/crunch/
+| Branch  | Windows | Linux | macOS |
+|:-------:|:-------:|:-----:|:-----:|
+| Master | ![Master branch build status on Windows][Build Status Master Windows] | ![Master branch build status on Linux][Build Status Master Linux] | ![Master branch build status on macOS][Build Status Master macOS] |
+| Develop | ![Develop branch build status on Windows][Build Status Develop Windows] | ![Develop branch build status on Linux][Build Status Develop Linux] | ![Develop branch build status on macOS][Build Status Develop macOS] |
 
 ## Overview
 
@@ -31,7 +43,7 @@ It can compress mipmapped 2D textures, normal maps, and cubemaps to
 approx. 1-1.25 bits/texel, and normal maps to 1.75-2 bits/texel. The
 actual bitrate depends on the complexity of the texture itself, the
 specified quality factor/target bitrate, and ultimately on the desired
-quality needed for a particular texture. 
+quality needed for a particular texture.
 
 crnlib's differs significantly from other approaches because its
 compressed texture data format was carefully designed to be quickly
@@ -51,20 +63,10 @@ The .CRN file format supports the following core DXTn texture formats:
 DXT1 (but not DXT1A), DXT5, DXT5A, and DXN/3DC
 
 It also supports several popular swizzled variants (several are
-also supported by AMD's Compressonator): 
+also supported by AMD's Compressonator):
 DXT5_XGBR, DXT5_xGxR, DXT5_AGBR, and DXT5_CCxY (experimental luma-chroma YCoCg).
 
-## Recommended Software
-
-AMD's [Compressonator tool](https://github.com/GPUOpen-Tools/Compressonator)
-is recommended to view the .DDS files created by the crunch tool and the included example projects.
-
-Note: Some of the swizzled DXTn .DDS output formats (such as DXT5_xGBR)
-read/written by the crunch tool or examples deviate from the DX9 DDS
-standard, so DXSDK tools such as DXTEX.EXE won't load them at all or
-they won't be properly displayed.
-
-## Compression Algorithm Details
+### Compression Algorithm Details
 
 The compression process employed in creating both .CRN and
 clustered .DDS files utilizes a very high quality, scalable DXTn
@@ -76,7 +78,7 @@ top-down cluster analysis, vector quantization (VQ) of the selector
 indices, and several custom algorithms for compressing the resulting
 endpoint/selector codebooks and macroblock indices. Multiple feedback
 passes are performed between the clusterization and VQ steps to optimize
-quality, and several steps use a brute force refinement approach to improve 
+quality, and several steps use a brute force refinement approach to improve
 quality. The majority of compression steps are multithreaded.
 
 The .CRN format currently utilizes canonical Huffman coding for speed
@@ -85,7 +87,7 @@ version will also utilize adaptive binary arithmetic coding and higher
 order context modeling using already developed tech from the my LZHAM
 compression library.
 
-## Supported File Formats
+### Supported File Formats
 
 crnlib supports two compressed texture file formats. The first
 format (clustered .DDS) is simple to integrate into an existing project
@@ -95,7 +97,7 @@ the second, higher quality custom format (.CRN) requires a few
 typically straightforward engine modifications to integrate the
 .CRN->DXTn transcoder header file library into your tools/engine.
 
-### .DDS
+#### .DDS
 
 crnlib can compress textures to standard DX9-style .DDS files using
 clustered DXTn compression, which is a subset of the approach used to
@@ -117,7 +119,7 @@ data.)
 Clustered .DDS files are intended to be the simplest/fastest way to
 integrate crnlib's tech into a project.
 
-### .CRN
+#### .CRN
 
 The second, better, option is to compress your textures to .CRN files
 using crnlib. To read the resulting .CRN data, you must add the .CRN
@@ -130,11 +132,11 @@ further lossless compression because they're already highly compressed.
 .CRN files are a bit more difficult/risky to integrate into a project, but
 the resulting compression ratio and quality is superior vs. clustered .DDS files.
 
-### .KTX
+#### .KTX
 
 crnlib and crunch can read/write the .KTX file format in various pixel formats.
 Rate distortion optimization (clustered DXTc compression) is not yet supported
-when writing .KTX files. 
+when writing .KTX files.
 
 The .KTX file format is just like .DDS, except it's a fairly well specified
 standard created by the Khronos Group. Unfortunately, almost all of the tools I've
@@ -142,16 +144,122 @@ found that support .KTX are fairly (to very) buggy, or are limited to only a han
 of pixel formats, so there's no guarantee that the .KTX files written by crnlib can
 be reliably read by other tools.
 
-## Building the Examples
+## Building
 
-This release contains the source code and projects for three simple
-example projects:
+```sh
+cmake -S . -B build -DCRN_BUILD_SHARED_LIBS=ON
+```
 
-crn_examples.2010.sln is a Visual Studio 2010 (VC10) solution file
-containing projects for Win32 and x64. crnlib itself also builds with
-VS2005, VS2008, and gcc 4.5.0 (TDM GCC+MinGW).  A codeblocks 10.05
-workspace and project file is also included, but compiling crnlib this
-way hasn't been tested much.
+### Compile to Javascript with Emscripten
+
+Download and install Emscripten:
+    http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html
+
+From the root directory, run:
+```sh
+emcc -O3 emscripten/crn.cpp -I./inc -s EXPORTED_FUNCTIONS="['_malloc', '_free', '_crn_get_width', '_crn_get_height', '_crn_get_levels', '_crn_get_dxt_format', '_crn_get_bytes_per_block', '_crn_get_uncompressed_size', '_crn_decompress']" -s NO_EXIT_RUNTIME=1 -s NO_FILESYSTEM=1 -s ELIMINATE_DUPLICATE_FUNCTIONS=1 -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 -o crunch.js
+```
+
+## Usage
+
+### Creating compressed textures with the Command Line Tool
+
+The simplest way to create compressed textures using crnlib is to
+integrate the crunch command line tool into your texture build toolchain or
+export process. It can write DXTn compressed 2D/cubemap textures to regular
+DXTn compressed .DDS, clustered (or reduced entropy) DXTn compressed .DDS, or
+.CRN files. It can also transcode or decompress files to several standard image
+formats, such as TGA or BMP. Run crunch with no options for help.
+
+The .CRN files created by crunch can be efficiently transcoded to DXTn using
+the CRN transcoding library, located in full source form under inc/crn_decomp.h.
+
+Here are a few examples:
+
+ - Compress blah.tga to blah.dds using normal DXT1 compression:
+   ```
+   crunch -file blah.tga -fileformat dds -dxt1
+   ```
+
+ - Compress blah.tga to blah.dds using clustered DXT1 at an effective bitrate of 1.5 bits/texel, display image statistic:
+   ```
+   crunch -file blah.tga -fileformat dds -dxt1 -bitrate 1.5 -imagestats
+   ```
+
+ - Compress blah.tga to blah.dds using clustered DXT1 at quality level 100 (from [0,255]), with no mipmaps, display LZMA statistics:
+   ```
+   crunch -file blah.tga -fileformat dds -dxt1 -quality 100 -mipmode none -lzmastats
+   ```
+
+ - Compress blah.tga to blah.crn using clustered DXT1 at a bitrate of 1.2 bits/texel, no mipmaps:
+   ```
+   crunch -file blah.tga -dxt1 -bitrate 1.2 -mipmode none
+   ```
+
+ - Decompress blah.dds to a .tga file:
+   ```
+   crunch -file blah.dds -fileformat tga
+   ```
+
+ - Transcode blah.crn to a .dds file:
+   ```
+   crunch -file blah.crn
+   ```
+
+ - Decompress blah.crn, writing each mipmap level to a separate .tga file:
+   ```
+   crunch -split -file blah.crn -fileformat tga
+   ```
+
+crunch can do a lot more, like rescale/crop images before compression, convert
+images from one file format to another, compare images, process multiple
+images, etc.
+
+### Using crnlib
+
+The most flexible and powerful way of using crnlib is to integrate the library
+into your editor/toolchain/etc. and directly supply it your raw/source texture 3
+bits. See the C-style API's and comments in inc/crnlib.h.
+
+To compress, you basically fill in a few structs in and call one function:
+
+```c
+void *crn_compress(const crn_comp_params &comp_params,
+                   crn_uint32 &compressed_size,
+                   crn_uint32 *pActual_quality_level = NULL,
+                   float *pActual_bitrate = NULL);
+```
+
+Or, if you want crnlib to also generate mipmaps, you call this function:
+
+```c
+void *crn_compress(const crn_comp_params &comp_params,
+                   const crn_mipmap_params &mip_params,
+                   crn_uint32 &compressed_size,
+                   crn_uint32 *pActual_quality_level = NULL,
+                   float *pActual_bitrate = NULL);
+```
+
+You can also transcode/uncompress .DDS/.CRN files to raw 32bpp images using
+`crn_decompress_crn_to_dds()` and `crn_decompress_dds_to_images()`.
+
+Internally, crnlib just uses inc/crn_decomp.h to transcode textures to DXTn. If
+you only need to transcode .CRN format files to raw DXTn bits at runtime (and
+not compress), you don't actually need to compile or link against crnlib at
+all. Just include inc/crn_decomp.h, which contains a completely self-contained
+CRN transcoder in the "crnd" namespace. The `crnd_get_texture_info()`,
+`crnd_unpack_begin()`, `crnd_unpack_level()`, etc. functions are all you need
+to efficiently get at the raw DXTn bits, which can be directly supplied to
+whatever API or GPU you're using. (See example2.)
+
+## Examples
+
+### Building
+
+Use `CRN_BUILD_EXAMPLES` with cmake:
+```sh
+cmake -S . -B build -DCRN_BUILD_EXAMPLES=ON
+```
 
 ### example1
 
@@ -176,96 +284,7 @@ DXTn compressor. crnlib's compressor is typically very competitive or
 superior to most available closed and open source CPU-based
 compressors.)
 
-## Creating Compressed Textures from the Command Line (crunch.exe)
-
-The simplest way to create compressed textures using crnlib is to
-integrate the bin\crunch.exe or bin\crunch_x64.exe) command line tool
-into your texture build toolchain or export process. It can write DXTn
-compressed 2D/cubemap textures to regular DXTn compressed .DDS,
-clustered (or reduced entropy) DXTn compressed .DDS, or .CRN files. It
-can also transcode or decompress files to several standard image
-formats, such as TGA or BMP. Run crunch.exe with no options for help.
-
-The .CRN files created by crunch.exe can be efficiently transcoded to
-DXTn using the included CRN transcoding library, located in full source
-form under inc/crn_decomp.h.
-
-Here are a few example crunch.exe command lines:
-
-1. Compress blah.tga to blah.dds using normal DXT1 compression:
-  * `crunch -file blah.tga -fileformat dds -dxt1`
-
-2. Compress blah.tga to blah.dds using clustered DXT1 at an effective bitrate of 1.5 bits/texel, display image statistic:
-  * `crunch -file blah.tga -fileformat dds -dxt1 -bitrate 1.5 -imagestats`
-
-3. Compress blah.tga to blah.dds using clustered DXT1 at quality level 100 (from [0,255]), with no mipmaps, display LZMA statistics:
-  * `crunch -file blah.tga -fileformat dds -dxt1 -quality 100 -mipmode none -lzmastats`
-
-3. Compress blah.tga to blah.crn using clustered DXT1 at a bitrate of 1.2 bits/texel, no mipmaps:
-  * `crunch -file blah.tga -dxt1 -bitrate 1.2 -mipmode none`
-
-4. Decompress blah.dds to a .tga file:
-  * `crunch -file blah.dds -fileformat tga`
-
-5. Transcode blah.crn to a .dds file:
-  * `crunch -file blah.crn`
-
-6. Decompress blah.crn, writing each mipmap level to a separate .tga file:
-  * `crunch -split -file blah.crn -fileformat tga`
-
-crunch.exe can do a lot more, like rescale/crop images before
-compression, convert images from one file format to another, compare
-images, process multiple images, etc.
-
-Note: I would have included the full source to crunch.exe, but it still
-has some low-level dependencies to crnlib internals which I didn't have
-time to address. This version of crunch.exe has some reduced
-functionality compared to an earlier eval release. For example, XML file
-support is not included in this version.
-
-## Using crnlib
-
-The most flexible and powerful way of using crnlib is to integrate the
-library into your editor/toolchain/etc. and directly supply it your
-raw/source texture bits. See the C-style API's and comments in
-inc/crnlib.h.
-
-To compress, you basically fill in a few structs in and call one function:
-
-```c
-void *crn_compress( const crn_comp_params &comp_params,
-                    crn_uint32 &compressed_size,
-                    crn_uint32 *pActual_quality_level = NULL,
-                    float *pActual_bitrate = NULL);
-```
-
-Or, if you want crnlib to also generate mipmaps, you call this function:
-
-```c
-void *crn_compress( const crn_comp_params &comp_params,
-                    const crn_mipmap_params &mip_params,
-                    crn_uint32 &compressed_size,
-                    crn_uint32 *pActual_quality_level = NULL,
-                    float *pActual_bitrate = NULL);
-```
-
-You can also transcode/uncompress .DDS/.CRN files to raw 32bpp images
-using `crn_decompress_crn_to_dds()` and `crn_decompress_dds_to_images()`.
-
-Internally, crnlib just uses inc/crn_decomp.h to transcode textures to
-DXTn. If you only need to transcode .CRN format files to raw DXTn bits
-at runtime (and not compress), you don't actually need to compile or
-link against crnlib at all. Just include inc/crn_decomp.h, which
-contains a completely self-contained CRN transcoder in the "crnd"
-namespace. The `crnd_get_texture_info()`, `crnd_unpack_begin()`,
-`crnd_unpack_level()`, etc. functions are all you need to efficiently get
-at the raw DXTn bits, which can be directly supplied to whatever API or
-GPU you're using. (See example2.)
-
-Important note: When compiling under native client, be sure to define
-the `PLATFORM_NACL` macro before including the `inc/crn_decomp.h` header file library.
-
-## Known Issues/Bugs
+## Known Issues / Bugs
 
 * crnlib currently assumes you'll be further losslessly compressing its
 output .DDS files using LZMA. However, some engines use weaker codecs
@@ -302,12 +321,20 @@ hasn't been tuned for max. quality yet.
 supported when writing to .DDS, not .KTX. Also, only plain block by block
 compression is supported when writing to ETC1, and .CRN does not support ETC1.
 
-## Compile to Javascript with Emscripten
+## License
 
-Download and install Emscripten:
-    http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html
+This project is licensed under the Zlib License - see the [LICENSE.md](LICENSE.md) file for details
 
-From the root directory, run:
-```c
-    emcc -O3 emscripten/crn.cpp -I./inc -s EXPORTED_FUNCTIONS="['_malloc', '_free', '_crn_get_width', '_crn_get_height', '_crn_get_levels', '_crn_get_dxt_format', '_crn_get_bytes_per_block', '_crn_get_uncompressed_size', '_crn_decompress']" -s NO_EXIT_RUNTIME=1 -s NO_FILESYSTEM=1 -s ELIMINATE_DUPLICATE_FUNCTIONS=1 -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 -o crunch.js
-```
+Copyright (C) 2010-2017 Richard Geldreich, Jr. and Binomial LLC http://binomial.info
+
+Portions of this software make use of public domain code originally
+written by Igor Pavlov (LZMA), RYG (crn_ryg_dxt*), and Sean Barrett (stb_image.c).
+
+<!-- urls -->
+
+[Build Status Master Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/master?stage=Build&job=Windows "Build Status Master Windows"
+[Build Status Master Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/master?stage=Build&job=Linux "Build Status Master Linux"
+[Build Status Master macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/master?stage=Build&job=macOS "Build Status Master macOS"
+[Build Status Develop Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=Windows "Build Status Develop Windows"
+[Build Status Develop Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=Linux "Build Status Develop Linux"
+[Build Status Develop macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=MacOS "Build Status Develop macOS"
