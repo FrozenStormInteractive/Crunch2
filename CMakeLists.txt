@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.1)
 project(crunch)
 
-option(BUILD_SHARED_LIBS "Build crunchlib as shared library and link executables against it." OFF)
+include(GNUInstallDirs)
+
+option(CRN_BUILD_SHARED_LIBS "Build crnlib as shared library." ${BUILD_SHARED_LIBS})
 option(CRN_BUILD_EXAMPLES "Build examples." OFF)
 
-include(GNUInstallDirs)
+set(BUILD_SHARED_LIBS ${CRN_BUILD_SHARED_LIBS})
 
 add_subdirectory(crnlib)
 add_subdirectory(crunch)
