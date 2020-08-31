@@ -2,7 +2,7 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
-#include "crn_sysdetection.h"
+#include "crn_core.h"
 
 CRN_EXPORT bool crnlib_is_debugger_present(void);
 CRN_EXPORT void crnlib_debug_break(void);
@@ -73,33 +73,38 @@ char* strupr(char* p);
 #define _strnicmp strncasecmp
 #endif
 
-inline bool crnlib_is_little_endian() {
-  return c_crnlib_little_endian_platform;
+inline bool crnlib_is_little_endian()
+{
+    return c_crnlib_little_endian_platform;
 }
-inline bool crnlib_is_big_endian() {
-  return c_crnlib_big_endian_platform;
+inline bool crnlib_is_big_endian()
+{
+    return c_crnlib_big_endian_platform;
 }
 
-inline bool crnlib_is_pc() {
+inline bool crnlib_is_pc()
+{
 #ifdef CRNLIB_PLATFORM_PC
-  return true;
+    return true;
 #else
-  return false;
+    return false;
 #endif
 }
 
-inline bool crnlib_is_x86() {
+inline bool crnlib_is_x86()
+{
 #ifdef CRNLIB_PLATFORM_PC_X86
-  return true;
+    return true;
 #else
-  return false;
+    return false;
 #endif
 }
 
-inline bool crnlib_is_x64() {
+inline bool crnlib_is_x64()
+{
 #ifdef CRNLIB_PLATFORM_PC_X64
-  return true;
+    return true;
 #else
-  return false;
+    return false;
 #endif
 }

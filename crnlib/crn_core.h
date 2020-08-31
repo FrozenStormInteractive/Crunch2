@@ -2,6 +2,8 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_sysdetection.h"
+
 #if defined(WIN32) && defined(_MSC_VER)
 #pragma warning(disable : 4201)  // nonstandard extension used : nameless struct/union
 #pragma warning(disable : 4127)  // conditional expression is constant
