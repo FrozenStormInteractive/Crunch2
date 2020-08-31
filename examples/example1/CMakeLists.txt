@@ -3,3 +3,5 @@ set(EXAMPLE1_SRCS
 )
 add_executable(example1 ${EXAMPLE1_SRCS})
 target_link_libraries(example1 crn stb)
+
+set_target_properties(example1 PROPERTIES FOLDER "examples")
