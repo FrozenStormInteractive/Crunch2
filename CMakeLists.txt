@@ -13,8 +13,9 @@ add_subdirectory(crunch)
 
 add_subdirectory(3rdparty/lzma)
 add_subdirectory(3rdparty/jpeg-compressor)
+add_subdirectory(3rdparty/miniz)
+add_subdirectory(3rdparty/stb)
 
 if (CRN_BUILD_EXAMPLES)
 	add_subdirectory(examples)
-    add_subdirectory(3rdparty/stb)
 endif(CRN_BUILD_EXAMPLES)

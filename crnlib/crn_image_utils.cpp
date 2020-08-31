@@ -3,6 +3,7 @@
 
 #include <jpge.h>
 #include <jpgd.h>
+#include <miniz.h>
 
 #include "crn_core.h"
 #include "crn_image_utils.h"
@@ -12,7 +13,6 @@
 #include "crn_strutils.h"
 #include "crn_file_utils.h"
 #include "crn_threading.h"
-#include "crn_miniz.h"
 #include "crn_cfile_stream.h"
 #include "crn_mipmapped_texture.h"
 #include "crn_buffer_stream.h"

@@ -70,8 +70,6 @@ set(CRNLIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_matrix.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_mem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_mem.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/crn_miniz.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crn_miniz.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_mipmapped_texture.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_mipmapped_texture.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_packed_uint.h
@@ -152,7 +150,7 @@ endif()
 
 add_library(crn ${CRNLIB_SRCS} ${CRNLIB_THREAD_SRCS})
 target_include_directories(crn PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../inc)
-target_link_libraries(crn PUBLIC lzma jpge jpgd)
+target_link_libraries(crn PRIVATE lzma jpge jpgd miniz)
 
 include(GenerateExportHeader)
 generate_export_header(crn)
