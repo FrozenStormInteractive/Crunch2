@@ -2,6 +2,8 @@
 // See Copyright Notice and license at the end of include/crnlib.h
 #pragma once
 
+#include "crn_core.h"
+
 #if CRNLIB_USE_PTHREADS_API
 
 #include "crn_atomics.h"

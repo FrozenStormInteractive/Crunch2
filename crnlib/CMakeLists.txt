@@ -144,8 +144,9 @@ if(WIN32)
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_win32.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_win32.h
     )
-else(WIN32)
+elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
     list(APPEND CRNLIB_SRCS
+        # Port to another pthread-compatible os
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_pthreads.h
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_pthreads.cpp
     )
