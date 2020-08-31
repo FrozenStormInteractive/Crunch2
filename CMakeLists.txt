@@ -8,10 +8,10 @@ option(CRN_BUILD_EXAMPLES "Build examples." OFF)
 
 set(BUILD_SHARED_LIBS ${CRN_BUILD_SHARED_LIBS})
 
-add_subdirectory(3rdparty/lzma)
 add_subdirectory(crnlib)
 add_subdirectory(crunch)
 
+add_subdirectory(3rdparty/lzma)
 add_subdirectory(3rdparty/jpeg-compressor)
 
 if (CRN_BUILD_EXAMPLES)

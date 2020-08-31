@@ -184,7 +184,7 @@ endif()
 
 add_library(crn ${CRNLIB_SRCS} ${CRNLIB_THREAD_SRCS})
 target_include_directories(crn PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../inc)
-target_link_libraries(crn PUBLIC jpge jpgd)
+target_link_libraries(crn PUBLIC lzma jpge jpgd)
 
 include(GenerateExportHeader)
 generate_export_header(crn)
