@@ -1,3 +1,5 @@
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/crn_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/crn_version.h @ONLY)
+
 set(CRNLIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_arealist.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_arealist.h
@@ -103,6 +105,7 @@ set(CRNLIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_strutils.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_symbol_codec.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_symbol_codec.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/crn_sysdetection.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_texture_comp.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_texture_comp.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_texture_conversion.cpp
@@ -128,7 +131,7 @@ set(CRNLIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_vector.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_vector.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_vector2d.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/crn_winhdr.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/crn_version.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crnlib.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc/crn_decomp.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc/crnlib.h
@@ -136,19 +139,27 @@ set(CRNLIB_SRCS
 )
 
 if(WIN32)
-    set(CRNLIB_THREAD_SRCS
+    list(APPEND CRNLIB_SRCS
+        ${CMAKE_CURRENT_SOURCE_DIR}/crn_winhdr.h
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_win32.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_win32.h
     )
-else(WIN32)
-    set(CRNLIB_THREAD_SRCS
+elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
+    list(APPEND CRNLIB_SRCS
+        # Port to another pthread-compatible os
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_pthreads.h
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_pthreads.cpp
     )
 endif()
 
-add_library(crn ${CRNLIB_SRCS} ${CRNLIB_THREAD_SRCS})
-target_include_directories(crn PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../inc)
+add_library(crn ${CRNLIB_SRCS})
+target_include_directories(crn
+    PUBLIC
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../inc
+    # PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
 target_link_libraries(crn PRIVATE lzma jpge jpgd miniz stb)
 
 include(GenerateExportHeader)

@@ -1,9 +1,10 @@
 // File: crn_mem.cpp
 // See Copyright Notice and license at the end of inc/crnlib.h
+
 #include "crn_core.h"
 #include "crn_console.h"
-#include "../inc/crnlib.h"
-#include <malloc.h>
+#include "crnlib.h"
+
 #if CRNLIB_USE_WIN32_API
 #include "crn_winhdr.h"
 #endif
@@ -11,7 +12,14 @@
 #define CRNLIB_MEM_STATS 0
 
 #if !CRNLIB_USE_WIN32_API
+#if defined(CRN_OS_LINUX)
+#include <malloc.h>
 #define _msize malloc_usable_size
+#elif defined(CRN_OS_DARWIN)
+typedef __darwin_uuid_t uuid_t;
+#include <malloc/malloc.h>
+#define _msize malloc_size
+#endif
 #endif
 
 namespace crnlib {
@@ -105,7 +113,7 @@ static void* crnlib_default_realloc(void* p, size_t size, size_t* pActual_size, 
 }
 
 static size_t crnlib_default_msize(void* p, void*) {
-  return p ? _msize(p) : 0;
+  return p ? ::_msize(p) : 0;
 }
 
 static crn_realloc_func g_pRealloc = crnlib_default_realloc;

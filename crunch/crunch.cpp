@@ -1412,7 +1412,7 @@ static void print_title()
 {
     console::printf("crunch: Advanced DXTn Texture Compressor - https://github.com/BinomialLLC/crunch");
     console::printf("Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC");
-    console::printf("crnlib version v%u.%02u %s Built %s, %s", CRNLIB_VERSION / 100U, CRNLIB_VERSION % 100U, crnlib_is_x64() ? "x64" : "x86", __DATE__, __TIME__);
+    console::printf("crnlib version %s %s Built %s, %s", crn_get_version(), crnlib_is_x64() ? "x64" : "x86", __DATE__, __TIME__);
     console::printf("");
 }
 

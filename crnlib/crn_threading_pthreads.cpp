@@ -166,27 +166,87 @@ bool semaphore::wait(uint32 milliseconds) {
   return true;
 }
 
-spinlock::spinlock() {
-  if (pthread_spin_init(&m_spinlock, 0)) {
-    CRNLIB_FAIL("spinlock: pthread_spin_init() failed");
-  }
+#if defined(CRN_OS_LINUX)
+spinlock::spinlock()
+{
+    if (pthread_spin_init(&m_spinlock, 0))
+    {
+        CRNLIB_FAIL("spinlock: pthread_spin_init() failed");
+    }
 }
 
-spinlock::~spinlock() {
-  pthread_spin_destroy(&m_spinlock);
+spinlock::~spinlock()
+{
+    pthread_spin_destroy(&m_spinlock);
 }
 
-void spinlock::lock() {
-  if (pthread_spin_lock(&m_spinlock)) {
-    CRNLIB_FAIL("spinlock: pthread_spin_lock() failed");
-  }
+void spinlock::lock()
+{
+    if (pthread_spin_lock(&m_spinlock))
+    {
+        CRNLIB_FAIL("spinlock: pthread_spin_lock() failed");
+    }
 }
 
-void spinlock::unlock() {
-  if (pthread_spin_unlock(&m_spinlock)) {
-    CRNLIB_FAIL("spinlock: pthread_spin_unlock() failed");
-  }
+void spinlock::unlock()
+{
+    if (pthread_spin_unlock(&m_spinlock))
+    {
+        CRNLIB_FAIL("spinlock: pthread_spin_unlock() failed");
+    }
 }
+#elif defined(CRN_OS_DARWIN)
+spinlock::spinlock():
+    m_lock(0)
+{
+}
+
+spinlock::~spinlock()
+{
+}
+
+void spinlock::lock()
+{
+    OSSpinLockLock(&m_lock);
+}
+
+void spinlock::unlock()
+{
+    OSSpinLockUnlock(&m_lock);
+}
+#else
+spinlock::spinlock()
+{
+    __asm__ __volatile__("" ::: "memory");
+    m_spinlock = 0;
+}
+
+spinlock::~spinlock()
+{
+}
+
+void spinlock::lock()
+{
+    while (1)
+    {
+        int i;
+        for (i = 0; i < 10000; i++)
+        {
+            if (__sync_bool_compare_and_swap(&m_spinlock, 0, 1))
+            {
+                return 0;
+            }
+        }
+        sched_yield();
+    }
+}
+
+void spinlock::unlock()
+{
+    __asm__ __volatile__("" ::: "memory");
+    m_spinlock = 0;
+}
+#endif
 
 task_pool::task_pool()
     : m_num_threads(0),

@@ -20,8 +20,6 @@
 #pragma warning(disable : 4127)  //  conditional expression is constant
 #endif
 
-#define CRNLIB_VERSION 104
-
 #define CRNLIB_SUPPORT_ATI_COMPRESS 0
 #define CRNLIB_SUPPORT_SQUISH 0
 
@@ -614,6 +612,15 @@ CRN_EXPORT void crn_free_block_compressor(crn_block_compressor_context_t pContex
 // The various swizzled DXT5 formats (such as cCRNFmtDXT5_xGBR, etc.) will be unpacked as if they where plain DXT5.
 // Returns false if the crn_fmt is invalid.
 CRN_EXPORT bool crn_decompress_block(const void* pSrc_block, crn_uint32* pDst_pixels, crn_format crn_fmt);
+
+
+#define CRNLIB_VERSION 104
+
+CRN_EXPORT const char* crn_get_version();
+CRN_EXPORT int crn_get_version_number();
+CRN_EXPORT int crn_get_version_major();
+CRN_EXPORT int crn_get_version_minor();
+CRN_EXPORT int crn_get_version_patch();
 
 #endif  // CRNLIB_H
 

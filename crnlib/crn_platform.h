@@ -2,6 +2,8 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
+#include "crn_core.h"
+
 CRN_EXPORT bool crnlib_is_debugger_present(void);
 CRN_EXPORT void crnlib_debug_break(void);
 CRN_EXPORT void crnlib_output_debug_string(const char* p);
@@ -18,15 +20,16 @@ const bool c_crnlib_little_endian_platform = false;
 
 const bool c_crnlib_big_endian_platform = !c_crnlib_little_endian_platform;
 
-#ifdef __GNUC__
-#define crn_fopen(pDstFile, f, m) *(pDstFile) = fopen64(f, m)
-#define crn_fseek fseeko64
-#define crn_ftell ftello64
-#elif defined(_MSC_VER)
+#if defined(CRN_OS_WIN) 
 #define crn_fopen(pDstFile, f, m) fopen_s(pDstFile, f, m)
 #define crn_fseek _fseeki64
 #define crn_ftell _ftelli64
+#elif defined(CRN_OS_LINUX)
+#define crn_fopen(pDstFile, f, m) *(pDstFile) = fopen64(f, m)
+#define crn_fseek fseeko64
+#define crn_ftell ftello64
 #else
+#pragma message("Using fopen, ftell, fseek for file I/O - this may not support large files.")
 #define crn_fopen(pDstFile, f, m) *(pDstFile) = fopen(f, m)
 #define crn_fseek(s, o, w) fseek(s, static_cast<long>(o), w)
 #define crn_ftell ftell
@@ -65,33 +68,38 @@ char* strupr(char* p);
 #define _strnicmp strncasecmp
 #endif
 
-inline bool crnlib_is_little_endian() {
-  return c_crnlib_little_endian_platform;
+inline bool crnlib_is_little_endian()
+{
+    return c_crnlib_little_endian_platform;
 }
-inline bool crnlib_is_big_endian() {
-  return c_crnlib_big_endian_platform;
+inline bool crnlib_is_big_endian()
+{
+    return c_crnlib_big_endian_platform;
 }
 
-inline bool crnlib_is_pc() {
+inline bool crnlib_is_pc()
+{
 #ifdef CRNLIB_PLATFORM_PC
-  return true;
+    return true;
 #else
-  return false;
+    return false;
 #endif
 }
 
-inline bool crnlib_is_x86() {
+inline bool crnlib_is_x86()
+{
 #ifdef CRNLIB_PLATFORM_PC_X86
-  return true;
+    return true;
 #else
-  return false;
+    return false;
 #endif
 }
 
-inline bool crnlib_is_x64() {
+inline bool crnlib_is_x64()
+{
 #ifdef CRNLIB_PLATFORM_PC_X64
-  return true;
+    return true;
 #else
-  return false;
+    return false;
 #endif
 }
