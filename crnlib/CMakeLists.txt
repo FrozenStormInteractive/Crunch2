@@ -99,7 +99,6 @@ set(CRNLIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_sparse_array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_sparse_bit_array.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_sparse_bit_array.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/crn_stb_image.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_strutils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_strutils.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_symbol_codec.cpp
@@ -150,7 +149,7 @@ endif()
 
 add_library(crn ${CRNLIB_SRCS} ${CRNLIB_THREAD_SRCS})
 target_include_directories(crn PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../inc)
-target_link_libraries(crn PRIVATE lzma jpge jpgd miniz)
+target_link_libraries(crn PRIVATE lzma jpge jpgd miniz stb)
 
 include(GenerateExportHeader)
 generate_export_header(crn)

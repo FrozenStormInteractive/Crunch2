@@ -5,6 +5,11 @@
 #include <jpgd.h>
 #include <miniz.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
 #include "crn_core.h"
 #include "crn_image_utils.h"
 #include "crn_console.h"
@@ -17,8 +22,8 @@
 #include "crn_mipmapped_texture.h"
 #include "crn_buffer_stream.h"
 
-#define STBI_HEADER_FILE_ONLY
-#include "crn_stb_image.cpp"
+//#define STBI_HEADER_FILE_ONLY
+//#include "crn_stb_image.cpp"
 
 #include "crn_pixel_format.h"
 
