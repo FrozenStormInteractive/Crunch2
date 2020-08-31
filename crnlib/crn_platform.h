@@ -29,15 +29,10 @@ const bool c_crnlib_big_endian_platform = !c_crnlib_little_endian_platform;
 #define crn_fseek fseeko64
 #define crn_ftell ftello64
 #else
-#pragma message("Using fopen, ftello, fseeko, stat() etc. path for file I/O - this path may not support large files.")
+#pragma message("Using fopen, ftell, fseek for file I/O - this may not support large files.")
 #define crn_fopen(pDstFile, f, m) *(pDstFile) = fopen(f, m)
-#ifdef __STRICT_ANSI__
 #define crn_fseek(s, o, w) fseek(s, static_cast<long>(o), w)
 #define crn_ftell ftell
-#else
-#define crn_fseek(s, o, w) fseeko(s, static_cast<long>(o), w)
-#define crn_ftell ftello
-#endif
 #endif
 
 #if CRNLIB_USE_WIN32_API
