@@ -1,3 +1,5 @@
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/crn_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/crn_version.h @ONLY)
+
 set(CRNLIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_arealist.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_arealist.h
@@ -129,6 +131,7 @@ set(CRNLIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_vector.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_vector.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_vector2d.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/crn_version.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crnlib.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc/crn_decomp.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc/crnlib.h
@@ -149,7 +152,13 @@ else(WIN32)
 endif()
 
 add_library(crn ${CRNLIB_SRCS})
-target_include_directories(crn PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../inc)
+target_include_directories(crn
+    PUBLIC
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../inc
+    # PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
 target_link_libraries(crn PRIVATE lzma jpge jpgd miniz stb)
 
 include(GenerateExportHeader)
