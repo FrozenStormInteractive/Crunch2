@@ -1,8 +1,6 @@
 // File: crn_mem.cpp
 // See Copyright Notice and license at the end of inc/crnlib.h
 
-#include <stdlib.h>
-
 #include "crn_core.h"
 #include "crn_console.h"
 #include "crnlib.h"
