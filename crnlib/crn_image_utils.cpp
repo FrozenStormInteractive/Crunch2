@@ -1,5 +1,9 @@
 // File: crn_image_utils.cpp
 // See Copyright Notice and license at the end of inc/crnlib.h
+
+#include <jpge.h>
+#include <jpgd.h>
+
 #include "crn_core.h"
 #include "crn_image_utils.h"
 #include "crn_console.h"
@@ -9,15 +13,12 @@
 #include "crn_file_utils.h"
 #include "crn_threading.h"
 #include "crn_miniz.h"
-#include "crn_jpge.h"
 #include "crn_cfile_stream.h"
 #include "crn_mipmapped_texture.h"
 #include "crn_buffer_stream.h"
 
 #define STBI_HEADER_FILE_ONLY
 #include "crn_stb_image.cpp"
-
-#include "crn_jpgd.h"
 
 #include "crn_pixel_format.h"
 

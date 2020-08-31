@@ -61,10 +61,6 @@ set(CRNLIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_image_utils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_image_utils.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_intersect.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/crn_jpgd.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crn_jpgd.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/crn_jpge.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crn_jpge.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_ktx_texture.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_ktx_texture.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_lzma_codec.cpp
@@ -188,6 +184,7 @@ endif()
 
 add_library(crn ${CRNLIB_SRCS} ${CRNLIB_THREAD_SRCS})
 target_include_directories(crn PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../inc)
+target_link_libraries(crn PUBLIC jpge jpgd)
 
 include(GenerateExportHeader)
 generate_export_header(crn)

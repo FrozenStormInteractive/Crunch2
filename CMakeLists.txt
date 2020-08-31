@@ -11,7 +11,9 @@ set(BUILD_SHARED_LIBS ${CRN_BUILD_SHARED_LIBS})
 add_subdirectory(crnlib)
 add_subdirectory(crunch)
 
+add_subdirectory(3rdparty/jpeg-compressor)
+
 if (CRN_BUILD_EXAMPLES)
-    add_subdirectory(3rdparty/stb)
 	add_subdirectory(examples)
+    add_subdirectory(3rdparty/stb)
 endif(CRN_BUILD_EXAMPLES)
