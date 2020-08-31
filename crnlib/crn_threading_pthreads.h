@@ -78,16 +78,23 @@ class CRN_EXPORT semaphore {
   sem_t m_sem;
 };
 
-class CRN_EXPORT spinlock {
- public:
-  spinlock();
-  ~spinlock();
+class CRN_EXPORT spinlock
+{
+public:
+    spinlock();
+    ~spinlock();
 
-  void lock();
-  void unlock();
+    void lock();
+    void unlock();
 
- private:
-  pthread_spinlock_t m_spinlock;
+private:
+#if defined(CRN_OS_LINUX)
+    pthread_spinlock_t m_spinlock;
+#elif defined(CRN_OS_DARWIN)
+    OSSpinLock m_spinlock;
+#else
+    int m_spinlock;
+#endif
 };
 
 class CRN_EXPORT scoped_spinlock {
