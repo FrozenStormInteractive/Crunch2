@@ -16,6 +16,7 @@
 #include <malloc.h>
 #define _msize malloc_usable_size
 #elif defined(CRN_OS_DARWIN)
+#include <uuid/uuid.h>
 #include <malloc/malloc.h>
 #define _msize malloc_size
 #endif
