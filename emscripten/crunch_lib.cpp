@@ -27,84 +27,92 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 #include "crn_decomp.h"
 
-extern "C" {
-unsigned int crn_get_width(void* src, unsigned int src_size);
-unsigned int crn_get_height(void* src, unsigned int src_size);
-unsigned int crn_get_levels(void* src, unsigned int src_size);
-unsigned int crn_get_dxt_format(void* src, unsigned int src_size);
-unsigned int crn_get_bytes_per_block(void* src, unsigned int src_size);
-unsigned int crn_get_uncompressed_size(void* p, unsigned int size, unsigned int level);
-void crn_decompress(void* src, unsigned int src_size, void* dst, unsigned int dst_size, unsigned int firstLevel, unsigned int levelCount);
+extern "C"
+{
+    unsigned int crn_get_width(void* src, unsigned int src_size);
+    unsigned int crn_get_height(void* src, unsigned int src_size);
+    unsigned int crn_get_levels(void* src, unsigned int src_size);
+    unsigned int crn_get_dxt_format(void* src, unsigned int src_size);
+    unsigned int crn_get_bytes_per_block(void* src, unsigned int src_size);
+    unsigned int crn_get_uncompressed_size(void* p, unsigned int size, unsigned int level);
+    void crn_decompress(void* src, unsigned int src_size, void* dst, unsigned int dst_size, unsigned int firstLevel, unsigned int levelCount);
 }
 
-unsigned int crn_get_width(void* src, unsigned int src_size) {
-  crnd::crn_texture_info tex_info;
-  crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
-  return tex_info.m_width;
+unsigned int crn_get_width(void* src, unsigned int src_size)
+{
+    crnd::crn_texture_info tex_info;
+    crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
+    return tex_info.m_width;
 }
 
-unsigned int crn_get_height(void* src, unsigned int src_size) {
-  crnd::crn_texture_info tex_info;
-  crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
-  return tex_info.m_height;
+unsigned int crn_get_height(void* src, unsigned int src_size)
+{
+    crnd::crn_texture_info tex_info;
+    crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
+    return tex_info.m_height;
 }
 
-unsigned int crn_get_levels(void* src, unsigned int src_size) {
-  crnd::crn_texture_info tex_info;
-  crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
-  return tex_info.m_levels;
+unsigned int crn_get_levels(void* src, unsigned int src_size)
+{
+    crnd::crn_texture_info tex_info;
+    crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
+    return tex_info.m_levels;
 }
 
-unsigned int crn_get_dxt_format(void* src, unsigned int src_size) {
-  crnd::crn_texture_info tex_info;
-  crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
-  return tex_info.m_format;
+unsigned int crn_get_dxt_format(void* src, unsigned int src_size)
+{
+    crnd::crn_texture_info tex_info;
+    crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
+    return tex_info.m_format;
 }
 
-unsigned int crn_get_bytes_per_block(void* src, unsigned int src_size) {
-  crnd::crn_texture_info tex_info;
-  crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
-  return crnd::crnd_get_bytes_per_dxt_block(tex_info.m_format);
+unsigned int crn_get_bytes_per_block(void* src, unsigned int src_size)
+{
+    crnd::crn_texture_info tex_info;
+    crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
+    return crnd::crnd_get_bytes_per_dxt_block(tex_info.m_format);
 }
 
-unsigned int crn_get_uncompressed_size(void* src, unsigned int src_size, unsigned int level) {
-  crnd::crn_texture_info tex_info;
-  crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
-  const crn_uint32 width = tex_info.m_width >> level;
-  const crn_uint32 height = tex_info.m_height >> level;
-  const crn_uint32 blocks_x = (width + 3) >> 2;
-  const crn_uint32 blocks_y = (height + 3) >> 2;
-  const crn_uint32 row_pitch = blocks_x * crnd::crnd_get_bytes_per_dxt_block(tex_info.m_format);
-  const crn_uint32 total_face_size = row_pitch * blocks_y;
-  return total_face_size;
+unsigned int crn_get_uncompressed_size(void* src, unsigned int src_size, unsigned int level)
+{
+    crnd::crn_texture_info tex_info;
+    crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
+    const crn_uint32 width = tex_info.m_width >> level;
+    const crn_uint32 height = tex_info.m_height >> level;
+    const crn_uint32 blocks_x = (width + 3) >> 2;
+    const crn_uint32 blocks_y = (height + 3) >> 2;
+    const crn_uint32 row_pitch = blocks_x * crnd::crnd_get_bytes_per_dxt_block(tex_info.m_format);
+    const crn_uint32 total_face_size = row_pitch * blocks_y;
+    return total_face_size;
 }
 
-void crn_decompress(void* src, unsigned int src_size, void* dst, unsigned int dst_size, unsigned int firstLevel, unsigned int levelCount) {
-  crnd::crn_texture_info tex_info;
-  crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
+void crn_decompress(void* src, unsigned int src_size, void* dst, unsigned int dst_size, unsigned int firstLevel, unsigned int levelCount)
+{
+    crnd::crn_texture_info tex_info;
+    crnd::crnd_get_texture_info(static_cast<crn_uint8*>(src), src_size, &tex_info);
 
-  crn_uint32 width = tex_info.m_width >> firstLevel;
-  crn_uint32 height = tex_info.m_height >> firstLevel;
-  crn_uint32 bytes_per_block = crnd::crnd_get_bytes_per_dxt_block(tex_info.m_format);
+    crn_uint32 width = tex_info.m_width >> firstLevel;
+    crn_uint32 height = tex_info.m_height >> firstLevel;
+    crn_uint32 bytes_per_block = crnd::crnd_get_bytes_per_dxt_block(tex_info.m_format);
 
-  void* pDecomp_images[1];
-  pDecomp_images[0] = dst;
+    void* pDecomp_images[1];
+    pDecomp_images[0] = dst;
 
-  crnd::crnd_unpack_context pContext =
-      crnd::crnd_unpack_begin(static_cast<crn_uint8*>(src), src_size);
+    crnd::crnd_unpack_context pContext = crnd::crnd_unpack_begin(static_cast<crn_uint8*>(src), src_size);
 
-  for (int i = firstLevel; i < firstLevel + levelCount; ++i) {
-    crn_uint32 blocks_x = (width + 3) >> 2;
-    crn_uint32 blocks_y = (height + 3) >> 2;
-    crn_uint32 row_pitch = blocks_x * bytes_per_block;
-    crn_uint32 total_level_size = row_pitch * blocks_y;
+    for (int i = firstLevel; i < firstLevel + levelCount; ++i)
+    {
+        crn_uint32 blocks_x = (width + 3) >> 2;
+        crn_uint32 blocks_y = (height + 3) >> 2;
+        crn_uint32 row_pitch = blocks_x * bytes_per_block;
+        crn_uint32 total_level_size = row_pitch * blocks_y;
 
-    crnd::crnd_unpack_level(pContext, pDecomp_images, total_level_size, row_pitch, i);
-    pDecomp_images[0] = (char*)pDecomp_images[0] + total_level_size;
+        crnd::crnd_unpack_level(pContext, pDecomp_images, total_level_size, row_pitch, i);
+        pDecomp_images[0] = (char*)pDecomp_images[0] + total_level_size;
 
-    width = width >> 1;
-    height = height >> 1;
-  }
+        width = width >> 1;
+        height = height >> 1;
+    }
 
-  crnd::crnd_unpack_end(pContext);
+    crnd::crnd_unpack_end(pContext);
 }

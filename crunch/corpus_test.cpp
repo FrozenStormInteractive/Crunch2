@@ -10,7 +10,9 @@
 #include "crn_radix_sort.h"
 #include "crn_mipmapped_texture.h"
 
-namespace crnlib
+using namespace crnlib;
+
+namespace crn
 {
     corpus_tester::corpus_tester()
     {

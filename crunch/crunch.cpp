@@ -25,6 +25,7 @@
 #include "corpus_gen.h"
 #include "corpus_test.h"
 
+using namespace crn;
 using namespace crnlib;
 
 const int cDefaultCRNQualityLevel = 128;

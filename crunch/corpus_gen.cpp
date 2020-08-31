@@ -19,7 +19,9 @@
 
 #include "crn_defs.h"
 
-namespace crnlib
+using namespace crnlib;
+
+namespace crn
 {
     struct block
     {
