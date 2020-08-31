@@ -207,7 +207,7 @@ namespace crn
         uint next_dst_block = 0;
         uint total_dst_images = 0;
 
-        random rm;
+        crnlib::random rm;
 
         block_hash_map block_hash;
         block_hash.reserve(total_dst_blocks);

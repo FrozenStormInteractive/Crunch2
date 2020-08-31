@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.1)
+project(lzma_sdk C)
+
+set(lzma_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/7zBuf.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/7zBuf.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/7zBuf2.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/7zCrc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/7zFile.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/7zFile.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/7zStream.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/7zVersion.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Alloc.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Alloc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Bcj2.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Bcj2.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Bra.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Bra.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Bra86.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/BraIA64.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CpuArch.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzFind.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzFind.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzHash.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzmaDec.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzmaDec.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzmaEnc.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzmaEnc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzmaLib.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzmaLib.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/LzmaTypes.h
+)
+
+
+if(WIN32)
+    list(APPEND lzma_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/LzFindMt.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/LzFindMt.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/Threads.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/Threads.h
+    )
+endif()
+
+add_library(lzma EXCLUDE_FROM_ALL STATIC ${lzma_SOURCES})
+target_include_directories(lzma PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+set_target_properties(lzma PROPERTIES
+    FOLDER "3rdparty"
+    POSITION_INDEPENDENT_CODE ON
+)
