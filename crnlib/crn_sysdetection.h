@@ -1,3 +1,34 @@
+/****************************************************************************
+**
+** Copyright (C) 2014 Digia Plc and/or its subsidiary(-ies).
+** Copyright (C) 2012 Intel Corporation
+** Contact: http://www.qt-project.org/legal
+**
+** This file is part of the QtCore module of the Qt Toolkit.
+**
+** Commercial License Usage
+** Licensees holding valid commercial Qt licenses may use this file in
+** accordance with the commercial license agreement provided with the
+** Software or, alternatively, in accordance with the terms contained in
+** a written agreement between you and Digia. For licensing terms and
+** conditions see http://qt.digia.com/licensing. For further information
+** use the contact form at http://qt.digia.com/contact-us.
+**
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** In addition, as a special exception, Digia gives you certain additional
+** rights. These rights are described in the Digia Qt LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
+**
+****************************************************************************/
+
 #pragma once
 
 // OS Detection
@@ -121,5 +152,131 @@
 
 // Compiler detection
 
+/*
+   The compiler, must be one of: (CRN_CC_x)
+     SYM      - Digital Mars C/C++ (used to be Symantec C++)
+     MSVC     - Microsoft Visual C/C++, Intel C++ for Windows
+     BOR      - Borland/Turbo C++
+     WAT      - Watcom C++
+     GNU      - GNU C++
+     COMEAU   - Comeau C++
+     EDG      - Edison Design Group C++
+     OC       - CenterLine C++
+     SUN      - Forte Developer, or Sun Studio C++
+     MIPS     - MIPSpro C++
+     DEC      - DEC C++
+     HPACC    - HP aC++
+     USLC     - SCO OUDK and UDK
+     CDS      - Reliant C++
+     KAI      - KAI C++
+     INTEL    - Intel C++ for Linux, Intel C++ for Windows
+     HIGHC    - MetaWare High C/C++
+     PGI      - Portland Group C++
+     GHS      - Green Hills Optimizing C++ Compilers
+     RVCT     - ARM Realview Compiler Suite
+     CLANG    - C++ front-end for the LLVM compiler
+   Should be sorted most to least authoritative.
+*/
 
-
+#if defined(__DMC__) || defined(__SC__)
+#  define CRN_CC_SYM
+#elif defined(_MSC_VER)
+#  define CRN_CC_MSVC
+#  define CRN_CC_MSVC_VER (_MSC_VER)
+#  define CRN_CC_MSVC_NET
+#  if defined(__INTEL_COMPILER)
+#    define CRN_CC_INTEL
+#  endif
+#elif defined(__BORLANDC__) || defined(__TURBOC__)
+#  define CRN_CC_BOR
+#elif defined(__WATCOMC__)
+#  define CRN_CC_WAT
+#elif defined(__ARMCC__) || defined(__CC_ARM)
+#  define CRN_CC_RVCT
+#elif defined(__GNUC__)
+#  define CRN_CC_GNU
+#  define CRN_CC_GNU_VER (__GNUC__ * 100 + __GNUC_MINOR__)
+#  if defined(__MINGW32__)
+#    define CRN_CC_MINGW
+#  endif
+#  if defined(__INTEL_COMPILER) /* Intel C++ also masquerades as GCC */
+#    define CRN_CC_INTEL (__INTEL_COMPILER)
+#    ifdef __clang__ /* Intel C++ masquerades as Clang masquerading as GCC */
+#      define CRN_CC_CLANG
+#      define CRN_CC_CLANG_VER    305
+#    endif
+#  elif defined(__clang__) /* Clang also masquerades as GCC */
+#    define CRN_CC_CLANG
+#    if defined(__apple_build_version__) /* http://en.wikipedia.org/wiki/Xcode#Toolchain_versions */
+#      if __apple_build_version__ >= 8020041
+#        define CRN_CC_CLANG_VER 309
+#      elif __apple_build_version__ >= 8000038
+#        define CRN_CC_CLANG_VER 308
+#      elif __apple_build_version__ >= 7000053
+#        define CRN_CC_CLANG_VER 306
+#      elif __apple_build_version__ >= 6000051
+#        define CRN_CC_CLANG_VER 305
+#      elif __apple_build_version__ >= 5030038
+#        define CRN_CC_CLANG_VER 304
+#      elif __apple_build_version__ >= 5000275
+#        define CRN_CC_CLANG_VER 303
+#      elif __apple_build_version__ >= 4250024
+#        define CRN_CC_CLANG_VER 302
+#      elif __apple_build_version__ >= 3180045
+#        define CRN_CC_CLANG_VER 301
+#      elif __apple_build_version__ >= 2111001
+#        define CRN_CC_CLANG_VER 300
+#      else
+#        warning "Unknown Apple Clang version"
+#      endif
+#    else
+#      define CRN_CC_CLANG_VER ((__clang_major__ * 100) + __clang_minor__)
+#    endif
+#  endif
+#elif defined(__xlC__)
+#  define CRN_CC_XLC
+#elif defined(__DECCXX) || defined(__DECC)
+#  define CRN_CC_DEC
+#  if defined(__EDG__)
+#    define CRN_CC_EDG
+#  endif
+#elif defined(__PGI)
+#  define CRN_CC_PGI
+#  if defined(__EDG__)
+#    define CRN_CC_EDG
+#  endif
+#elif !defined(CRN_OS_HPUX) && (defined(__EDG) || defined(__EDG__))
+#  define CRN_CC_EDG
+#  if defined(__COMO__)
+#    define CRN_CC_COMEAU
+#  elif defined(__KCC)
+#    define CRN_CC_KAI
+#  elif defined(__INTEL_COMPILER)
+#    define CRN_CC_INTEL (__INTEL_COMPILER)
+#  elif defined(__ghs)
+#    define CRN_CC_GHS
+#  elif defined(__DCC__)
+#    define CRN_CC_DIAB
+#  elif defined(__USLC__) && defined(__SCO_VERSION__)
+#    define CRN_CC_USLC
+#  elif defined(CENTERLINE_CLPP) || defined(OBJECTCENTER)
+#    define CRN_CC_OC
+#  elif defined(sinix)
+#    define CRN_CC_CDS
+#  elif defined(__sgi)
+#    define CRN_CC_MIPS
+#  endif
+#elif defined(_DIAB_TOOL)
+#  define CRN_CC_DIAB
+#elif defined(__HIGHC__)
+#  define CRN_CC_HIGHC
+#elif defined(__SUNPRO_CC) || defined(__SUNPRO_C)
+#  define CRN_CC_SUN
+#elif defined(sinix)
+#  define CRN_CC_EDG
+#  define CRN_CC_CDS
+#elif defined(CRN_OS_HPUX) && defined(__HP_aCC)
+#  define CRN_CC_HPACC
+#else
+#  warning "Cannot detect compiler"
+#endif

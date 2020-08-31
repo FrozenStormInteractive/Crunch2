@@ -15,7 +15,7 @@ extern __inline__ __attribute__((__always_inline__, __gnu_inline__)) void crnlib
   __asm__ __volatile__("pause");
 }
 #else
-CRNLIB_FORCE_INLINE void crnlib_yield_processor() {
+CRN_FORCE_INLINE void crnlib_yield_processor() {
 #if CRNLIB_USE_MSVC_INTRINSICS
 #if CRNLIB_PLATFORM_PC_X64
   _mm_pause();

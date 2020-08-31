@@ -4,12 +4,24 @@
 
 #include "crn_sysdetection.h"
 
-#if defined(WIN32) && defined(_MSC_VER)
+#if defined(CRN_CC_MSVC)
 #pragma warning(disable : 4201)  // nonstandard extension used : nameless struct/union
 #pragma warning(disable : 4127)  // conditional expression is constant
 #pragma warning(disable : 4793)  // function compiled as native
 #pragma warning(disable : 4324)  // structure was padded due to __declspec(align())
 #endif
+
+#if defined(CRN_CC_MSVC)
+#  define CRN_NEVER_INLINE __declspec(noinline)
+#  define CRN_FORCE_INLINE __forceinline
+#elif defined(CRN_CC_GNU)
+#  define CRN_NEVER_INLINE __attribute__((noinline))
+#  define CRN_FORCE_INLINE inline __attribute__((always_inline))
+#else
+#  define CRN_NEVER_INLINE
+#  define CRN_FORCE_INLINE inline
+#endif
+
 
 #if defined(WIN32) && !defined(CRNLIB_ANSI_CPLUSPLUS)
 // MSVC or MinGW, x86 or x64, Win32 API's for threading and Win32 Interlocked API's or GCC built-ins for atomic ops.
@@ -49,7 +61,6 @@
 
 #define CRNLIB_USE_UNALIGNED_INT_LOADS 1
 #define CRNLIB_RESTRICT __restrict
-#define CRNLIB_FORCE_INLINE __forceinline
 
 #if defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
 #define CRNLIB_USE_MSVC_INTRINSICS 1
@@ -86,8 +97,6 @@
 
 #define CRNLIB_RESTRICT
 
-#define CRNLIB_FORCE_INLINE inline __attribute__((__always_inline__, __gnu_inline__))
-
 #define CRNLIB_INT64_FORMAT_SPECIFIER "%lli"
 #define CRNLIB_UINT64_FORMAT_SPECIFIER "%llu"
 
@@ -117,7 +126,6 @@
 #define CRNLIB_USE_WIN32_ATOMIC_FUNCTIONS 0
 
 #define CRNLIB_RESTRICT
-#define CRNLIB_FORCE_INLINE inline
 
 #define CRNLIB_INT64_FORMAT_SPECIFIER "%I64i"
 #define CRNLIB_UINT64_FORMAT_SPECIFIER "%I64u"
