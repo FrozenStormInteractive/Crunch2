@@ -133,34 +133,34 @@ set(CRNLIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_vector2d.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crn_winhdr.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crnlib.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zBuf.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zBuf.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zBuf2.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zCrc.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zFile.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zFile.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zStream.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zVersion.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Alloc.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Alloc.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bcj2.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bcj2.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bra.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bra.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bra86.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_BraIA64.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_CpuArch.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFind.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFind.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzHash.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaDec.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaDec.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaEnc.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaEnc.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaLib.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaLib.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_MyVersion.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Types.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zBuf.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zBuf.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zBuf2.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zCrc.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zFile.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zFile.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zStream.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_7zVersion.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Alloc.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Alloc.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bcj2.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bcj2.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bra.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bra.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Bra86.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_BraIA64.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_CpuArch.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFind.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFind.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzHash.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaDec.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaDec.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaEnc.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaEnc.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaLib.cpp
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzmaLib.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_MyVersion.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Types.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc/crn_decomp.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc/crnlib.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc/dds_defs.h
@@ -168,10 +168,10 @@ set(CRNLIB_SRCS
 
 if(WIN32)
     set(CRNLIB_THREAD_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFindMt.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFindMt.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Threads.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Threads.h
+#        ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFindMt.cpp
+#        ${CMAKE_CURRENT_SOURCE_DIR}/lzma_LzFindMt.h
+#        ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Threads.cpp
+#        ${CMAKE_CURRENT_SOURCE_DIR}/lzma_Threads.h
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_win32.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_win32.h
     )

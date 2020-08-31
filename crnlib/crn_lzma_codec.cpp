@@ -1,10 +1,12 @@
 // File: crn_lzma_codec.cpp
 // See Copyright Notice and license at the end of inc/crnlib.h
+
+#include <LzmaLib.h>
+
 #include "crn_core.h"
 #include "crn_lzma_codec.h"
 #include "crn_strutils.h"
 #include "crn_checksum.h"
-#include "lzma_LzmaLib.h"
 #include "crn_threading.h"
 
 namespace crnlib {
