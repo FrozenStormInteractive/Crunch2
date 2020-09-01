@@ -1,16 +1,16 @@
 <h1 align="center">
-  Crunch
+  Crunch 2
 </h1>
 
 <h4 align="center">An advanced DXTn texture compression library</h4>
 
 <p align="center">
-  <a href="https://github.com/FrozenStormInteractive/crunch/releases"><img src="https://img.shields.io/github/v/release/FrozenStormInteractive/crunch?sort=semver" alt="Gitter"></a>
-  <a href="https://github.com/FrozenStormInteractive/crunch/stargazers"><img src="https://img.shields.io/github/stars/FrozenStormInteractive/crunch.svg"></a>
-  <a href="https://github.com/FrozenStormInteractive/crunch/issues"><img src="https://img.shields.io/github/issues/FrozenStormInteractive/crunch.svg"></a>
-  <a href="https://github.com/FrozenStormInteractive/crunch/pulls"><img src="https://img.shields.io/github/issues-pr/FrozenStormInteractive/crunch"></a>
-  <a href="https://github.com/FrozenStormInteractive/crunch/graphs/contributors"><img src="https://img.shields.io/github/contributors-anon/FrozenStormInteractive/crunch.svg"></a>
-  <a href="https://github.com/FrozenStormInteractive/crunch/issues"><img src="https://img.shields.io/badge/contributions-welcome-orange.svg"></a>
+  <a href="https://github.com/FrozenStormInteractive/Crunch2/releases"><img src="https://img.shields.io/github/v/release/FrozenStormInteractive/Crunch2?sort=semver" alt="Gitter"></a>
+  <a href="https://github.com/FrozenStormInteractive/Crunch2/stargazers"><img src="https://img.shields.io/github/stars/FrozenStormInteractive/Crunch2.svg"></a>
+  <a href="https://github.com/FrozenStormInteractive/Crunch2/issues"><img src="https://img.shields.io/github/issues/FrozenStormInteractive/Crunch2.svg"></a>
+  <a href="https://github.com/FrozenStormInteractive/Crunch2/pulls"><img src="https://img.shields.io/github/issues-pr/FrozenStormInteractive/Crunch2"></a>
+  <a href="https://github.com/FrozenStormInteractive/Crunch2/graphs/contributors"><img src="https://img.shields.io/github/contributors-anon/FrozenStormInteractive/Crunch2.svg"></a>
+  <a href="https://github.com/FrozenStormInteractive/Crunch2/issues"><img src="https://img.shields.io/badge/contributions-welcome-orange.svg"></a>
   <a href="License.md"><img src="https://img.shields.io/badge/license-Zlib-blue.svg"></a>
 </p>
 
@@ -18,7 +18,8 @@
 
 * [Built Status](#built-status)
 * [Overview](#overview)
-* [Building](#building)
+* [Crunch2 VS Crunch](#crunch2-vs-crunch)
+* [Installation](#installation)
 * [Usage](#usage)
 * [Examples](#examples)
 * [Known Issues / Bugs](#known-issues--bugs)
@@ -34,10 +35,11 @@
 
 ## Overview
 
-crnlib is a lossy texture compression library for developers that ship
-content using the DXT1/5/N or 3DC compressed color/normal map/cubemap
-mipmapped texture formats. It was written by the same author as the open
-source [LZHAM compression library](http://code.google.com/p/lzham/).
+Crunch2 is a fork of crunch, a lossy texture compression tool and
+library for developers that ship content using the DXT1/5/N or 3DC
+compressed color/normal map/cubemapmipmapped texture formats. It was
+written by the same author as the open source
+[LZHAM compression library](http://code.google.com/p/lzham/).
 
 It can compress mipmapped 2D textures, normal maps, and cubemaps to
 approx. 1-1.25 bits/texel, and normal maps to 1.75-2 bits/texel. The
@@ -144,21 +146,60 @@ found that support .KTX are fairly (to very) buggy, or are limited to only a han
 of pixel formats, so there's no guarantee that the .KTX files written by crnlib can
 be reliably read by other tools.
 
-## Building
+## Crunch2 VS Crunch
 
-```sh
-cmake -S . -B build -DCRN_BUILD_SHARED_LIBS=ON
-```
+Crunch2 is a fork of crunch, the lossy texture compression tool
+written by Richard Geldreich, Jr.
 
-### Compile to Javascript with Emscripten
+Crunch2 provides some features to its predecessor:
+ - Updates and bug fixes
+ - Shared library
+ - Support for Linux and macOS
+ - CI pipeline
+ - Easy build with [CMake](https://cmake.org)
+ - Dependency management with [Conan](https://conan.io)
 
-Download and install Emscripten:
-    http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html
+Crunch2 isn't a rewrite of crunch, just an improvement. Our main goal is to keep
+the compatibility with the old crnlib API.
 
-From the root directory, run:
-```sh
-emcc -O3 emscripten/crunch_lib.cpp -I./inc -s EXPORTED_FUNCTIONS="['_malloc', '_free', '_crn_get_width', '_crn_get_height', '_crn_get_levels', '_crn_get_dxt_format', '_crn_get_bytes_per_block', '_crn_get_uncompressed_size', '_crn_decompress']" -s NO_EXIT_RUNTIME=1 -s NO_FILESYSTEM=1 -s ELIMINATE_DUPLICATE_FUNCTIONS=1 -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 -o crunch.js
-```
+## Installation
+
+### From binary
+
+Download Crunch2 binary from [GitHub releases page](https://github.com/FrozenStormInteractive/Crunch2/releases). Each release provides binaries for Windows, Linux and macOS.
+
+### Building from source
+
+ 1. Install the prerequisites.
+     - [CMake](https://cmake.org)
+
+ 2. Download Crunch2 sources from [GitHub](https://github.com/FrozenStormInteractive/Crunch2/releases) and unpack the distribution archive somewhere on disk.
+
+ 3. Generate build files with [CMake](https://cmake.org).
+    ```sh
+    cmake -S . -B build -DCRN_BUILD_SHARED_LIBS=ON
+    ```
+
+ 4. Build crunch2 with the generated build files or use [CMake](https://cmake.org).
+    ```sh
+    cmake --build build 
+    ```
+
+ 5. (Optional) Export distribution files with install target or use [CMake](https://cmake.org) (You must provide `CMAKE_INSTALL_PREFIX`).
+    ```sh
+    cmake --install build 
+    ```
+
+#### Compile to Javascript with Emscripten
+
+ 1. Download and install [Emscripten](https://emscripten.org/docs/getting_started/downloads.html)
+
+ 2. Download Crunch2 sources from [GitHub](https://github.com/FrozenStormInteractive/Crunch2/releases) and unpack the distribution archive somewhere on disk.
+
+ 3. From the root directory, run:
+    ```sh
+    emcc -O3 emscripten/crunch_lib.cpp -I./inc -s EXPORTED_FUNCTIONS="['_malloc', '_free', '_crn_get_width', '_crn_get_height', '_crn_get_levels', '_crn_get_dxt_format', '_crn_get_bytes_per_block', '_crn_get_uncompressed_size', '_crn_decompress']" -s NO_EXIT_RUNTIME=1 -s NO_FILESYSTEM=1 -s ELIMINATE_DUPLICATE_FUNCTIONS=1 -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 -o crunch.js
+    ```
 
 ## Usage
 
@@ -324,25 +365,29 @@ compression is supported when writing to ETC1, and .CRN does not support ETC1.
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct,
+and the process for submitting pull requests to us.
 
 ## License
 
-This project is licensed under the Zlib License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the Zlib License - see the [LICENSE.md](LICENSE.md) file for details.
 
-Copyright (C) 2010-2017 Richard Geldreich, Jr. and Binomial LLC http://binomial.info
+```
+Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+```
 
 Portions of this software make use of public domain code originally
-written by Igor Pavlov (LZMA), RYG (crn_ryg_dxt*), and Sean Barrett (stb_image.c).
+written by Igor Pavlov (LZMA), and Sean Barrett (stb) and Fabian "ryg" Giesen (stb_dxt).
 
 <!-- urls -->
 
-[Build Status Master Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/master?stage=Build&job=Windows "Build Status Master Windows"
-[Build Status Master Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/master?stage=Build&job=Linux "Build Status Master Linux"
-[Build Status Master macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/master?stage=Build&job=macOS "Build Status Master macOS"
-[Build Status Develop Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=Windows "Build Status Develop Windows"
-[Build Status Develop Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=Linux "Build Status Develop Linux"
-[Build Status Develop macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=macOS "Build Status Develop macOS"
+[Build Status Master Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/master?stage=Build&job=Windows "Build Status Master Windows"
+[Build Status Master Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/master?stage=Build&job=Linux "Build Status Master Linux"
+[Build Status Master macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/master?stage=Build&job=macOS "Build Status Master macOS"
+[Build Status Develop Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/develop?stage=Build&job=Windows "Build Status Develop Windows"
+[Build Status Develop Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/develop?stage=Build&job=Linux "Build Status Develop Linux"
+[Build Status Develop macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/develop?stage=Build&job=macOS "Build Status Develop macOS"
 
-[Latest Master Build]: https://dev.azure.com/FrozenStormInteractive/Crunch/_build/latest?definitionId=7&branchName=master
-[Latest Develop Build]: https://dev.azure.com/FrozenStormInteractive/Crunch/_build/latest?definitionId=7&branchName=develop
+[Latest Master Build]: https://dev.azure.com/FrozenStormInteractive/Crunch2/_build/latest?definitionId=8&branchName=master
+[Latest Develop Build]: https://dev.azure.com/FrozenStormInteractive/Crunch2/_build/latest?definitionId=8&branchName=develop

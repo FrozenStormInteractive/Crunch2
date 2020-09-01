@@ -1,5 +1,6 @@
 // File: crnlib.h - Advanced DXTn texture compression library.
 // Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+// Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
 // See copyright notice and license at the end of this file.
 //
 // This header file contains the public crnlib declarations for DXTn,
@@ -630,6 +631,7 @@ CRN_EXPORT int crn_get_version_patch();
 // http://opensource.org/licenses/Zlib
 //
 // Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+// Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
 //
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
