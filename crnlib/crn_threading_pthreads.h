@@ -12,6 +12,10 @@
 #error No atomic operations defined in crn_platform.h!
 #endif
 
+#if defined(CRN_OS_DARWIN)
+#include <libkern/OSAtomic.h>
+#endif
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
