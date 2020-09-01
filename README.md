@@ -342,7 +342,7 @@ written by Igor Pavlov (LZMA), RYG (crn_ryg_dxt*), and Sean Barrett (stb_image.c
 [Build Status Master macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/master?stage=Build&job=macOS "Build Status Master macOS"
 [Build Status Develop Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=Windows "Build Status Develop Windows"
 [Build Status Develop Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=Linux "Build Status Develop Linux"
-[Build Status Develop macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=MacOS "Build Status Develop macOS"
+[Build Status Develop macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/7/develop?stage=Build&job=macOS "Build Status Develop macOS"
 
 [Latest Master Build]: https://dev.azure.com/FrozenStormInteractive/Crunch/_build/latest?definitionId=7&branchName=master
 [Latest Develop Build]: https://dev.azure.com/FrozenStormInteractive/Crunch/_build/latest?definitionId=7&branchName=develop

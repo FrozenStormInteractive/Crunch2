@@ -201,7 +201,7 @@ void spinlock::unlock()
 }
 #elif defined(CRN_OS_DARWIN)
 spinlock::spinlock():
-    m_spinlock(0)
+    m_spinlock(OS_UNFAIR_LOCK_INIT)
 {
 }
 
@@ -211,12 +211,12 @@ spinlock::~spinlock()
 
 void spinlock::lock()
 {
-    OSSpinLockLock(&m_spinlock);
+    os_unfair_lock_lock(&m_spinlock);
 }
 
 void spinlock::unlock()
 {
-    OSSpinLockUnlock(&m_spinlock);
+    os_unfair_lock_unlock(&m_spinlock);
 }
 #else
 spinlock::spinlock()
