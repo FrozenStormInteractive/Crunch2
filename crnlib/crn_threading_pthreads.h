@@ -13,7 +13,7 @@
 #endif
 
 #if defined(CRN_OS_DARWIN)
-#include <libkern/OSAtomic.h>
+#include <os/lock.h>
 #endif
 
 #include <pthread.h>
@@ -95,7 +95,7 @@ private:
 #if defined(CRN_OS_LINUX)
     pthread_spinlock_t m_spinlock;
 #elif defined(CRN_OS_DARWIN)
-    OSSpinLock m_spinlock;
+    os_unfair_lock m_spinlock;
 #else
     int m_spinlock;
 #endif
