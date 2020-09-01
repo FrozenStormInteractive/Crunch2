@@ -1,6 +1,17 @@
 cmake_minimum_required(VERSION 3.1)
 project(crunch VERSION "1.1.0")
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake")
+    conan_basic_setup()
+elseif(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake")
+    include("${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake")
+    conan_basic_setup()
+elseif(DEFINED CONANBUILD_DIR AND EXISTS "${CONANBUILD_DIR}/conanbuildinfo.cmake")
+    include("${CONANBUILD_DIR}/conanbuildinfo.cmake")
+    conan_basic_setup()
+endif()
+
 include(GNUInstallDirs)
 
 option(CRN_BUILD_SHARED_LIBS "Build crnlib as shared library." ${BUILD_SHARED_LIBS})
