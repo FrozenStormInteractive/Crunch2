@@ -32,9 +32,15 @@ void crn_threading_init() {
 #endif
 }
 
-crn_thread_id_t crn_get_current_thread_id() {
-  // FIXME: Not portable
-  return static_cast<crn_thread_id_t>(pthread_self());
+crn_thread_id_t crn_get_current_thread_id()
+{
+#if defined(CRN_OS_BSD4) || defined(CRN_OS_DARWIN)
+    crn_thread_id_t id;
+    pthread_threadid_np(pthread_self(), &id);
+    return id;
+#else
+    return static_cast<crn_thread_id_t>(pthread_self());
+#endif
 }
 
 void crn_sleep(unsigned int milliseconds) {
