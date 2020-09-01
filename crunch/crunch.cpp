@@ -88,8 +88,6 @@ public:
         console::printf("-file @list.txt - List of files to convert.");
         console::printf("Supported source file formats: dds,ktx,crn,tga,bmp,png,jpg/jpeg,psd");
         console::printf("Note: Some file format variants are unsupported.");
-        console::printf("See the docs for stb_image.c: http://www.nothings.org/stb_image.c");
-        console::printf("Progressive JPEG files are supported, see: http://code.google.com/p/jpeg-compressor/");
 
         console::message("\nPath/file related parameters:");
         console::printf("-out filename - Output filename");
@@ -189,7 +187,7 @@ public:
             console::printf("-%s", pixel_format_helpers::get_pixel_format_string(fmt));
         }
 
-        console::printf("\nFor bugs, support, or feedback: info@binomial.info");
+        console::printf("\nFor bugs, support, or feedback: https://github.com/FrozenStormInteractive/Crunch2");
     }
 
     bool convert(const char* pCommand_line)
@@ -1410,8 +1408,11 @@ static bool check_for_option(int argc, char* argv[], const char* pOption)
 
 static void print_title()
 {
-    console::printf("crunch: Advanced DXTn Texture Compressor - https://github.com/BinomialLLC/crunch");
+    console::printf("crunch - Advanced DXTn Texture Compressor - https://github.com/FrozenStormInteractive/Crunch2");
+    console::printf("");
     console::printf("Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC");
+    console::printf("Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet");
+    console::printf("");
     console::printf("crnlib version %s %s Built %s, %s", crn_get_version(), crnlib_is_x64() ? "x64" : "x86", __DATE__, __TIME__);
     console::printf("");
 }
@@ -1431,6 +1432,17 @@ static int main_internal(int argc, char* argv[])
     }
 
     print_title();
+
+    if (check_for_option(argc, argv, "version"))
+    {
+        return EXIT_SUCCESS;
+    }
+
+    if (check_for_option(argc, argv, "help"))
+    {
+        crunch::print_usage();
+        return EXIT_SUCCESS;
+    }
 
     dynamic_string cmd_line;
     get_command_line_as_single_string(cmd_line, argc, argv);

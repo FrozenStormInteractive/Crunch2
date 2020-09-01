@@ -1,5 +1,6 @@
 // File: crn_decomp.h - Fast CRN->DXTc texture transcoder header file library
 // Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+// Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
 // See Copyright Notice and license at the end of this file.
 //
 // This single header file contains *all* of the code necessary to unpack .CRN files to raw DXTn bits.
@@ -3813,6 +3814,7 @@ bool crnd_unpack_end(crnd_unpack_context pContext) {
 // http://opensource.org/licenses/Zlib
 //
 // Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+// Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
 //
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages

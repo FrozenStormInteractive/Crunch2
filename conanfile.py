@@ -1,14 +1,16 @@
 import os
 from conans import ConanFile, CMake, tools
 
-class CrunchConan(ConanFile):
-    name = "crunch"
+class Crunch2Conan(ConanFile):
+    name = "crunch2"
     description = "Advanced DXTc texture compression and transcoding library"
-    homepage = "https://github.com/FrozenStormInteractive/Crunch"
-    url = "https://github.com/FrozenStormInteractive/Crunch"
+    homepage = "https://github.com/FrozenStormInteractive/Crunch2"
+    url = "https://github.com/FrozenStormInteractive/Crunch2"
     license = "Zlib"
     topics = ("conan", "crunch", "texture", "compression", "decompression", "transcoding")
     settings = "os", "compiler", "arch", "build_type"
+    exports_sources = ["CMakeLists.txt", "license.txt", "crnlib/*", "crunch/*", "inc/*", "3rdparty/*"]
+    generators = "cmake"
     options = {
         "fPIC": [True, False],
         "shared": [True, False],
@@ -17,9 +19,7 @@ class CrunchConan(ConanFile):
         "fPIC": True,
         "shared": False,
     }
-    exports_sources = ["CMakeLists.txt", "crnlib/*", "crunch/*", "inc/*", "3rdparty/*"]
-    generators = "cmake"
-
+    
     _cmake = None
 
     @property
@@ -48,7 +48,7 @@ class CrunchConan(ConanFile):
         cmake.build()
 
     def package(self):
-        self.copy("LICENSE", src=self.source_folder, dst="licenses")
+        self.copy("license.txt", src=self.source_folder, dst="licenses")
         cmake = self._configure_cmake()
         cmake.install()
 
