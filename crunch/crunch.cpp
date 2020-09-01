@@ -1408,7 +1408,7 @@ static bool check_for_option(int argc, char* argv[], const char* pOption)
 
 static void print_title()
 {
-    console::printf("crunch: - Advanced DXTn Texture Compressor - https://github.com/FrozenStormInteractive/Crunch2");
+    console::printf("crunch - Advanced DXTn Texture Compressor - https://github.com/FrozenStormInteractive/Crunch2");
     console::printf("");
     console::printf("Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC");
     console::printf("Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet");
@@ -1432,6 +1432,17 @@ static int main_internal(int argc, char* argv[])
     }
 
     print_title();
+
+    if (check_for_option(argc, argv, "version"))
+    {
+        return EXIT_SUCCESS;
+    }
+
+    if (check_for_option(argc, argv, "help"))
+    {
+        crunch::print_usage();
+        return EXIT_SUCCESS;
+    }
 
     dynamic_string cmd_line;
     get_command_line_as_single_string(cmd_line, argc, argv);

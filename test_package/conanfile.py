@@ -12,6 +12,5 @@ class TestPackageConan(ConanFile):
 
     def test(self):
         if not tools.cross_building(self.settings, skip_x64_x86=True):
-            # TODO: Add help flag
-            # self.run("crunch", run_environment=True)
+            self.run("crunch -version", run_environment=True)
             self.run(os.path.join("bin", "test_package"), run_environment=True)
