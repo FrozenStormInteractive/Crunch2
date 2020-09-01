@@ -9,7 +9,7 @@ class Crunch2Conan(ConanFile):
     license = "Zlib"
     topics = ("conan", "crunch", "texture", "compression", "decompression", "transcoding")
     settings = "os", "compiler", "arch", "build_type"
-    exports_sources = ["CMakeLists.txt", "crnlib/*", "crunch/*", "inc/*", "3rdparty/*"]
+    exports_sources = ["CMakeLists.txt", "license.txt", "crnlib/*", "crunch/*", "inc/*", "3rdparty/*"]
     generators = "cmake"
     options = {
         "fPIC": [True, False],
