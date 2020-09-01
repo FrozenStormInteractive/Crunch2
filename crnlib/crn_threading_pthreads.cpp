@@ -1,5 +1,6 @@
 // File: crn_threading_pthreads.cpp
 // See Copyright Notice and license at the end of include/crnlib.h
+
 #include "crn_core.h"
 #include "crn_threading_pthreads.h"
 #include "crn_timer.h"
@@ -9,17 +10,13 @@
 #ifdef WIN32
 #pragma comment(lib, "../ext/libpthread/lib/pthreadVC2.lib")
 #include "crn_winhdr.h"
-#endif
-
-#ifdef __GNUC__
-#include <sys/sysinfo.h>
-#endif
-
-#ifdef WIN32
 #include <process.h>
+#else
+#include <unistd.h>
 #endif
 
-namespace crnlib {
+namespace crnlib
+{
 uint g_number_of_processors = 1;
 
 void crn_threading_init() {
@@ -27,10 +24,8 @@ void crn_threading_init() {
   SYSTEM_INFO g_system_info;
   GetSystemInfo(&g_system_info);
   g_number_of_processors = math::maximum<uint>(1U, g_system_info.dwNumberOfProcessors);
-#elif defined(__GNUC__)
-  g_number_of_processors = math::maximum<int>(1, get_nprocs());
 #else
-  g_number_of_processors = 1;
+  g_number_of_processors = math::maximum<int>(1, sysconf(_SC_NPROCESSORS_ONLN));
 #endif
 }
 
