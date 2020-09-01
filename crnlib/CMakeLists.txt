@@ -146,10 +146,16 @@ if(WIN32)
     )
 else()
     list(APPEND CRNLIB_SRCS
-        # Port to another pthread-compatible os
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_pthreads.h
         ${CMAKE_CURRENT_SOURCE_DIR}/crn_threading_pthreads.cpp
     )
+
+    if(APPLE)
+        list(APPEND CRNLIB_SRCS
+            ${CMAKE_CURRENT_SOURCE_DIR}/crn_darwin_pthreads.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/crn_darwin_pthreads.cpp
+        )
+    endif()
 endif()
 
 add_library(crn ${CRNLIB_SRCS})

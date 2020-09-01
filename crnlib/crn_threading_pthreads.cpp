@@ -13,6 +13,9 @@
 #include <process.h>
 #else
 #include <unistd.h>
+#if defined(CRN_OS_DARWIN)
+#include "crn_darwin_pthreads.h"
+#endif
 #endif
 
 namespace crnlib
@@ -192,7 +195,7 @@ void spinlock::unlock()
 }
 #elif defined(CRN_OS_DARWIN)
 spinlock::spinlock():
-    m_lock(0)
+    m_spinlock(0)
 {
 }
 
@@ -202,12 +205,12 @@ spinlock::~spinlock()
 
 void spinlock::lock()
 {
-    OSSpinLockLock(&m_lock);
+    OSSpinLockLock(&m_spinlock);
 }
 
 void spinlock::unlock()
 {
-    OSSpinLockUnlock(&m_lock);
+    OSSpinLockUnlock(&m_spinlock);
 }
 #else
 spinlock::spinlock()
