@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(crunch VERSION "1.1.0")
+project(crunch VERSION "1.1.1")
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake")
     include("${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake")
