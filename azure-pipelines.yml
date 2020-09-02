@@ -1,8 +1,12 @@
 trigger:
-  - master
-  - develop
-  - release/*
-  - feature/*
+  branches:
+    include:
+      - master
+      - develop
+      - refs/tags/v*
+      - release/*
+      - feature/*
+      - hotfix/*
 
 stages:
 
