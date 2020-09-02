@@ -182,12 +182,12 @@ Download Crunch2 binary from [GitHub releases page](https://github.com/FrozenSto
 
  4. Build crunch2 with the generated build files or use [CMake](https://cmake.org).
     ```sh
-    cmake --build build 
+    cmake --build build
     ```
 
  5. (Optional) Export distribution files with install target or use [CMake](https://cmake.org) (You must provide `CMAKE_INSTALL_PREFIX`).
     ```sh
-    cmake --install build 
+    cmake --install build
     ```
 
 #### Compile to Javascript with Emscripten
@@ -382,12 +382,12 @@ written by Igor Pavlov (LZMA), and Sean Barrett (stb) and Fabian "ryg" Giesen (s
 
 <!-- urls -->
 
-[Build Status Master Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/master?stage=Build&job=Windows "Build Status Master Windows"
-[Build Status Master Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/master?stage=Build&job=Linux "Build Status Master Linux"
-[Build Status Master macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/master?stage=Build&job=macOS "Build Status Master macOS"
-[Build Status Develop Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/develop?stage=Build&job=Windows "Build Status Develop Windows"
-[Build Status Develop Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/develop?stage=Build&job=Linux "Build Status Develop Linux"
-[Build Status Develop macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/8/develop?stage=Build&job=macOS "Build Status Develop macOS"
+[Build Status Master Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/9/master?stage=Build&job=Windows "Build Status Master Windows"
+[Build Status Master Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/9/master?stage=Build&job=Linux "Build Status Master Linux"
+[Build Status Master macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/9/master?stage=Build&job=macOS "Build Status Master macOS"
+[Build Status Develop Windows]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/9/develop?stage=Build&job=Windows "Build Status Develop Windows"
+[Build Status Develop Linux]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/9/develop?stage=Build&job=Linux "Build Status Develop Linux"
+[Build Status Develop macOS]: https://img.shields.io/azure-devops/build/FrozenStormInteractive/0e954e31-9ab2-40af-908f-dede5858bfed/9/develop?stage=Build&job=macOS "Build Status Develop macOS"
 
-[Latest Master Build]: https://dev.azure.com/FrozenStormInteractive/Crunch2/_build/latest?definitionId=8&branchName=master
-[Latest Develop Build]: https://dev.azure.com/FrozenStormInteractive/Crunch2/_build/latest?definitionId=8&branchName=develop
+[Latest Master Build]: https://dev.azure.com/FrozenStormInteractive/Crunch2/_build/latest?definitionId=9&branchName=master
+[Latest Develop Build]: https://dev.azure.com/FrozenStormInteractive/Crunch2/_build/latest?definitionId=9&branchName=develop
