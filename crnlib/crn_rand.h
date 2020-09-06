@@ -1,115 +1,125 @@
 // File: crn_rand.h
 // See Copyright Notice and license at the end of inc/crnlib.h
+
 #pragma once
 
 #include "crn_export.h"
 
-namespace crnlib {
-class CRN_EXPORT kiss99 {
- public:
-  kiss99();
+namespace crnlib
+{
+    class CRN_EXPORT kiss99
+    {
+    public:
+        kiss99();
 
-  void seed(uint32 i, uint32 j, uint32 k);
+        void seed(uint32 i, uint32 j, uint32 k);
 
-  inline uint32 next();
+        inline uint32 next();
 
- private:
-  uint32 x;
-  uint32 y;
-  uint32 z;
-  uint32 c;
-};
+    private:
+        uint32 x;
+        uint32 y;
+        uint32 z;
+        uint32 c;
+    };
 
-class CRN_EXPORT well512 {
- public:
-  well512();
+    class CRN_EXPORT well512
+    {
+    public:
+        well512();
 
-  enum { cStateSize = 16 };
-  void seed(uint32 seed[cStateSize]);
-  void seed(uint32 seed);
-  void seed(uint32 seed1, uint32 seed2, uint32 seed3);
+        enum { cStateSize = 16 };
+        void seed(uint32 seed[cStateSize]);
+        void seed(uint32 seed);
+        void seed(uint32 seed1, uint32 seed2, uint32 seed3);
 
-  inline uint32 next();
+        inline uint32 next();
 
- private:
-  uint32 m_state[cStateSize];
-  uint32 m_index;
-};
+    private:
+        uint32 m_state[cStateSize];
+        uint32 m_index;
+    };
 
-class CRN_EXPORT ranctx {
- public:
-  ranctx() { seed(0xDE149737); }
+    class CRN_EXPORT ranctx
+    {
+    public:
+        ranctx()
+        {
+            seed(0xDE149737);
+        }
 
-  void seed(uint32 seed);
+        void seed(uint32 seed);
 
-  inline uint32 next();
+        inline uint32 next();
 
- private:
-  uint32 a;
-  uint32 b;
-  uint32 c;
-  uint32 d;
-};
+    private:
+        uint32 a;
+        uint32 b;
+        uint32 c;
+        uint32 d;
+    };
 
-class CRN_EXPORT random {
- public:
-  random();
-  random(uint32 i);
+    class CRN_EXPORT random
+    {
+    public:
+        random();
+        random(uint32 i);
 
-  void seed(uint32 i);
-  void seed(uint32 i1, uint32 i2, uint32 i3);
+        void seed(uint32 i);
+        void seed(uint32 i1, uint32 i2, uint32 i3);
 
-  uint32 urand32();
-  uint64 urand64();
+        uint32 urand32();
+        uint64 urand64();
 
-  // "Fast" variant uses no multiplies.
-  uint32 fast_urand32();
+        // "Fast" variant uses no multiplies.
+        uint32 fast_urand32();
 
-  uint32 bit();
+        uint32 bit();
 
-  // Returns random between [0, 1)
-  double drand(double l, double h);
+        // Returns random between [0, 1)
+        double drand(double l, double h);
 
-  float frand(float l, float h);
+        float frand(float l, float h);
 
-  // Returns random between [l, h)
-  int irand(int l, int h);
+        // Returns random between [l, h)
+        int irand(int l, int h);
 
-  // Returns random between [l, h]
-  int irand_inclusive(int l, int h);
+        // Returns random between [l, h]
+        int irand_inclusive(int l, int h);
 
-  double gaussian(double mean, double stddev);
+        double gaussian(double mean, double stddev);
 
-  void test();
+        void test();
 
- private:
-  ranctx m_ranctx;
-  kiss99 m_kiss99;
-  well512 m_well512;
-};
+    private:
+        ranctx m_ranctx;
+        kiss99 m_kiss99;
+        well512 m_well512;
+    };
 
-// Simpler, minimal state PRNG
-class CRN_EXPORT fast_random {
- public:
-  fast_random();
-  fast_random(uint32 i);
-  fast_random(const fast_random& other);
-  fast_random& operator=(const fast_random& other);
+    // Simpler, minimal state PRNG
+    class CRN_EXPORT fast_random
+    {
+    public:
+        fast_random();
+        fast_random(uint32 i);
+        fast_random(const fast_random& other);
+        fast_random& operator=(const fast_random& other);
 
-  void seed(uint32 i);
+        void seed(uint32 i);
 
-  uint32 urand32();
-  uint64 urand64();
+        uint32 urand32();
+        uint64 urand64();
 
-  int irand(int l, int h);
+        int irand(int l, int h);
 
-  double drand(double l, double h);
+        double drand(double l, double h);
 
-  float frand(float l, float h);
+        float frand(float l, float h);
 
- private:
-  uint32 jsr;
-  uint32 jcong;
-};
+    private:
+        uint32 jsr;
+        uint32 jcong;
+    };
 
 }  // namespace crnlib

@@ -2,7 +2,8 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 
-namespace crnlib {
+namespace crnlib
+{
 template <typename T>
 struct int_traits {
   enum { cMin = crnlib::cINT32_MIN,
