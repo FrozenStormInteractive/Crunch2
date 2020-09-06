@@ -57,6 +57,7 @@ dxt1_endpoint_optimizer::dxt1_endpoint_optimizer()
 
   m_lo_cells.reserve(128);
   m_hi_cells.reserve(128);
+  m_num_prev_results = 0;
 }
 
 // All selectors are equal. Try compressing as if it was solid, using the block's average color, using ryg's optimal single color compression tables.
