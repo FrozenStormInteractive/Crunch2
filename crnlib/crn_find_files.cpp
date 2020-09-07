@@ -315,7 +315,7 @@ namespace crnlib
         }
 
         closedir(dp);
-        dp = NULL;
+        dp = nullptr;
 
         if (flags & cFlagRecursive)
         {

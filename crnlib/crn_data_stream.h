@@ -31,7 +31,7 @@ namespace crnlib
 
         virtual data_stream* get_parent()
         {
-            return NULL;
+            return nullptr;
         }
 
         virtual bool close()
@@ -100,7 +100,7 @@ namespace crnlib
 
         virtual const void* get_ptr() const
         {
-            return NULL;
+            return nullptr;
         }
 
         inline int read_byte()

@@ -16,7 +16,7 @@ namespace crnlib
         {
             params():
                 m_block_index(0),
-                m_pPixels(NULL),
+                m_pPixels(nullptr),
                 m_num_pixels(0),
                 m_comp_index(3),
                 m_quality(cCRNDXTQualityUber),

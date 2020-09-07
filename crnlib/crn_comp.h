@@ -49,7 +49,7 @@ namespace crnlib
         }
         const uint8* get_comp_data_ptr() const
         {
-            return m_comp_data.size() ? &m_comp_data[0] : NULL;
+            return m_comp_data.size() ? &m_comp_data[0] : nullptr;
         }
 
     private:

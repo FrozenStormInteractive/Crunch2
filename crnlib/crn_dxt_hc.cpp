@@ -31,7 +31,7 @@ dxt_hc::dxt_hc()
     m_num_alpha_blocks(0),
     m_main_thread_id(crn_get_current_thread_id()),
     m_canceled(false),
-    m_pTask_pool(NULL),
+    m_pTask_pool(nullptr),
     m_prev_phase_index(-1),
     m_prev_percentage_complete(-1) {
 }
@@ -229,7 +229,7 @@ bool dxt_hc::compress(
     }
   }
 
-  m_pTask_pool = NULL;
+  m_pTask_pool = nullptr;
   return true;
 }
 
@@ -769,7 +769,7 @@ void dxt_hc::determine_color_endpoints() {
   }
 
   for (uint i = 0; i <= m_pTask_pool->get_num_threads(); i++)
-    m_pTask_pool->queue_object_task(this, m_has_etc_color_blocks ? &dxt_hc::determine_color_endpoint_codebook_task_etc : &dxt_hc::determine_color_endpoint_codebook_task, i, NULL);
+    m_pTask_pool->queue_object_task(this, m_has_etc_color_blocks ? &dxt_hc::determine_color_endpoint_codebook_task_etc : &dxt_hc::determine_color_endpoint_codebook_task, i, nullptr);
   m_pTask_pool->join();
 }
 
@@ -978,7 +978,7 @@ void dxt_hc::determine_alpha_endpoints() {
   }
 
   for (uint i = 0; i < num_tasks; i++)
-    m_pTask_pool->queue_object_task(this, &dxt_hc::determine_alpha_endpoint_codebook_task, i, NULL);
+    m_pTask_pool->queue_object_task(this, &dxt_hc::determine_alpha_endpoint_codebook_task, i, nullptr);
   m_pTask_pool->join();
 }
 

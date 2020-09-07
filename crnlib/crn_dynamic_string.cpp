@@ -11,7 +11,7 @@ namespace crnlib
     dynamic_string::dynamic_string(eVarArg, const char* p, ...):
         m_buf_size(0),
         m_len(0),
-        m_pStr(NULL)
+        m_pStr(nullptr)
     {
         CRNLIB_ASSERT(p);
 
@@ -24,7 +24,7 @@ namespace crnlib
     dynamic_string::dynamic_string(const char* p):
         m_buf_size(0),
         m_len(0),
-        m_pStr(NULL)
+        m_pStr(nullptr)
     {
         CRNLIB_ASSERT(p);
         set(p);
@@ -33,7 +33,7 @@ namespace crnlib
     dynamic_string::dynamic_string(const char* p, uint len):
         m_buf_size(0),
         m_len(0),
-        m_pStr(NULL)
+        m_pStr(nullptr)
     {
         CRNLIB_ASSERT(p);
         set_from_buf(p, len);
@@ -42,7 +42,7 @@ namespace crnlib
     dynamic_string::dynamic_string(const dynamic_string& other):
         m_buf_size(0),
         m_len(0),
-        m_pStr(NULL)
+        m_pStr(nullptr)
     {
         set(other);
     }
@@ -54,7 +54,7 @@ namespace crnlib
         if (m_pStr)
         {
             crnlib_delete_array(m_pStr);
-            m_pStr = NULL;
+            m_pStr = nullptr;
 
             m_len = 0;
             m_buf_size = 0;
@@ -230,7 +230,7 @@ namespace crnlib
         }
 
 #ifdef CRNLIB_BUILD_DEBUG
-        if ((buf_size) && (memchr(pBuf, 0, buf_size) != NULL))
+        if ((buf_size) && (memchr(pBuf, 0, buf_size) != nullptr))
         {
             CRNLIB_ASSERT(0);
             clear();

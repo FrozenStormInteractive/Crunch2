@@ -13,7 +13,7 @@ namespace crnlib
     {
     public:
         data_stream_serializer():
-            m_pStream(NULL),
+            m_pStream(nullptr),
             m_little_endian(true)
         {
         }
@@ -307,7 +307,7 @@ namespace crnlib
                     return false;
                 }
 
-                if (memchr(str.get_ptr(), 0, len) != NULL)
+                if (memchr(str.get_ptr(), 0, len) != nullptr)
                 {
                     str.truncate(0);
                     return false;

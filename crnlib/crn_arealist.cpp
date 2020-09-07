@@ -43,7 +43,7 @@ namespace crnlib
         q->Pprev = p;
 
         Parea->Pnext = Plist->Pfree;
-        Parea->Pprev = NULL;
+        Parea->Pprev = nullptr;
         Plist->Pfree = Parea;
 
         return q;
@@ -53,7 +53,7 @@ namespace crnlib
     {
         Area* p = Plist->Pfree;
 
-        if (p == NULL)
+        if (p == nullptr)
         {
             if (Plist->next_free == Plist->total_areas)
             {
@@ -123,7 +123,7 @@ namespace crnlib
         if (Plist->Phead)
         {
             crnlib_free(Plist->Phead);
-            Plist->Phead = NULL;
+            Plist->Phead = nullptr;
         }
 
         crnlib_free(Plist);
@@ -138,13 +138,13 @@ namespace crnlib
         Plist->Phead = (Area*)crnlib_calloc(max_areas + 2, sizeof(Area));
         Plist->Ptail = Plist->Phead + 1;
 
-        Plist->Phead->Pprev = NULL;
+        Plist->Phead->Pprev = nullptr;
         Plist->Phead->Pnext = Plist->Ptail;
 
         Plist->Ptail->Pprev = Plist->Phead;
-        Plist->Ptail->Pnext = NULL;
+        Plist->Ptail->Pnext = nullptr;
 
-        Plist->Pfree = NULL;
+        Plist->Pfree = nullptr;
         Plist->next_free = 2;
 
         return Plist;
@@ -172,7 +172,7 @@ namespace crnlib
         Pnew_list->Phead = (Area*)crnlib_malloc(sizeof(Area) * Plist->total_areas);
         Pnew_list->Ptail = Pnew_list->Phead + 1;
 
-        Pnew_list->Pfree = (Plist->Pfree) ? ((Plist->Pfree - Plist->Phead) + Pnew_list->Phead) : NULL;
+        Pnew_list->Pfree = (Plist->Pfree) ? ((Plist->Pfree - Plist->Phead) + Pnew_list->Phead) : nullptr;
 
         Pnew_list->next_free = Plist->next_free;
 
@@ -180,8 +180,8 @@ namespace crnlib
 
         for (i = 0; i < Plist->total_areas; i++)
         {
-            Pnew_list->Phead[i].Pnext = (Plist->Phead[i].Pnext == NULL) ? NULL : (Plist->Phead[i].Pnext - Plist->Phead) + Pnew_list->Phead;
-            Pnew_list->Phead[i].Pprev = (Plist->Phead[i].Pprev == NULL) ? NULL : (Plist->Phead[i].Pprev - Plist->Phead) + Pnew_list->Phead;
+            Pnew_list->Phead[i].Pnext = (Plist->Phead[i].Pnext == nullptr) ? nullptr : (Plist->Phead[i].Pnext - Plist->Phead) + Pnew_list->Phead;
+            Pnew_list->Phead[i].Pprev = (Plist->Phead[i].Pprev == nullptr) ? nullptr : (Plist->Phead[i].Pprev - Plist->Phead) + Pnew_list->Phead;
 
             Pnew_list->Phead[i].x1 += x_ofs;
             Pnew_list->Phead[i].y1 += y_ofs;
@@ -216,7 +216,7 @@ namespace crnlib
         {
             area_fatal_error("Area_List_dup", "Src and Dst total_areas must be equal!");
         }
-        Pdst_list->Pfree = (Psrc_list->Pfree) ? ((Psrc_list->Pfree - Psrc_list->Phead) + Pdst_list->Phead) : NULL;
+        Pdst_list->Pfree = (Psrc_list->Pfree) ? ((Psrc_list->Pfree - Psrc_list->Phead) + Pdst_list->Phead) : nullptr;
 
         Pdst_list->next_free = Psrc_list->next_free;
 
@@ -226,8 +226,8 @@ namespace crnlib
         {
             for (i = 0; i < Psrc_list->total_areas; i++)
             {
-                Pdst_list->Phead[i].Pnext = (Psrc_list->Phead[i].Pnext == NULL) ? NULL : (Psrc_list->Phead[i].Pnext - Psrc_list->Phead) + Pdst_list->Phead;
-                Pdst_list->Phead[i].Pprev = (Psrc_list->Phead[i].Pprev == NULL) ? NULL : (Psrc_list->Phead[i].Pprev - Psrc_list->Phead) + Pdst_list->Phead;
+                Pdst_list->Phead[i].Pnext = (Psrc_list->Phead[i].Pnext == nullptr) ? nullptr : (Psrc_list->Phead[i].Pnext - Psrc_list->Phead) + Pdst_list->Phead;
+                Pdst_list->Phead[i].Pprev = (Psrc_list->Phead[i].Pprev == nullptr) ? nullptr : (Psrc_list->Phead[i].Pprev - Psrc_list->Phead) + Pdst_list->Phead;
 
                 Pdst_list->Phead[i].x1 += x_ofs;
                 Pdst_list->Phead[i].y1 += y_ofs;
@@ -239,8 +239,8 @@ namespace crnlib
         {
             for (i = 0; i < Psrc_list->total_areas; i++)
             {
-                Pdst_list->Phead[i].Pnext = (Psrc_list->Phead[i].Pnext == NULL) ? NULL : (Psrc_list->Phead[i].Pnext - Psrc_list->Phead) + Pdst_list->Phead;
-                Pdst_list->Phead[i].Pprev = (Psrc_list->Phead[i].Pprev == NULL) ? NULL : (Psrc_list->Phead[i].Pprev - Psrc_list->Phead) + Pdst_list->Phead;
+                Pdst_list->Phead[i].Pnext = (Psrc_list->Phead[i].Pnext == nullptr) ? nullptr : (Psrc_list->Phead[i].Pnext - Psrc_list->Phead) + Pdst_list->Phead;
+                Pdst_list->Phead[i].Pprev = (Psrc_list->Phead[i].Pprev == nullptr) ? nullptr : (Psrc_list->Phead[i].Pprev - Psrc_list->Phead) + Pdst_list->Phead;
             }
         }
     }
@@ -329,13 +329,13 @@ namespace crnlib
     {
         Plist->Phead->Pnext = Plist->Ptail;
         Plist->Ptail->Pprev = Plist->Phead;
-        Plist->Pfree = NULL;
+        Plist->Pfree = nullptr;
         Plist->next_free = 2;
     }
 
     void Area_List_set(Area_List* Plist, int x1, int y1, int x2, int y2)
     {
-        Plist->Pfree = NULL;
+        Plist->Pfree = nullptr;
 
         Plist->Phead[2].x1 = x1;
         Plist->Phead[2].y1 = y1;

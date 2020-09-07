@@ -413,10 +413,10 @@ class CRN_EXPORT etc1_optimizer {
   }
 
   void clear() {
-    m_pParams = NULL;
-    m_pResult = NULL;
-    m_pSorted_luma = NULL;
-    m_pSorted_luma_indices = NULL;
+    m_pParams = nullptr;
+    m_pResult = nullptr;
+    m_pSorted_luma = nullptr;
+    m_pSorted_luma_indices = nullptr;
   }
 
   struct params : crn_etc1_pack_params {

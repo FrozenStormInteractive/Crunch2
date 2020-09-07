@@ -127,7 +127,7 @@ namespace crnlib
     {
         CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(semaphore);
     public:
-        inline semaphore(long initialCount = 0, long maximumCount = 1, const char* pName = NULL)
+        inline semaphore(long initialCount = 0, long maximumCount = 1, const char* pName = nullptr)
         {
             initialCount, maximumCount, pName;
         }
@@ -136,7 +136,7 @@ namespace crnlib
         {
         }
 
-        inline void release(long releaseCount = 1, long* pPreviousCount = NULL)
+        inline void release(long releaseCount = 1, long* pPreviousCount = nullptr)
         {
             releaseCount, pPreviousCount;
         }
@@ -183,7 +183,7 @@ namespace crnlib
 
         // C-style task callback
         typedef void (*task_callback_func)(uint64 data, void* pData_ptr);
-        inline bool queue_task(task_callback_func pFunc, uint64 data = 0, void* pData_ptr = NULL)
+        inline bool queue_task(task_callback_func pFunc, uint64 data = 0, void* pData_ptr = nullptr)
         {
             pFunc(data, pData_ptr);
             return true;
@@ -195,21 +195,21 @@ namespace crnlib
         };
 
         // It's the caller's responsibility to delete pObj within the execute_task() method, if needed!
-        inline bool queue_task(executable_task* pObj, uint64 data = 0, void* pData_ptr = NULL)
+        inline bool queue_task(executable_task* pObj, uint64 data = 0, void* pData_ptr = nullptr)
         {
             pObj->execute_task(data, pData_ptr);
             return true;
         }
 
         template <typename S, typename T>
-        inline bool queue_object_task(S* pObject, T pObject_method, uint64 data = 0, void* pData_ptr = NULL)
+        inline bool queue_object_task(S* pObject, T pObject_method, uint64 data = 0, void* pData_ptr = nullptr)
         {
             (pObject->*pObject_method)(data, pData_ptr);
             return true;
         }
 
         template <typename S, typename T>
-        inline bool queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks, void* pData_ptr = NULL)
+        inline bool queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks, void* pData_ptr = nullptr)
         {
             for (uint i = 0; i < num_tasks; i++)
             {

@@ -10,7 +10,7 @@ namespace crnlib
     {
     public:
         cfile_stream(): data_stream(),
-            m_pFile(NULL),
+            m_pFile(nullptr),
             m_size(0),
             m_ofs(0),
             m_has_ownership(false)
@@ -18,7 +18,7 @@ namespace crnlib
         }
 
         cfile_stream(FILE* pFile, const char* pFilename, uint attribs, bool has_ownership): data_stream(),
-            m_pFile(NULL),
+            m_pFile(nullptr),
             m_size(0),
             m_ofs(0),
             m_has_ownership(false)
@@ -27,7 +27,7 @@ namespace crnlib
         }
 
         cfile_stream(const char* pFilename, uint attribs = cDataStreamReadable | cDataStreamSeekable, bool open_existing = false): data_stream(),
-            m_pFile(NULL),
+            m_pFile(nullptr),
             m_size(0),
             m_ofs(0),
             m_has_ownership(false)
@@ -55,7 +55,7 @@ namespace crnlib
                     }
                 }
 
-                m_pFile = NULL;
+                m_pFile = nullptr;
                 m_opened = false;
                 m_size = 0;
                 m_ofs = 0;
@@ -116,7 +116,7 @@ namespace crnlib
                 return false;
             }
 
-            FILE* pFile = NULL;
+            FILE* pFile = nullptr;
             crn_fopen(&pFile, pFilename, pMode);
             m_has_ownership = true;
 

@@ -9,9 +9,9 @@
 namespace crnlib
 {
     dds_comp::dds_comp():
-        m_pParams(NULL),
+        m_pParams(nullptr),
         m_pixel_fmt(PIXEL_FMT_INVALID),
-        m_pQDXT_state(NULL)
+        m_pQDXT_state(nullptr)
     {
     }
 
@@ -25,13 +25,13 @@ namespace crnlib
         m_src_tex.clear();
         m_packed_tex.clear();
         m_comp_data.clear();
-        m_pParams = NULL;
+        m_pParams = nullptr;
         m_pixel_fmt = PIXEL_FMT_INVALID;
         m_task_pool.deinit();
         if (m_pQDXT_state)
         {
             crnlib_delete(m_pQDXT_state);
-            m_pQDXT_state = NULL;
+            m_pQDXT_state = nullptr;
         }
     }
 

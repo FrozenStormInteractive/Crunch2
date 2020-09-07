@@ -18,8 +18,8 @@ namespace crnlib
 
     CRN_EXPORT void* crnlib_malloc(size_t size);
     CRN_EXPORT void* crnlib_malloc(size_t size, size_t* pActual_size);
-    CRN_EXPORT void* crnlib_realloc(void* p, size_t size, size_t* pActual_size = NULL, bool movable = true);
-    CRN_EXPORT void* crnlib_calloc(size_t count, size_t size, size_t* pActual_size = NULL);
+    CRN_EXPORT void* crnlib_realloc(void* p, size_t size, size_t* pActual_size = nullptr, bool movable = true);
+    CRN_EXPORT void* crnlib_calloc(size_t count, size_t size, size_t* pActual_size = nullptr);
     CRN_EXPORT void crnlib_free(void* p);
     CRN_EXPORT size_t crnlib_msize(void* p);
     CRN_EXPORT void crnlib_print_mem_stats();
@@ -141,7 +141,7 @@ namespace crnlib
         if (total > CRNLIB_MAX_POSSIBLE_BLOCK_SIZE)
         {
             crnlib_mem_error("crnlib_new_array: Array too large!");
-            return NULL;
+            return nullptr;
         }
         uint8* q = static_cast<uint8*>(crnlib_malloc(static_cast<size_t>(total)));
 

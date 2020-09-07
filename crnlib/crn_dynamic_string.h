@@ -15,7 +15,7 @@ namespace crnlib
         inline dynamic_string():
             m_buf_size(0),
             m_len(0),
-            m_pStr(NULL)
+            m_pStr(nullptr)
         {
         }
         dynamic_string(eVarArg dummy, const char* p, ...);
@@ -40,7 +40,7 @@ namespace crnlib
         inline const char* assume_ownership()
         {
             const char* p = m_pStr;
-            m_pStr = NULL;
+            m_pStr = nullptr;
             m_len = 0;
             m_buf_size = 0;
             return p;
@@ -279,7 +279,7 @@ namespace crnlib
         if (buf_size_in_chars > cUINT16_MAX)
         {
             CRNLIB_ASSERT(0);
-            return NULL;
+            return nullptr;
         }
         buf_size_in_chars = math::minimum<uint>(cUINT16_MAX, math::next_pow2(buf_size_in_chars));
         return crnlib_new_array<char>(buf_size_in_chars);

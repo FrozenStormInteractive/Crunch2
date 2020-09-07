@@ -299,10 +299,10 @@ namespace crnlib
 #ifdef _MSC_VER
         // Compiling with MSVC
         errno_t error = _splitpath_s(p,
-            pDrive ? drive_buf : NULL, pDrive ? _MAX_DRIVE : 0,
-            pDir ? dir_buf : NULL, pDir ? _MAX_DIR : 0,
-            pFilename ? fname_buf : NULL, pFilename ? _MAX_FNAME : 0,
-            pExt ? ext_buf : NULL, pExt ? _MAX_EXT : 0);
+            pDrive ? drive_buf : nullptr, pDrive ? _MAX_DRIVE : 0,
+            pDir ? dir_buf : nullptr, pDir ? _MAX_DIR : 0,
+            pFilename ? fname_buf : nullptr, pFilename ? _MAX_FNAME : 0,
+            pExt ? ext_buf : nullptr, pExt ? _MAX_EXT : 0);
         if (error != 0)
         {
             return false;
@@ -310,10 +310,10 @@ namespace crnlib
 #else
         // Compiling with MinGW
         _splitpath(p,
-            pDrive ? drive_buf : NULL,
-            pDir ? dir_buf : NULL,
-            pFilename ? fname_buf : NULL,
-            pExt ? ext_buf : NULL);
+            pDrive ? drive_buf : nullptr,
+            pDir ? dir_buf : nullptr,
+            pFilename ? fname_buf : nullptr,
+            pExt ? ext_buf : nullptr);
 #endif
 
         if (pDrive)
@@ -398,7 +398,7 @@ namespace crnlib
     bool file_utils::get_pathname(const char* p, dynamic_string& path)
     {
         dynamic_string temp_drive, temp_path;
-        if (!split_path(p, &temp_drive, &temp_path, NULL, NULL))
+        if (!split_path(p, &temp_drive, &temp_path, nullptr, nullptr))
         {
             return false;
         }
@@ -410,7 +410,7 @@ namespace crnlib
     bool file_utils::get_filename(const char* p, dynamic_string& filename)
     {
         dynamic_string temp_ext;
-        if (!split_path(p, NULL, NULL, &filename, &temp_ext))
+        if (!split_path(p, nullptr, nullptr, &filename, &temp_ext))
         {
             return false;
         }
@@ -609,7 +609,7 @@ namespace crnlib
     // See http://www.codeproject.com/KB/string/wildcmp.aspx
     int file_utils::wildcmp(const char* pWild, const char* pString)
     {
-        const char* cp = NULL, * mp = NULL;
+        const char* cp = nullptr, * mp = nullptr;
 
         while ((*pString) && (*pWild != '*'))
         {
@@ -656,7 +656,7 @@ namespace crnlib
 
     bool file_utils::write_buf_to_file(const char* pPath, const void* pData, size_t data_size)
     {
-        FILE* pFile = NULL;
+        FILE* pFile = nullptr;
 
 #if defined(CRN_CC_MSVC)
         // Compiling with MSVC

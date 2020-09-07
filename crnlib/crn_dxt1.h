@@ -148,7 +148,7 @@ namespace crnlib
         {
             params():
                 m_block_index(0),
-                m_pPixels(NULL),
+                m_pPixels(nullptr),
                 m_num_pixels(0),
                 m_dxt1a_alpha_threshold(128U),
                 m_quality(cCRNDXTQualityUber),
@@ -181,7 +181,7 @@ namespace crnlib
 
         struct results
         {
-            inline results(): m_pSelectors(NULL)
+            inline results(): m_pSelectors(nullptr)
             {
             }
 

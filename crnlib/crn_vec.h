@@ -650,7 +650,7 @@ namespace crnlib
             return result;
         }
 
-        inline double normalize(const vec* pDefaultVec = NULL) {
+        inline double normalize(const vec* pDefaultVec = nullptr) {
             double n = m_s[0] * m_s[0];
             for (uint i = 1; i < N; i++)
             {
@@ -668,7 +668,7 @@ namespace crnlib
             return n;
         }
 
-        inline double normalize3(const vec* pDefaultVec = NULL)
+        inline double normalize3(const vec* pDefaultVec = nullptr)
         {
             CRNLIB_ASSUME(N >= 3);
 
@@ -685,26 +685,26 @@ namespace crnlib
             return n;
         }
 
-        inline vec& normalize_in_place(const vec* pDefaultVec = NULL)
+        inline vec& normalize_in_place(const vec* pDefaultVec = nullptr)
         {
             normalize(pDefaultVec);
             return *this;
         }
 
-        inline vec& normalize3_in_place(const vec* pDefaultVec = NULL)
+        inline vec& normalize3_in_place(const vec* pDefaultVec = nullptr)
         {
             normalize3(pDefaultVec);
             return *this;
         }
 
-        inline vec get_normalized(const vec* pDefaultVec = NULL) const
+        inline vec get_normalized(const vec* pDefaultVec = nullptr) const
         {
             vec result(*this);
             result.normalize(pDefaultVec);
             return result;
         }
 
-        inline vec get_normalized3(const vec* pDefaultVec = NULL) const
+        inline vec get_normalized3(const vec* pDefaultVec = nullptr) const
         {
             vec result(*this);
             result.normalize3(pDefaultVec);

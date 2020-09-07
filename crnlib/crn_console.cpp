@@ -32,7 +32,7 @@ namespace crnlib
         if (m_pMutex)
         {
             crnlib_delete(m_pMutex);
-            m_pMutex = NULL;
+            m_pMutex = nullptr;
         }
     }
 
@@ -74,7 +74,7 @@ namespace crnlib
             }
         }
 
-        const char* pPrefix = NULL;
+        const char* pPrefix = nullptr;
         if ((m_prefixes) && (m_at_beginning_of_line))
         {
             switch (type)

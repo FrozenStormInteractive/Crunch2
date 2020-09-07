@@ -110,7 +110,7 @@ namespace crnlib
 
         virtual const void* get_ptr() const
         {
-            return m_buf.empty() ? NULL : &m_buf[0];
+            return m_buf.empty() ? nullptr : &m_buf[0];
         }
 
         virtual uint read(void* pBuf, uint len)

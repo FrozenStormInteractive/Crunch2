@@ -25,9 +25,9 @@ namespace crnlib
                 m_table_max_code(0),
                 m_decode_start_code_size(0),
                 m_cur_lookup_size(0),
-                m_lookup(NULL),
+                m_lookup(nullptr),
                 m_cur_sorted_symbol_order_size(0),
-                m_sorted_symbol_order(NULL)
+                m_sorted_symbol_order(nullptr)
             {
             }
 
@@ -36,9 +36,9 @@ namespace crnlib
                 m_table_max_code(0),
                 m_decode_start_code_size(0),
                 m_cur_lookup_size(0),
-                m_lookup(NULL),
+                m_lookup(nullptr),
                 m_cur_sorted_symbol_order_size(0),
-                m_sorted_symbol_order(NULL)
+                m_sorted_symbol_order(nullptr)
             {
                 *this = other;
             }
@@ -81,7 +81,7 @@ namespace crnlib
                 if (m_sorted_symbol_order)
                 {
                     crnlib_delete_array(m_sorted_symbol_order);
-                    m_sorted_symbol_order = NULL;
+                    m_sorted_symbol_order = nullptr;
                     m_cur_sorted_symbol_order_size = 0;
                 }
             }

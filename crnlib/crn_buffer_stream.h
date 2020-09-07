@@ -9,14 +9,14 @@ namespace crnlib
     {
     public:
         buffer_stream(): data_stream(),
-            m_pBuf(NULL),
+            m_pBuf(nullptr),
             m_size(0),
             m_ofs(0)
         {
         }
 
         buffer_stream(void* p, uint size): data_stream(),
-            m_pBuf(NULL),
+            m_pBuf(nullptr),
             m_size(0),
             m_ofs(0)
         {
@@ -24,7 +24,7 @@ namespace crnlib
         }
 
         buffer_stream(const void* p, uint size): data_stream(),
-            m_pBuf(NULL),
+            m_pBuf(nullptr),
             m_size(0),
             m_ofs(0)
         {
@@ -78,7 +78,7 @@ namespace crnlib
             if (m_opened)
             {
                 m_opened = false;
-                m_pBuf = NULL;
+                m_pBuf = nullptr;
                 m_size = 0;
                 m_ofs = 0;
                 return true;

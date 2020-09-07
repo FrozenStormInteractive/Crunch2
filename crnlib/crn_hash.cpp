@@ -23,7 +23,7 @@ namespace crnlib
         uint32 hash = len, tmp;
         int rem;
 
-        if (len <= 0 || data == NULL)
+        if (len <= 0 || data == nullptr)
         {
             return 0;
         }

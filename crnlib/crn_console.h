@@ -44,7 +44,7 @@ namespace crnlib
         CRN_EXPORT static void init();
         CRN_EXPORT static void deinit();
 
-        static bool is_initialized() { return m_pMutex != NULL; }
+        static bool is_initialized() { return m_pMutex != nullptr; }
 
         CRN_EXPORT static void set_default_category(eConsoleMessageType category);
         CRN_EXPORT static eConsoleMessageType get_default_category();
@@ -89,7 +89,7 @@ namespace crnlib
 
         struct console_func
         {
-            console_func(console_output_func func = NULL, void* pData = NULL):
+            console_func(console_output_func func = nullptr, void* pData = nullptr):
                 m_func(func),
                 m_pData(pData)
             {

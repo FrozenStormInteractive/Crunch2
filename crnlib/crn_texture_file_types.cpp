@@ -12,7 +12,7 @@ namespace crnlib
         CRNLIB_ASSERT(fmt < cNumFileFormats);
         if (fmt >= cNumFileFormats)
         {
-            return NULL;
+            return nullptr;
         }
 
         static const char* extensions[cNumFileFormats] =
@@ -43,7 +43,7 @@ namespace crnlib
     texture_file_types::format texture_file_types::determine_file_format(const char* pFilename)
     {
         dynamic_string ext;
-        if (!file_utils::split_path(pFilename, NULL, NULL, NULL, &ext))
+        if (!file_utils::split_path(pFilename, nullptr, nullptr, nullptr, &ext))
         {
             return cFormatInvalid;
         }

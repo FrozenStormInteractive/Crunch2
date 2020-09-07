@@ -21,7 +21,7 @@ namespace crnlib
         }
         else
         {
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -246,7 +246,7 @@ namespace crnlib
         }
 
         crnlib_delete(pTexture_comp);
-        pTexture_comp = NULL;
+        pTexture_comp = nullptr;
 
         if (best_quality_level < 0)
         {

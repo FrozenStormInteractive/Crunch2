@@ -16,6 +16,6 @@ namespace crnlib
         "vec3f",
         "vec3i",
 
-        NULL,
+        nullptr,
     };
 }  // namespace crnlib

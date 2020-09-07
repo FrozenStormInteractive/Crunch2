@@ -30,14 +30,14 @@ namespace crnlib
         typedef const T* const_pointer;
 
         inline vector():
-            m_p(NULL),
+            m_p(nullptr),
             m_size(0),
             m_capacity(0)
         {
         }
 
         inline vector(uint n, const T& init):
-            m_p(NULL),
+            m_p(nullptr),
             m_size(0),
             m_capacity(0)
         {
@@ -47,7 +47,7 @@ namespace crnlib
         }
 
         inline vector(const vector& other):
-            m_p(NULL),
+            m_p(nullptr),
             m_size(0),
             m_capacity(0)
         {
@@ -71,7 +71,7 @@ namespace crnlib
         }
 
         inline explicit vector(uint size):
-            m_p(NULL),
+            m_p(nullptr),
             m_size(0),
             m_capacity(0)
         {
@@ -221,7 +221,7 @@ namespace crnlib
             {
                 scalar_type<T>::destruct_array(m_p, m_size);
                 crnlib_free(m_p);
-                m_p = NULL;
+                m_p = nullptr;
                 m_size = 0;
                 m_capacity = 0;
             }
@@ -232,7 +232,7 @@ namespace crnlib
             if (m_p)
             {
                 crnlib_free(m_p);
-                m_p = NULL;
+                m_p = nullptr;
                 m_size = 0;
                 m_capacity = 0;
             }
@@ -335,7 +335,7 @@ namespace crnlib
             uint cur_size = m_size;
             if (!try_resize(cur_size + i, true))
             {
-                return NULL;
+                return nullptr;
             }
             return get_ptr() + cur_size;
         }
@@ -770,7 +770,7 @@ namespace crnlib
         inline void* assume_ownership()
         {
             T* p = m_p;
-            m_p = NULL;
+            m_p = nullptr;
             m_size = 0;
             m_capacity = 0;
             return p;
@@ -849,7 +849,7 @@ namespace crnlib
         {
             return reinterpret_cast<elemental_vector*>(this)->increase_capacity(
                 min_new_capacity, grow_hint, sizeof(T),
-                (CRNLIB_IS_BITWISE_COPYABLE_OR_MOVABLE(T) || (is_vector<T>::cFlag)) ? NULL : object_mover, nofail);
+                (CRNLIB_IS_BITWISE_COPYABLE_OR_MOVABLE(T) || (is_vector<T>::cFlag)) ? nullptr : object_mover, nofail);
         }
     };
 

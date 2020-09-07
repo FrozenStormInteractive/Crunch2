@@ -75,7 +75,7 @@ namespace crnlib
             CRNLIB_ASSERT(key_size == 1);
             if (key_size != 1)
             {
-                return NULL;
+                return nullptr;
             }
 
             T* p = pBuf0;
@@ -251,7 +251,7 @@ namespace crnlib
             CRNLIB_ASSERT(key_size == 1);
             if (key_size != 1)
             {
-                return NULL;
+                return nullptr;
             }
 
             T* p = pIndices0;
