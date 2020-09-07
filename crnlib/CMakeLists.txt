@@ -159,6 +159,7 @@ else()
 endif()
 
 add_library(crn ${CRNLIB_SRCS})
+set_property(TARGET crn PROPERTY CXX_STANDARD 11)
 target_include_directories(crn
     PUBLIC
         ${CMAKE_CURRENT_BINARY_DIR}
