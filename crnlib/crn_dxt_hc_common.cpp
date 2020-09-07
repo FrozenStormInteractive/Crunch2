@@ -41,5 +41,4 @@ namespace crnlib
         {0, 4, 4, 4, 7},
         {4, 4, 4, 4, 8}
     };
-
 }  // namespace crnlib

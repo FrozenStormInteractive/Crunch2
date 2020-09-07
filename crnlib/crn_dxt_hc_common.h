@@ -42,5 +42,4 @@ namespace crnlib
     const uint cNumChunkTileLayouts = 9;
     const uint cFirst4x4ChunkTileLayout = 5;
     CRN_EXPORT extern chunk_tile_desc g_chunk_tile_layouts[cNumChunkTileLayouts];
-
 }  // namespace crnlib

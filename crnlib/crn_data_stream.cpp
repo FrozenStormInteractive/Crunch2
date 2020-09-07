@@ -1,5 +1,6 @@
 // File: crn_data_stream.cpp
 // See Copyright Notice and license at the end of inc/crnlib.h
+
 #include "crn_core.h"
 #include "crn_data_stream.h"
 
