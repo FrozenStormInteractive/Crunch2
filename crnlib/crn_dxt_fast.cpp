@@ -627,7 +627,7 @@ namespace crnlib
                         uint h = probe_high[j];
                         if (l < h)
                         {
-                            utils::swap(l, h);
+                            std::swap(l, h);
                         }
 
                         uint c = l | (h << 16);
@@ -729,7 +729,7 @@ namespace crnlib
 
             if (low16 < high16)
             {
-                utils::swap(low16, high16);
+                std::swap(low16, high16);
                 for (uint i = 0; i < n; i++)
                 {
                     pSelectors[i] ^= 1;
@@ -961,7 +961,7 @@ namespace crnlib
 
             if (energy[0] > energy[1])
             {
-                utils::swap(lo_color, hi_color);
+                std::swap(lo_color, hi_color);
             }
 
             lo = lo_color;

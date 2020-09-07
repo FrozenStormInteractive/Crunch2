@@ -255,7 +255,7 @@ vec6F dxt_hc::palettize_color(color_quad_u8* pixels, uint pixels_count) {
   vec3F result[2];
   split_vectors<vec3F>(vectors, weights, size, result);
   if (result[0].length() > result[1].length())
-    utils::swap(result[0], result[1]);
+      std::swap(result[0], result[1]);
   return *(vec6F*)result;
 }
 
@@ -279,7 +279,7 @@ vec2F dxt_hc::palettize_alpha(color_quad_u8* pixels, uint pixels_count, uint com
   vec1F result[2];
   split_vectors<vec1F>(vectors, weights, size, result);
   if (result[0] > result[1])
-    utils::swap(result[0], result[1]);
+      std::swap(result[0], result[1]);
   return *(vec2F*)result;
 }
 

@@ -143,7 +143,7 @@ namespace crnlib
 
             if (m_pResults->m_first_endpoint > m_pResults->m_second_endpoint)
             {
-                utils::swap(m_pResults->m_first_endpoint, m_pResults->m_second_endpoint);
+                std::swap(m_pResults->m_first_endpoint, m_pResults->m_second_endpoint);
                 m_pResults->m_reordered = true;
                 for (uint i = 0; i < m_best_selectors.size(); i++)
                 {
@@ -153,7 +153,7 @@ namespace crnlib
         }
         else if (!(m_pResults->m_first_endpoint > m_pResults->m_second_endpoint))
         {
-            utils::swap(m_pResults->m_first_endpoint, m_pResults->m_second_endpoint);
+            std::swap(m_pResults->m_first_endpoint, m_pResults->m_second_endpoint);
             m_pResults->m_reordered = true;
             for (uint i = 0; i < m_best_selectors.size(); i++)
             {

@@ -71,8 +71,8 @@ void sparse_bit_array::clear() {
 }
 
 void sparse_bit_array::swap(sparse_bit_array& other) {
-  utils::swap(m_ppGroups, other.m_ppGroups);
-  utils::swap(m_num_groups, other.m_num_groups);
+    std::swap(m_ppGroups, other.m_ppGroups);
+  std::swap(m_num_groups, other.m_num_groups);
 }
 
 void sparse_bit_array::optimize() {

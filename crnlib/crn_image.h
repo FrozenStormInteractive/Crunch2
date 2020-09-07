@@ -529,25 +529,25 @@ class image {
   }
 
   inline void swap(image& other) {
-    utils::swap(m_width, other.m_width);
-    utils::swap(m_height, other.m_height);
-    utils::swap(m_pitch, other.m_pitch);
-    utils::swap(m_total, other.m_total);
-    utils::swap(m_comp_flags, other.m_comp_flags);
-    utils::swap(m_pPixels, other.m_pPixels);
+      std::swap(m_width, other.m_width);
+      std::swap(m_height, other.m_height);
+      std::swap(m_pitch, other.m_pitch);
+      std::swap(m_total, other.m_total);
+      std::swap(m_comp_flags, other.m_comp_flags);
+      std::swap(m_pPixels, other.m_pPixels);
     m_pixel_buf.swap(other.m_pixel_buf);
   }
 
   void draw_line(int xs, int ys, int xe, int ye, const color_type& color) {
     if (xs > xe) {
-      utils::swap(xs, xe);
-      utils::swap(ys, ye);
+        std::swap(xs, xe);
+        std::swap(ys, ye);
     }
 
     int dx = xe - xs, dy = ye - ys;
     if (!dx) {
       if (ys > ye)
-        utils::swap(ys, ye);
+          std::swap(ys, ye);
       for (int i = ys; i <= ye; i++)
         set_pixel_clipped(xs, i, color);
     } else if (!dy) {

@@ -588,9 +588,9 @@ namespace crnlib
 
         inline void swap(vector& other)
         {
-            utils::swap(m_p, other.m_p);
-            utils::swap(m_size, other.m_size);
-            utils::swap(m_capacity, other.m_capacity);
+            std::swap(m_p, other.m_p);
+            std::swap(m_size, other.m_size);
+            std::swap(m_capacity, other.m_capacity);
         }
 
         inline void sort()
@@ -613,7 +613,7 @@ namespace crnlib
             uint j = m_size >> 1;
             for (uint i = 0; i < j; i++)
             {
-                utils::swap(m_p[i], m_p[m_size - 1 - i]);
+                std::swap(m_p[i], m_p[m_size - 1 - i]);
             }
         }
 

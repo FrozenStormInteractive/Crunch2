@@ -1756,13 +1756,13 @@ image_u8* mipmapped_texture::get_level_image(uint face, uint level, image_u8& im
 }
 
 void mipmapped_texture::swap(mipmapped_texture& img) {
-  utils::swap(m_width, img.m_width);
-  utils::swap(m_height, img.m_height);
-  utils::swap(m_comp_flags, img.m_comp_flags);
-  utils::swap(m_format, img.m_format);
+    std::swap(m_width, img.m_width);
+    std::swap(m_height, img.m_height);
+    std::swap(m_comp_flags, img.m_comp_flags);
+    std::swap(m_format, img.m_format);
   m_faces.swap(img.m_faces);
   m_last_error.swap(img.m_last_error);
-  utils::swap(m_source_file_type, img.m_source_file_type);
+  std::swap(m_source_file_type, img.m_source_file_type);
 
   CRNLIB_ASSERT(check());
 }

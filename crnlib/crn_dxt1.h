@@ -58,7 +58,7 @@ namespace crnlib
         {
             if (m_low_color < m_high_color)
             {
-                utils::swap(m_low_color, m_high_color);
+                std::swap(m_low_color, m_high_color);
             }
             return *this;
         }

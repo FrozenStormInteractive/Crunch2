@@ -663,9 +663,9 @@ namespace crnlib
 
     void dynamic_string::swap(dynamic_string& other)
     {
-        utils::swap(other.m_buf_size, m_buf_size);
-        utils::swap(other.m_len, m_len);
-        utils::swap(other.m_pStr, m_pStr);
+        std::swap(other.m_buf_size, m_buf_size);
+        std::swap(other.m_len, m_len);
+        std::swap(other.m_pStr, m_pStr);
     }
 
     int dynamic_string::serialize(void* pBuf, uint buf_size, bool little_endian) const

@@ -406,11 +406,11 @@ class hash_map {
 
   inline void swap(hash_map_type& other) {
     m_values.swap(other.m_values);
-    utils::swap(m_hash_shift, other.m_hash_shift);
-    utils::swap(m_num_valid, other.m_num_valid);
-    utils::swap(m_grow_threshold, other.m_grow_threshold);
-    utils::swap(m_hasher, other.m_hasher);
-    utils::swap(m_equals, other.m_equals);
+    std::swap(m_hash_shift, other.m_hash_shift);
+    std::swap(m_num_valid, other.m_num_valid);
+    std::swap(m_grow_threshold, other.m_grow_threshold);
+    std::swap(m_hasher, other.m_hasher);
+    std::swap(m_equals, other.m_equals);
   }
 
  private:

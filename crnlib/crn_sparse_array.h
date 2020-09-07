@@ -293,9 +293,9 @@ class sparse_array : public Traits<T, Log2N> {
   }
 
   inline void swap(sparse_array& other) {
-    utils::swap(m_size, other.m_size);
+      std::swap(m_size, other.m_size);
     m_groups.swap(other.m_groups);
-    utils::swap(m_num_active_groups, other.m_num_active_groups);
+    std::swap(m_num_active_groups, other.m_num_active_groups);
   }
 
  private:

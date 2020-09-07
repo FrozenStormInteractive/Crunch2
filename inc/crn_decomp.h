@@ -772,9 +772,9 @@ class vector : public helpers::rel_ops<vector<T> > {
   }
 
   void swap(vector& other) {
-    utils::swap(m_p, other.m_p);
-    utils::swap(m_size, other.m_size);
-    utils::swap(m_capacity, other.m_capacity);
+      std::swap(m_p, other.m_p);
+      std::swap(m_size, other.m_size);
+      std::swap(m_capacity, other.m_capacity);
   }
 
  private:

@@ -36,13 +36,6 @@ namespace crnlib
 {
     namespace utils
     {
-        template <typename T>
-        inline void swap(T& l, T& r)
-        {
-            T temp(l);
-            l = r;
-            r = temp;
-        }
 
         template <typename T>
         inline void zero_object(T& obj)
@@ -92,7 +85,7 @@ namespace crnlib
             const uint half_size = size >> 1;
             for (uint i = 0; i < half_size; i++)
             {
-                utils::swap(p[i], p[size - 1U - i]);
+                std::swap(p[i], p[size - 1U - i]);
             }
         }
 
