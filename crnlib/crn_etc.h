@@ -1,7 +1,7 @@
 // File: crn_etc.h
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
-#include "../inc/crnlib.h"
+#include "crnlib.h"
 #include "crn_dxt.h"
 #include "crn_export.h"
 

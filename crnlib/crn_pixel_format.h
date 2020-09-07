@@ -2,8 +2,8 @@
 // See Copyright Notice and license at the end of inc/crnlib.h
 #pragma once
 #include "crn_dxt.h"
-#include "../inc/crnlib.h"
-#include "../inc/dds_defs.h"
+#include "crnlib.h"
+#include "dds_defs.h"
 
 namespace crnlib {
 namespace pixel_format_helpers {
