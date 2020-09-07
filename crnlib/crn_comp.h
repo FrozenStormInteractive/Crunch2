@@ -1,5 +1,6 @@
 // File: crn_comp.h
 // See Copyright Notice and license at the end of inc/crnlib.h
+
 #pragma once
 
 #include "crn_defs.h"

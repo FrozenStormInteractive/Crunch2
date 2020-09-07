@@ -173,8 +173,8 @@ include(GenerateExportHeader)
 generate_export_header(crn)
 
 if(NOT WIN32)
-  find_package(Threads)
-  target_link_libraries(crn PUBLIC Threads::Threads)
+    find_package(Threads)
+    target_link_libraries(crn PUBLIC Threads::Threads)
 endif()
 
 install(TARGETS crn)

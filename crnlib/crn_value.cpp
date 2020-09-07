@@ -3,8 +3,9 @@
 #include "crn_core.h"
 #include "crn_value.h"
 
-namespace crnlib {
-const char* gValueDataTypeStrings[cDTTotal + 1] =
+namespace crnlib
+{
+    const char* gValueDataTypeStrings[cDTTotal + 1] =
     {
         "invalid",
         "string",
@@ -16,6 +17,5 @@ const char* gValueDataTypeStrings[cDTTotal + 1] =
         "vec3i",
 
         NULL,
-};
-
+    };
 }  // namespace crnlib
