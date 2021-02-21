@@ -506,6 +506,6 @@ namespace crnlib
 
         return nullptr;
     }
-}  // namespace crnlib
+} // namespace crnlib
 
 #endif  // CRNLIB_USE_PTHREADS_API

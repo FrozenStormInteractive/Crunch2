@@ -16,7 +16,7 @@
 #include <math.h>
 
 #if defined(_MSC_VER)
-#pragma warning(disable : 4201)  //  nonstandard extension used : nameless struct/union
+#pragma warning(disable : 4201) //  nonstandard extension used : nameless struct/union
 #endif
 
 #if defined(_DEBUG) || defined(DEBUG)
@@ -25,9 +25,10 @@
 
 #define RG_ETC1_ASSERT CRNLIB_ASSERT
 
-namespace crnlib {
-
-    namespace rg_etc1 {
+namespace crnlib
+{
+    namespace rg_etc1
+    {
         typedef unsigned char uint8;
         typedef unsigned short uint16;
         typedef unsigned int uint;
@@ -36,57 +37,74 @@ namespace crnlib {
         typedef unsigned long long uint64;
 
         const uint32 cUINT32_MAX = 0xFFFFFFFFU;
-        const uint64 cUINT64_MAX = 0xFFFFFFFFFFFFFFFFULL;  //0xFFFFFFFFFFFFFFFFui64;
+        const uint64 cUINT64_MAX = 0xFFFFFFFFFFFFFFFFULL; //0xFFFFFFFFFFFFFFFFui64;
 
-        template <typename T>
-        inline T minimum(T a, T b) {
+        template<typename T>
+        inline T minimum(T a, T b)
+        {
             return (a < b) ? a : b;
         }
-        template <typename T>
-        inline T minimum(T a, T b, T c) {
+        template<typename T>
+        inline T minimum(T a, T b, T c)
+        {
             return minimum(minimum(a, b), c);
         }
-        template <typename T>
-        inline T maximum(T a, T b) {
+        template<typename T>
+        inline T maximum(T a, T b)
+        {
             return (a > b) ? a : b;
         }
-        template <typename T>
-        inline T maximum(T a, T b, T c) {
+        template<typename T>
+        inline T maximum(T a, T b, T c)
+        {
             return maximum(maximum(a, b), c);
         }
-        template <typename T>
-        inline T clamp(T value, T low, T high) {
+        template<typename T>
+        inline T clamp(T value, T low, T high)
+        {
             return (value < low) ? low : ((value > high) ? high : value);
         }
-        template <typename T>
-        inline T square(T value) {
+        template<typename T>
+        inline T square(T value)
+        {
             return value * value;
         }
-        template <typename T>
-        inline void zero_object(T& obj) {
+        template<typename T>
+        inline void zero_object(T& obj)
+        {
             memset((void*)&obj, 0, sizeof(obj));
         }
-        template <typename T>
-        inline void zero_this(T* pObj) {
+        template<typename T>
+        inline void zero_this(T* pObj)
+        {
             memset((void*)pObj, 0, sizeof(*pObj));
         }
 
-        template <class T, size_t N>
-        T decay_array_to_subtype(T(&a)[N]);
+        template<class T, size_t N>
+        T decay_array_to_subtype(T (&a)[N]);
 
 #define RG_ETC1_ARRAY_SIZE(X) (sizeof(X) / sizeof(decay_array_to_subtype(X)))
 
-        enum eNoClamp { cNoClamp };
+        enum eNoClamp
+        {
+            cNoClamp
+        };
 
-        struct color_quad_u8 {
-            static inline int clamp(int v) {
+        struct color_quad_u8
+        {
+            static inline int clamp(int v)
+            {
                 if (v & 0xFFFFFF00U)
+                {
                     v = (~(static_cast<int>(v) >> 31)) & 0xFF;
+                }
                 return v;
             }
 
-            struct component_traits {
-                enum {
+            struct component_traits
+            {
+                enum
+                {
                     cSigned = false,
                     cFloat = false,
                     cMin = 0U,
@@ -98,9 +116,13 @@ namespace crnlib {
             typedef unsigned char component_t;
             typedef int parameter_t;
 
-            enum { cNumComps = 4 };
+            enum
+            {
+                cNumComps = 4
+            };
 
-            union {
+            union
+            {
                 struct
                 {
                     component_t r;
@@ -114,51 +136,62 @@ namespace crnlib {
                 uint32 m_u32;
             };
 
-            inline color_quad_u8() {
+            inline color_quad_u8()
+            {
             }
 
-            inline color_quad_u8(const color_quad_u8& other)
-                : m_u32(other.m_u32) {
+            inline color_quad_u8(const color_quad_u8& other) :
+                m_u32(other.m_u32)
+            {
             }
 
-            explicit inline color_quad_u8(parameter_t y, parameter_t alpha = component_traits::cMax) {
+            explicit inline color_quad_u8(parameter_t y, parameter_t alpha = component_traits::cMax)
+            {
                 set(y, alpha);
             }
 
-            inline color_quad_u8(parameter_t red, parameter_t green, parameter_t blue, parameter_t alpha = component_traits::cMax) {
+            inline color_quad_u8(parameter_t red, parameter_t green, parameter_t blue, parameter_t alpha = component_traits::cMax)
+            {
                 set(red, green, blue, alpha);
             }
 
-            explicit inline color_quad_u8(eNoClamp, parameter_t y, parameter_t alpha = component_traits::cMax) {
+            explicit inline color_quad_u8(eNoClamp, parameter_t y, parameter_t alpha = component_traits::cMax)
+            {
                 set_noclamp_y_alpha(y, alpha);
             }
 
-            inline color_quad_u8(eNoClamp, parameter_t red, parameter_t green, parameter_t blue, parameter_t alpha = component_traits::cMax) {
+            inline color_quad_u8(eNoClamp, parameter_t red, parameter_t green, parameter_t blue, parameter_t alpha = component_traits::cMax)
+            {
                 set_noclamp_rgba(red, green, blue, alpha);
             }
 
-            inline void clear() {
+            inline void clear()
+            {
                 m_u32 = 0;
             }
 
-            inline color_quad_u8& operator=(const color_quad_u8& other) {
+            inline color_quad_u8& operator=(const color_quad_u8& other)
+            {
                 m_u32 = other.m_u32;
                 return *this;
             }
 
-            inline color_quad_u8& set_rgb(const color_quad_u8& other) {
+            inline color_quad_u8& set_rgb(const color_quad_u8& other)
+            {
                 r = other.r;
                 g = other.g;
                 b = other.b;
                 return *this;
             }
 
-            inline color_quad_u8& operator=(parameter_t y) {
+            inline color_quad_u8& operator=(parameter_t y)
+            {
                 set(y, component_traits::cMax);
                 return *this;
             }
 
-            inline color_quad_u8& set(parameter_t y, parameter_t alpha = component_traits::cMax) {
+            inline color_quad_u8& set(parameter_t y, parameter_t alpha = component_traits::cMax)
+            {
                 y = clamp(y);
                 alpha = clamp(alpha);
                 r = static_cast<component_t>(y);
@@ -168,7 +201,8 @@ namespace crnlib {
                 return *this;
             }
 
-            inline color_quad_u8& set_noclamp_y_alpha(parameter_t y, parameter_t alpha = component_traits::cMax) {
+            inline color_quad_u8& set_noclamp_y_alpha(parameter_t y, parameter_t alpha = component_traits::cMax)
+            {
                 RG_ETC1_ASSERT((y >= component_traits::cMin) && (y <= component_traits::cMax));
                 RG_ETC1_ASSERT((alpha >= component_traits::cMin) && (alpha <= component_traits::cMax));
 
@@ -179,7 +213,8 @@ namespace crnlib {
                 return *this;
             }
 
-            inline color_quad_u8& set(parameter_t red, parameter_t green, parameter_t blue, parameter_t alpha = component_traits::cMax) {
+            inline color_quad_u8& set(parameter_t red, parameter_t green, parameter_t blue, parameter_t alpha = component_traits::cMax)
+            {
                 r = static_cast<component_t>(clamp(red));
                 g = static_cast<component_t>(clamp(green));
                 b = static_cast<component_t>(clamp(blue));
@@ -187,7 +222,8 @@ namespace crnlib {
                 return *this;
             }
 
-            inline color_quad_u8& set_noclamp_rgba(parameter_t red, parameter_t green, parameter_t blue, parameter_t alpha) {
+            inline color_quad_u8& set_noclamp_rgba(parameter_t red, parameter_t green, parameter_t blue, parameter_t alpha)
+            {
                 RG_ETC1_ASSERT((red >= component_traits::cMin) && (red <= component_traits::cMax));
                 RG_ETC1_ASSERT((green >= component_traits::cMin) && (green <= component_traits::cMax));
                 RG_ETC1_ASSERT((blue >= component_traits::cMin) && (blue <= component_traits::cMax));
@@ -200,7 +236,8 @@ namespace crnlib {
                 return *this;
             }
 
-            inline color_quad_u8& set_noclamp_rgb(parameter_t red, parameter_t green, parameter_t blue) {
+            inline color_quad_u8& set_noclamp_rgb(parameter_t red, parameter_t green, parameter_t blue)
+            {
                 RG_ETC1_ASSERT((red >= component_traits::cMin) && (red <= component_traits::cMax));
                 RG_ETC1_ASSERT((green >= component_traits::cMin) && (green <= component_traits::cMax));
                 RG_ETC1_ASSERT((blue >= component_traits::cMin) && (blue <= component_traits::cMax));
@@ -211,20 +248,32 @@ namespace crnlib {
                 return *this;
             }
 
-            static inline parameter_t get_min_comp() { return component_traits::cMin; }
-            static inline parameter_t get_max_comp() { return component_traits::cMax; }
-            static inline bool get_comps_are_signed() { return component_traits::cSigned; }
+            static inline parameter_t get_min_comp()
+            {
+                return component_traits::cMin;
+            }
+            static inline parameter_t get_max_comp()
+            {
+                return component_traits::cMax;
+            }
+            static inline bool get_comps_are_signed()
+            {
+                return component_traits::cSigned;
+            }
 
-            inline component_t operator[](uint i) const {
+            inline component_t operator[](uint i) const
+            {
                 RG_ETC1_ASSERT(i < cNumComps);
                 return c[i];
             }
-            inline component_t& operator[](uint i) {
+            inline component_t& operator[](uint i)
+            {
                 RG_ETC1_ASSERT(i < cNumComps);
                 return c[i];
             }
 
-            inline color_quad_u8& set_component(uint i, parameter_t f) {
+            inline color_quad_u8& set_component(uint i, parameter_t f)
+            {
                 RG_ETC1_ASSERT(i < cNumComps);
 
                 c[i] = static_cast<component_t>(clamp(f));
@@ -232,7 +281,8 @@ namespace crnlib {
                 return *this;
             }
 
-            inline color_quad_u8& set_grayscale(parameter_t l) {
+            inline color_quad_u8& set_grayscale(parameter_t l)
+            {
                 component_t x = static_cast<component_t>(clamp(l));
                 c[0] = x;
                 c[1] = x;
@@ -240,103 +290,136 @@ namespace crnlib {
                 return *this;
             }
 
-            inline color_quad_u8& clamp(const color_quad_u8& l, const color_quad_u8& h) {
+            inline color_quad_u8& clamp(const color_quad_u8& l, const color_quad_u8& h)
+            {
                 for (uint i = 0; i < cNumComps; i++)
+                {
                     c[i] = static_cast<component_t>(rg_etc1::clamp<parameter_t>(c[i], l[i], h[i]));
+                }
                 return *this;
             }
 
-            inline color_quad_u8& clamp(parameter_t l, parameter_t h) {
+            inline color_quad_u8& clamp(parameter_t l, parameter_t h)
+            {
                 for (uint i = 0; i < cNumComps; i++)
+                {
                     c[i] = static_cast<component_t>(rg_etc1::clamp<parameter_t>(c[i], l, h));
+                }
                 return *this;
             }
 
             // Returns CCIR 601 luma (consistent with color_utils::RGB_To_Y).
-            inline parameter_t get_luma() const {
+            inline parameter_t get_luma() const
+            {
                 return static_cast<parameter_t>((19595U * r + 38470U * g + 7471U * b + 32768U) >> 16U);
             }
 
             // Returns REC 709 luma.
-            inline parameter_t get_luma_rec709() const {
+            inline parameter_t get_luma_rec709() const
+            {
                 return static_cast<parameter_t>((13938U * r + 46869U * g + 4729U * b + 32768U) >> 16U);
             }
 
-            inline uint squared_distance_rgb(const color_quad_u8& c) const {
+            inline uint squared_distance_rgb(const color_quad_u8& c) const
+            {
                 return rg_etc1::square(r - c.r) + rg_etc1::square(g - c.g) + rg_etc1::square(b - c.b);
             }
 
-            inline uint squared_distance_rgba(const color_quad_u8& c) const {
+            inline uint squared_distance_rgba(const color_quad_u8& c) const
+            {
                 return rg_etc1::square(r - c.r) + rg_etc1::square(g - c.g) + rg_etc1::square(b - c.b) + rg_etc1::square(a - c.a);
             }
 
-            inline bool rgb_equals(const color_quad_u8& rhs) const {
+            inline bool rgb_equals(const color_quad_u8& rhs) const
+            {
                 return (r == rhs.r) && (g == rhs.g) && (b == rhs.b);
             }
 
-            inline bool operator==(const color_quad_u8& rhs) const {
+            inline bool operator==(const color_quad_u8& rhs) const
+            {
                 return m_u32 == rhs.m_u32;
             }
 
-            color_quad_u8& operator+=(const color_quad_u8& other) {
+            color_quad_u8& operator+=(const color_quad_u8& other)
+            {
                 for (uint i = 0; i < 4; i++)
+                {
                     c[i] = static_cast<component_t>(clamp(c[i] + other.c[i]));
+                }
                 return *this;
             }
 
-            color_quad_u8& operator-=(const color_quad_u8& other) {
+            color_quad_u8& operator-=(const color_quad_u8& other)
+            {
                 for (uint i = 0; i < 4; i++)
+                {
                     c[i] = static_cast<component_t>(clamp(c[i] - other.c[i]));
+                }
                 return *this;
             }
 
-            friend color_quad_u8 operator+(const color_quad_u8& lhs, const color_quad_u8& rhs) {
+            friend color_quad_u8 operator+(const color_quad_u8& lhs, const color_quad_u8& rhs)
+            {
                 color_quad_u8 result(lhs);
                 result += rhs;
                 return result;
             }
 
-            friend color_quad_u8 operator-(const color_quad_u8& lhs, const color_quad_u8& rhs) {
+            friend color_quad_u8 operator-(const color_quad_u8& lhs, const color_quad_u8& rhs)
+            {
                 color_quad_u8 result(lhs);
                 result -= rhs;
                 return result;
             }
-        };  // class color_quad_u8
+        }; // class color_quad_u8
 
-        struct vec3F {
+        struct vec3F
+        {
             float m_s[3];
 
-            inline vec3F() {}
-            inline vec3F(float s) {
+            inline vec3F()
+            {
+            }
+            inline vec3F(float s)
+            {
                 m_s[0] = s;
                 m_s[1] = s;
                 m_s[2] = s;
             }
-            inline vec3F(float x, float y, float z) {
+            inline vec3F(float x, float y, float z)
+            {
                 m_s[0] = x;
                 m_s[1] = y;
                 m_s[2] = z;
             }
 
-            inline float operator[](uint i) const {
+            inline float operator[](uint i) const
+            {
                 RG_ETC1_ASSERT(i < 3);
                 return m_s[i];
             }
 
-            inline vec3F& operator+=(const vec3F& other) {
+            inline vec3F& operator+=(const vec3F& other)
+            {
                 for (uint i = 0; i < 3; i++)
+                {
                     m_s[i] += other.m_s[i];
+                }
                 return *this;
             }
 
-            inline vec3F& operator*=(float s) {
+            inline vec3F& operator*=(float s)
+            {
                 for (uint i = 0; i < 3; i++)
+                {
                     m_s[i] *= s;
+                }
                 return *this;
             }
         };
 
-        enum etc_constants {
+        enum etc_constants
+        {
             cETC1BytesPerBlock = 8U,
 
             cETC1SelectorBits = 2U,
@@ -396,403 +479,403 @@ namespace crnlib {
 
         static uint8 g_quant5_tab[256 + 16];
 
-        static const int g_etc1_inten_tables[cETC1IntenModifierValues][cETC1SelectorValues] =
-        {
-            {-8, -2, 2, 8},
-            {-17, -5, 5, 17},
-            {-29, -9, 9, 29},
-            {-42, -13, 13, 42},
-            {-60, -18, 18, 60},
-            {-80, -24, 24, 80},
-            {-106, -33, 33, 106},
-            {-183, -47, 47, 183} };
+        static const int g_etc1_inten_tables[cETC1IntenModifierValues][cETC1SelectorValues] = {
+            { -8, -2, 2, 8 },
+            { -17, -5, 5, 17 },
+            { -29, -9, 9, 29 },
+            { -42, -13, 13, 42 },
+            { -60, -18, 18, 60 },
+            { -80, -24, 24, 80 },
+            { -106, -33, 33, 106 },
+            { -183, -47, 47, 183 }
+        };
 
         static const uint8 g_etc2_modifier_table[8] = { 3, 6, 11, 16, 23, 32, 41, 64 };
 
         static const int g_etc2a_modifier_table[16][8] = {
-          {  -3,  -6,  -9, -15,   2,   5,   8,  14},
-          {  -3,  -7, -10, -13,   2,   6,   9,  12},
-          {  -2,  -5,  -8, -13,   1,   4,   7,  12},
-          {  -2,  -4,  -6, -13,   1,   3,   5,  12},
-          {  -3,  -6,  -8, -12,   2,   5,   7,  11},
-          {  -3,  -7,  -9, -11,   2,   6,   8,  10},
-          {  -4,  -7,  -8, -11,   3,   6,   7,  10},
-          {  -3,  -5,  -8, -11,   2,   4,   7,  10},
-          {  -2,  -6,  -8, -10,   1,   5,   7,   9},
-          {  -2,  -5,  -8, -10,   1,   4,   7,   9},
-          {  -2,  -4,  -8, -10,   1,   3,   7,   9},
-          {  -2,  -5,  -7, -10,   1,   4,   6,   9},
-          {  -3,  -4,  -7, -10,   2,   3,   6,   9},
-          {  -1,  -2,  -3, -10,   0,   1,   2,   9},
-          {  -4,  -6,  -8,  -9,   3,   5,   7,   8},
-          {  -3,  -5,  -7,  -9,   2,   4,   6,   8},
+            { -3, -6, -9, -15, 2, 5, 8, 14 },
+            { -3, -7, -10, -13, 2, 6, 9, 12 },
+            { -2, -5, -8, -13, 1, 4, 7, 12 },
+            { -2, -4, -6, -13, 1, 3, 5, 12 },
+            { -3, -6, -8, -12, 2, 5, 7, 11 },
+            { -3, -7, -9, -11, 2, 6, 8, 10 },
+            { -4, -7, -8, -11, 3, 6, 7, 10 },
+            { -3, -5, -8, -11, 2, 4, 7, 10 },
+            { -2, -6, -8, -10, 1, 5, 7, 9 },
+            { -2, -5, -8, -10, 1, 4, 7, 9 },
+            { -2, -4, -8, -10, 1, 3, 7, 9 },
+            { -2, -5, -7, -10, 1, 4, 6, 9 },
+            { -3, -4, -7, -10, 2, 3, 6, 9 },
+            { -1, -2, -3, -10, 0, 1, 2, 9 },
+            { -4, -6, -8, -9, 3, 5, 7, 8 },
+            { -3, -5, -7, -9, 2, 4, 6, 8 },
         };
 
         static const uint8 g_etc1_to_selector_index[cETC1SelectorValues] = { 2, 3, 1, 0 };
         static const uint8 g_selector_index_to_etc1[cETC1SelectorValues] = { 3, 2, 0, 1 };
 
         // Given an ETC1 diff/inten_table/selector, and an 8-bit desired color, this table encodes the best packed_color in the low byte, and the abs error in the high byte.
-        static uint16 g_etc1_inverse_lookup[2 * 8 * 4][256];  // [diff/inten_table/selector][desired_color]
+        static uint16 g_etc1_inverse_lookup[2 * 8 * 4][256]; // [diff/inten_table/selector][desired_color]
 
         // g_color8_to_etc_block_config[color][table_index] = Supplies for each 8-bit color value a list of packed ETC1 diff/intensity table/selectors/packed_colors that map to that color.
         // To pack: diff | (inten << 1) | (selector << 4) | (packed_c << 8)
-        static const uint16 g_color8_to_etc_block_config_0_255[2][33] =
-        {
-            {0x0000, 0x0010, 0x0002, 0x0012, 0x0004, 0x0014, 0x0006, 0x0016, 0x0008, 0x0018, 0x000A, 0x001A, 0x000C, 0x001C, 0x000E, 0x001E,
-             0x0001, 0x0011, 0x0003, 0x0013, 0x0005, 0x0015, 0x0007, 0x0017, 0x0009, 0x0019, 0x000B, 0x001B, 0x000D, 0x001D, 0x000F, 0x001F, 0xFFFF},
-            {0x0F20, 0x0F30, 0x0E32, 0x0F22, 0x0E34, 0x0F24, 0x0D36, 0x0F26, 0x0C38, 0x0E28, 0x0B3A, 0x0E2A, 0x093C, 0x0E2C, 0x053E, 0x0D2E,
-             0x1E31, 0x1F21, 0x1D33, 0x1F23, 0x1C35, 0x1E25, 0x1A37, 0x1E27, 0x1839, 0x1D29, 0x163B, 0x1C2B, 0x133D, 0x1B2D, 0x093F, 0x1A2F, 0xFFFF},
+        static const uint16 g_color8_to_etc_block_config_0_255[2][33] = {
+            { 0x0000, 0x0010, 0x0002, 0x0012, 0x0004, 0x0014, 0x0006, 0x0016, 0x0008, 0x0018, 0x000A, 0x001A, 0x000C, 0x001C, 0x000E, 0x001E,
+                0x0001, 0x0011, 0x0003, 0x0013, 0x0005, 0x0015, 0x0007, 0x0017, 0x0009, 0x0019, 0x000B, 0x001B, 0x000D, 0x001D, 0x000F, 0x001F, 0xFFFF },
+            { 0x0F20, 0x0F30, 0x0E32, 0x0F22, 0x0E34, 0x0F24, 0x0D36, 0x0F26, 0x0C38, 0x0E28, 0x0B3A, 0x0E2A, 0x093C, 0x0E2C, 0x053E, 0x0D2E,
+                0x1E31, 0x1F21, 0x1D33, 0x1F23, 0x1C35, 0x1E25, 0x1A37, 0x1E27, 0x1839, 0x1D29, 0x163B, 0x1C2B, 0x133D, 0x1B2D, 0x093F, 0x1A2F, 0xFFFF },
         };
 
         // Really only [254][11].
-        static const uint16 g_color8_to_etc_block_config_1_to_254[254][12] =
-        {
-            {0x021C, 0x0D0D, 0xFFFF},
-            {0x0020, 0x0021, 0x0A0B, 0x061F, 0xFFFF},
-            {0x0113, 0x0217, 0xFFFF},
-            {0x0116, 0x031E,
-             0x0B0E, 0x0405, 0xFFFF},
-            {0x0022, 0x0204, 0x050A, 0x0023, 0xFFFF},
-            {0x0111, 0x0319, 0x0809, 0x170F, 0xFFFF},
-            {0x0303, 0x0215, 0x0607, 0xFFFF},
-            {0x0030, 0x0114, 0x0408, 0x0031, 0x0201, 0x051D, 0xFFFF},
-            {0x0100, 0x0024, 0x0306,
-             0x0025, 0x041B, 0x0E0D, 0xFFFF},
-            {0x021A, 0x0121, 0x0B0B, 0x071F, 0xFFFF},
-            {0x0213, 0x0317, 0xFFFF},
-            {0x0112,
-             0x0505, 0xFFFF},
-            {0x0026, 0x070C, 0x0123, 0x0027, 0xFFFF},
-            {0x0211, 0x0909, 0xFFFF},
-            {0x0110, 0x0315, 0x0707,
-             0x0419, 0x180F, 0xFFFF},
-            {0x0218, 0x0131, 0x0301, 0x0403, 0x061D, 0xFFFF},
-            {0x0032, 0x0202, 0x0033, 0x0125, 0x051B,
-             0x0F0D, 0xFFFF},
-            {0x0028, 0x031C, 0x0221, 0x0029, 0xFFFF},
-            {0x0120, 0x0313, 0x0C0B, 0x081F, 0xFFFF},
-            {0x0605,
-             0x0417, 0xFFFF},
-            {0x0216, 0x041E, 0x0C0E, 0x0223, 0x0127, 0xFFFF},
-            {0x0122, 0x0304, 0x060A, 0x0311, 0x0A09, 0xFFFF},
-            {0x0519, 0x190F, 0xFFFF},
-            {0x002A, 0x0231, 0x0503, 0x0415, 0x0807, 0x002B, 0x071D, 0xFFFF},
-            {0x0130, 0x0214,
-             0x0508, 0x0401, 0x0133, 0x0225, 0x061B, 0xFFFF},
-            {0x0200, 0x0124, 0x0406, 0x0321, 0x0129, 0x100D, 0xFFFF},
-            {0x031A,
-             0x0D0B, 0x091F, 0xFFFF},
-            {0x0413, 0x0705, 0x0517, 0xFFFF},
-            {0x0212, 0x0034, 0x0323, 0x0035, 0x0227, 0xFFFF},
-            {0x0126, 0x080C, 0x0B09, 0xFFFF},
-            {0x0411, 0x0619, 0x1A0F, 0xFFFF},
-            {0x0210, 0x0331, 0x0603, 0x0515, 0x0907, 0x012B,
-             0xFFFF},
-            {0x0318, 0x002C, 0x0501, 0x0233, 0x0325, 0x071B, 0x002D, 0x081D, 0xFFFF},
-            {0x0132, 0x0302, 0x0229, 0x110D,
-             0xFFFF},
-            {0x0128, 0x041C, 0x0421, 0x0E0B, 0x0A1F, 0xFFFF},
-            {0x0220, 0x0513, 0x0617, 0xFFFF},
-            {0x0135, 0x0805,
-             0x0327, 0xFFFF},
-            {0x0316, 0x051E, 0x0D0E, 0x0423, 0xFFFF},
-            {0x0222, 0x0404, 0x070A, 0x0511, 0x0719, 0x0C09, 0x1B0F,
-             0xFFFF},
-            {0x0703, 0x0615, 0x0A07, 0x022B, 0xFFFF},
-            {0x012A, 0x0431, 0x0601, 0x0333, 0x012D, 0x091D, 0xFFFF},
-            {0x0230, 0x0314, 0x0036, 0x0608, 0x0425, 0x0037, 0x0329, 0x081B, 0x120D, 0xFFFF},
-            {0x0300, 0x0224, 0x0506, 0x0521,
-             0x0F0B, 0x0B1F, 0xFFFF},
-            {0x041A, 0x0613, 0x0717, 0xFFFF},
-            {0x0235, 0x0905, 0xFFFF},
-            {0x0312, 0x0134, 0x0523,
-             0x0427, 0xFFFF},
-            {0x0226, 0x090C, 0x002E, 0x0611, 0x0D09, 0x002F, 0xFFFF},
-            {0x0715, 0x0B07, 0x0819, 0x032B, 0x1C0F,
-             0xFFFF},
-            {0x0310, 0x0531, 0x0701, 0x0803, 0x022D, 0x0A1D, 0xFFFF},
-            {0x0418, 0x012C, 0x0433, 0x0525, 0x0137, 0x091B,
-             0x130D, 0xFFFF},
-            {0x0232, 0x0402, 0x0621, 0x0429, 0xFFFF},
-            {0x0228, 0x051C, 0x0713, 0x100B, 0x0C1F, 0xFFFF},
-            {0x0320, 0x0335, 0x0A05, 0x0817, 0xFFFF},
-            {0x0623, 0x0527, 0xFFFF},
-            {0x0416, 0x061E, 0x0E0E, 0x0711, 0x0E09, 0x012F,
-             0xFFFF},
-            {0x0322, 0x0504, 0x080A, 0x0919, 0x1D0F, 0xFFFF},
-            {0x0631, 0x0903, 0x0815, 0x0C07, 0x042B, 0x032D, 0x0B1D,
-             0xFFFF},
-            {0x022A, 0x0801, 0x0533, 0x0625, 0x0237, 0x0A1B, 0xFFFF},
-            {0x0330, 0x0414, 0x0136, 0x0708, 0x0721, 0x0529,
-             0x140D, 0xFFFF},
-            {0x0400, 0x0324, 0x0606, 0x0038, 0x0039, 0x110B, 0x0D1F, 0xFFFF},
-            {0x051A, 0x0813, 0x0B05, 0x0917,
-             0xFFFF},
-            {0x0723, 0x0435, 0x0627, 0xFFFF},
-            {0x0412, 0x0234, 0x0F09, 0x022F, 0xFFFF},
-            {0x0326, 0x0A0C, 0x012E,
-             0x0811, 0x0A19, 0x1E0F, 0xFFFF},
-            {0x0731, 0x0A03, 0x0915, 0x0D07, 0x052B, 0xFFFF},
-            {0x0410, 0x0901, 0x0633, 0x0725,
-             0x0337, 0x0B1B, 0x042D, 0x0C1D, 0xFFFF},
-            {0x0518, 0x022C, 0x0629, 0x150D, 0xFFFF},
-            {0x0332, 0x0502, 0x0821, 0x0139,
-             0x120B, 0x0E1F, 0xFFFF},
-            {0x0328, 0x061C, 0x0913, 0x0A17, 0xFFFF},
-            {0x0420, 0x0535, 0x0C05, 0x0727, 0xFFFF},
-            {0x0823, 0x032F, 0xFFFF},
-            {0x0516, 0x071E, 0x0F0E, 0x0911, 0x0B19, 0x1009, 0x1F0F, 0xFFFF},
-            {0x0422, 0x0604, 0x090A,
-             0x0B03, 0x0A15, 0x0E07, 0x062B, 0xFFFF},
-            {0x0831, 0x0A01, 0x0733, 0x052D, 0x0D1D, 0xFFFF},
-            {0x032A, 0x0825, 0x0437,
-             0x0729, 0x0C1B, 0x160D, 0xFFFF},
-            {0x0430, 0x0514, 0x0236, 0x0808, 0x0921, 0x0239, 0x130B, 0x0F1F, 0xFFFF},
-            {0x0500,
-             0x0424, 0x0706, 0x0138, 0x0A13, 0x0B17, 0xFFFF},
-            {0x061A, 0x0635, 0x0D05, 0xFFFF},
-            {0x0923, 0x0827, 0xFFFF},
-            {0x0512, 0x0334, 0x003A, 0x0A11, 0x1109, 0x003B, 0x042F, 0xFFFF},
-            {0x0426, 0x0B0C, 0x022E, 0x0B15, 0x0F07, 0x0C19,
-             0x072B, 0xFFFF},
-            {0x0931, 0x0B01, 0x0C03, 0x062D, 0x0E1D, 0xFFFF},
-            {0x0510, 0x0833, 0x0925, 0x0537, 0x0D1B, 0x170D,
-             0xFFFF},
-            {0x0618, 0x032C, 0x0A21, 0x0339, 0x0829, 0xFFFF},
-            {0x0432, 0x0602, 0x0B13, 0x140B, 0x101F, 0xFFFF},
-            {0x0428, 0x071C, 0x0735, 0x0E05, 0x0C17, 0xFFFF},
-            {0x0520, 0x0A23, 0x0927, 0xFFFF},
-            {0x0B11, 0x1209, 0x013B, 0x052F,
-             0xFFFF},
-            {0x0616, 0x081E, 0x0D19, 0xFFFF},
-            {0x0522, 0x0704, 0x0A0A, 0x0A31, 0x0D03, 0x0C15, 0x1007, 0x082B, 0x072D,
-             0x0F1D, 0xFFFF},
-            {0x0C01, 0x0933, 0x0A25, 0x0637, 0x0E1B, 0xFFFF},
-            {0x042A, 0x0B21, 0x0929, 0x180D, 0xFFFF},
-            {0x0530, 0x0614, 0x0336, 0x0908, 0x0439, 0x150B, 0x111F, 0xFFFF},
-            {0x0600, 0x0524, 0x0806, 0x0238, 0x0C13, 0x0F05,
-             0x0D17, 0xFFFF},
-            {0x071A, 0x0B23, 0x0835, 0x0A27, 0xFFFF},
-            {0x1309, 0x023B, 0x062F, 0xFFFF},
-            {0x0612, 0x0434,
-             0x013A, 0x0C11, 0x0E19, 0xFFFF},
-            {0x0526, 0x0C0C, 0x032E, 0x0B31, 0x0E03, 0x0D15, 0x1107, 0x092B, 0xFFFF},
-            {0x0D01,
-             0x0A33, 0x0B25, 0x0737, 0x0F1B, 0x082D, 0x101D, 0xFFFF},
-            {0x0610, 0x0A29, 0x190D, 0xFFFF},
-            {0x0718, 0x042C, 0x0C21,
-             0x0539, 0x160B, 0x121F, 0xFFFF},
-            {0x0532, 0x0702, 0x0D13, 0x0E17, 0xFFFF},
-            {0x0528, 0x081C, 0x0935, 0x1005, 0x0B27,
-             0xFFFF},
-            {0x0620, 0x0C23, 0x033B, 0x072F, 0xFFFF},
-            {0x0D11, 0x0F19, 0x1409, 0xFFFF},
-            {0x0716, 0x003C, 0x091E,
-             0x0F03, 0x0E15, 0x1207, 0x0A2B, 0x003D, 0xFFFF},
-            {0x0622, 0x0804, 0x0B0A, 0x0C31, 0x0E01, 0x0B33, 0x092D, 0x111D,
-             0xFFFF},
-            {0x0C25, 0x0837, 0x0B29, 0x101B, 0x1A0D, 0xFFFF},
-            {0x052A, 0x0D21, 0x0639, 0x170B, 0x131F, 0xFFFF},
-            {0x0630, 0x0714, 0x0436, 0x0A08, 0x0E13, 0x0F17, 0xFFFF},
-            {0x0700, 0x0624, 0x0906, 0x0338, 0x0A35, 0x1105, 0xFFFF},
-            {0x081A, 0x0D23, 0x0C27, 0xFFFF},
-            {0x0E11, 0x1509, 0x043B, 0x082F, 0xFFFF},
-            {0x0712, 0x0534, 0x023A, 0x0F15, 0x1307,
-             0x1019, 0x0B2B, 0x013D, 0xFFFF},
-            {0x0626, 0x0D0C, 0x042E, 0x0D31, 0x0F01, 0x1003, 0x0A2D, 0x121D, 0xFFFF},
-            {0x0C33,
-             0x0D25, 0x0937, 0x111B, 0x1B0D, 0xFFFF},
-            {0x0710, 0x0E21, 0x0739, 0x0C29, 0xFFFF},
-            {0x0818, 0x052C, 0x0F13, 0x180B,
-             0x141F, 0xFFFF},
-            {0x0632, 0x0802, 0x0B35, 0x1205, 0x1017, 0xFFFF},
-            {0x0628, 0x091C, 0x0E23, 0x0D27, 0xFFFF},
-            {0x0720, 0x0F11, 0x1609, 0x053B, 0x092F, 0xFFFF},
-            {0x1119, 0x023D, 0xFFFF},
-            {0x0816, 0x013C, 0x0A1E, 0x0E31, 0x1103,
-             0x1015, 0x1407, 0x0C2B, 0x0B2D, 0x131D, 0xFFFF},
-            {0x0722, 0x0904, 0x0C0A, 0x1001, 0x0D33, 0x0E25, 0x0A37, 0x121B,
-             0xFFFF},
-            {0x0F21, 0x0D29, 0x1C0D, 0xFFFF},
-            {0x062A, 0x0839, 0x190B, 0x151F, 0xFFFF},
-            {0x0730, 0x0814, 0x0536,
-             0x0B08, 0x1013, 0x1305, 0x1117, 0xFFFF},
-            {0x0800, 0x0724, 0x0A06, 0x0438, 0x0F23, 0x0C35, 0x0E27, 0xFFFF},
-            {0x091A,
-             0x1709, 0x063B, 0x0A2F, 0xFFFF},
-            {0x1011, 0x1219, 0x033D, 0xFFFF},
-            {0x0812, 0x0634, 0x033A, 0x0F31, 0x1203, 0x1115,
-             0x1507, 0x0D2B, 0xFFFF},
-            {0x0726, 0x0E0C, 0x052E, 0x1101, 0x0E33, 0x0F25, 0x0B37, 0x131B, 0x0C2D, 0x141D, 0xFFFF},
-            {0x0E29, 0x1D0D, 0xFFFF},
-            {0x0810, 0x1021, 0x0939, 0x1A0B, 0x161F, 0xFFFF},
-            {0x0918, 0x062C, 0x1113, 0x1217, 0xFFFF},
-            {0x0732, 0x0902, 0x0D35, 0x1405, 0x0F27, 0xFFFF},
-            {0x0728, 0x0A1C, 0x1023, 0x073B, 0x0B2F, 0xFFFF},
-            {0x0820,
-             0x1111, 0x1319, 0x1809, 0xFFFF},
-            {0x1303, 0x1215, 0x1607, 0x0E2B, 0x043D, 0xFFFF},
-            {0x0916, 0x023C, 0x0B1E, 0x1031,
-             0x1201, 0x0F33, 0x0D2D, 0x151D, 0xFFFF},
-            {0x0822, 0x0A04, 0x0D0A, 0x1025, 0x0C37, 0x0F29, 0x141B, 0x1E0D, 0xFFFF},
-            {0x1121, 0x0A39, 0x1B0B, 0x171F, 0xFFFF},
-            {0x072A, 0x1213, 0x1317, 0xFFFF},
-            {0x0830, 0x0914, 0x0636, 0x0C08, 0x0E35,
-             0x1505, 0xFFFF},
-            {0x0900, 0x0824, 0x0B06, 0x0538, 0x1123, 0x1027, 0xFFFF},
-            {0x0A1A, 0x1211, 0x1909, 0x083B, 0x0C2F,
-             0xFFFF},
-            {0x1315, 0x1707, 0x1419, 0x0F2B, 0x053D, 0xFFFF},
-            {0x0912, 0x0734, 0x043A, 0x1131, 0x1301, 0x1403, 0x0E2D,
-             0x161D, 0xFFFF},
-            {0x0826, 0x0F0C, 0x062E, 0x1033, 0x1125, 0x0D37, 0x151B, 0x1F0D, 0xFFFF},
-            {0x1221, 0x0B39, 0x1029,
-             0xFFFF},
-            {0x0910, 0x1313, 0x1C0B, 0x181F, 0xFFFF},
-            {0x0A18, 0x072C, 0x0F35, 0x1605, 0x1417, 0xFFFF},
-            {0x0832,
-             0x0A02, 0x1223, 0x1127, 0xFFFF},
-            {0x0828, 0x0B1C, 0x1311, 0x1A09, 0x093B, 0x0D2F, 0xFFFF},
-            {0x0920, 0x1519, 0x063D,
-             0xFFFF},
-            {0x1231, 0x1503, 0x1415, 0x1807, 0x102B, 0x0F2D, 0x171D, 0xFFFF},
-            {0x0A16, 0x033C, 0x0C1E, 0x1401, 0x1133,
-             0x1225, 0x0E37, 0x161B, 0xFFFF},
-            {0x0922, 0x0B04, 0x0E0A, 0x1321, 0x1129, 0xFFFF},
-            {0x0C39, 0x1D0B, 0x191F, 0xFFFF},
-            {0x082A, 0x1413, 0x1705, 0x1517, 0xFFFF},
-            {0x0930, 0x0A14, 0x0736, 0x0D08, 0x1323, 0x1035, 0x1227, 0xFFFF},
-            {0x0A00, 0x0924, 0x0C06, 0x0638, 0x1B09, 0x0A3B, 0x0E2F, 0xFFFF},
-            {0x0B1A, 0x1411, 0x1619, 0x073D, 0xFFFF},
-            {0x1331,
-             0x1603, 0x1515, 0x1907, 0x112B, 0xFFFF},
-            {0x0A12, 0x0834, 0x053A, 0x1501, 0x1233, 0x1325, 0x0F37, 0x171B, 0x102D,
-             0x181D, 0xFFFF},
-            {0x0926, 0x072E, 0x1229, 0xFFFF},
-            {0x1421, 0x0D39, 0x1E0B, 0x1A1F, 0xFFFF},
-            {0x0A10, 0x1513,
-             0x1617, 0xFFFF},
-            {0x0B18, 0x082C, 0x1135, 0x1805, 0x1327, 0xFFFF},
-            {0x0932, 0x0B02, 0x1423, 0x0B3B, 0x0F2F, 0xFFFF},
-            {0x0928, 0x0C1C, 0x1511, 0x1719, 0x1C09, 0xFFFF},
-            {0x0A20, 0x1703, 0x1615, 0x1A07, 0x122B, 0x083D, 0xFFFF},
-            {0x1431, 0x1601, 0x1333, 0x112D, 0x191D, 0xFFFF},
-            {0x0B16, 0x043C, 0x0D1E, 0x1425, 0x1037, 0x1329, 0x181B, 0xFFFF},
-            {0x0A22, 0x0C04, 0x0F0A, 0x1521, 0x0E39, 0x1F0B, 0x1B1F, 0xFFFF},
-            {0x1613, 0x1717, 0xFFFF},
-            {0x092A, 0x1235, 0x1905,
-             0xFFFF},
-            {0x0A30, 0x0B14, 0x0836, 0x0E08, 0x1523, 0x1427, 0xFFFF},
-            {0x0B00, 0x0A24, 0x0D06, 0x0738, 0x1611, 0x1D09,
-             0x0C3B, 0x102F, 0xFFFF},
-            {0x0C1A, 0x1715, 0x1B07, 0x1819, 0x132B, 0x093D, 0xFFFF},
-            {0x1531, 0x1701, 0x1803, 0x122D,
-             0x1A1D, 0xFFFF},
-            {0x0B12, 0x0934, 0x063A, 0x1433, 0x1525, 0x1137, 0x191B, 0xFFFF},
-            {0x0A26, 0x003E, 0x082E, 0x1621,
-             0x0F39, 0x1429, 0x003F, 0xFFFF},
-            {0x1713, 0x1C1F, 0xFFFF},
-            {0x0B10, 0x1335, 0x1A05, 0x1817, 0xFFFF},
-            {0x0C18,
-             0x092C, 0x1623, 0x1527, 0xFFFF},
-            {0x0A32, 0x0C02, 0x1711, 0x1E09, 0x0D3B, 0x112F, 0xFFFF},
-            {0x0A28, 0x0D1C, 0x1919,
-             0x0A3D, 0xFFFF},
-            {0x0B20, 0x1631, 0x1903, 0x1815, 0x1C07, 0x142B, 0x132D, 0x1B1D, 0xFFFF},
-            {0x1801, 0x1533, 0x1625,
-             0x1237, 0x1A1B, 0xFFFF},
-            {0x0C16, 0x053C, 0x0E1E, 0x1721, 0x1529, 0x013F, 0xFFFF},
-            {0x0B22, 0x0D04, 0x1039, 0x1D1F,
-             0xFFFF},
-            {0x1813, 0x1B05, 0x1917, 0xFFFF},
-            {0x0A2A, 0x1723, 0x1435, 0x1627, 0xFFFF},
-            {0x0B30, 0x0C14, 0x0936,
-             0x0F08, 0x1F09, 0x0E3B, 0x122F, 0xFFFF},
-            {0x0C00, 0x0B24, 0x0E06, 0x0838, 0x1811, 0x1A19, 0x0B3D, 0xFFFF},
-            {0x0D1A,
-             0x1731, 0x1A03, 0x1915, 0x1D07, 0x152B, 0xFFFF},
-            {0x1901, 0x1633, 0x1725, 0x1337, 0x1B1B, 0x142D, 0x1C1D, 0xFFFF},
-            {0x0C12, 0x0A34, 0x073A, 0x1629, 0x023F, 0xFFFF},
-            {0x0B26, 0x013E, 0x092E, 0x1821, 0x1139, 0x1E1F, 0xFFFF},
-            {0x1913,
-             0x1A17, 0xFFFF},
-            {0x0C10, 0x1535, 0x1C05, 0x1727, 0xFFFF},
-            {0x0D18, 0x0A2C, 0x1823, 0x0F3B, 0x132F, 0xFFFF},
-            {0x0B32, 0x0D02, 0x1911, 0x1B19, 0xFFFF},
-            {0x0B28, 0x0E1C, 0x1B03, 0x1A15, 0x1E07, 0x162B, 0x0C3D, 0xFFFF},
-            {0x0C20,
-             0x1831, 0x1A01, 0x1733, 0x152D, 0x1D1D, 0xFFFF},
-            {0x1825, 0x1437, 0x1729, 0x1C1B, 0x033F, 0xFFFF},
-            {0x0D16, 0x063C,
-             0x0F1E, 0x1921, 0x1239, 0x1F1F, 0xFFFF},
-            {0x0C22, 0x0E04, 0x1A13, 0x1B17, 0xFFFF},
-            {0x1635, 0x1D05, 0xFFFF},
-            {0x0B2A, 0x1923, 0x1827, 0xFFFF},
-            {0x0C30, 0x0D14, 0x0A36, 0x1A11, 0x103B, 0x142F, 0xFFFF},
-            {0x0D00, 0x0C24, 0x0F06,
-             0x0938, 0x1B15, 0x1F07, 0x1C19, 0x172B, 0x0D3D, 0xFFFF},
-            {0x0E1A, 0x1931, 0x1B01, 0x1C03, 0x162D, 0x1E1D, 0xFFFF},
-            {0x1833, 0x1925, 0x1537, 0x1D1B, 0xFFFF},
-            {0x0D12, 0x0B34, 0x083A, 0x1A21, 0x1339, 0x1829, 0x043F, 0xFFFF},
-            {0x0C26,
-             0x023E, 0x0A2E, 0x1B13, 0xFFFF},
-            {0x1735, 0x1E05, 0x1C17, 0xFFFF},
-            {0x0D10, 0x1A23, 0x1927, 0xFFFF},
-            {0x0E18,
-             0x0B2C, 0x1B11, 0x113B, 0x152F, 0xFFFF},
-            {0x0C32, 0x0E02, 0x1D19, 0x0E3D, 0xFFFF},
-            {0x0C28, 0x0F1C, 0x1A31, 0x1D03,
-             0x1C15, 0x182B, 0x172D, 0x1F1D, 0xFFFF},
-            {0x0D20, 0x1C01, 0x1933, 0x1A25, 0x1637, 0x1E1B, 0xFFFF},
-            {0x1B21, 0x1929,
-             0x053F, 0xFFFF},
-            {0x0E16, 0x073C, 0x1439, 0xFFFF},
-            {0x0D22, 0x0F04, 0x1C13, 0x1F05, 0x1D17, 0xFFFF},
-            {0x1B23,
-             0x1835, 0x1A27, 0xFFFF},
-            {0x0C2A, 0x123B, 0x162F, 0xFFFF},
-            {0x0D30, 0x0E14, 0x0B36, 0x1C11, 0x1E19, 0x0F3D, 0xFFFF},
-            {0x0E00, 0x0D24, 0x0A38, 0x1B31, 0x1E03, 0x1D15, 0x192B, 0xFFFF},
-            {0x0F1A, 0x1D01, 0x1A33, 0x1B25, 0x1737, 0x1F1B,
-             0x182D, 0xFFFF},
-            {0x1A29, 0x063F, 0xFFFF},
-            {0x0E12, 0x0C34, 0x093A, 0x1C21, 0x1539, 0xFFFF},
-            {0x0D26, 0x033E,
-             0x0B2E, 0x1D13, 0x1E17, 0xFFFF},
-            {0x1935, 0x1B27, 0xFFFF},
-            {0x0E10, 0x1C23, 0x133B, 0x172F, 0xFFFF},
-            {0x0F18,
-             0x0C2C, 0x1D11, 0x1F19, 0xFFFF},
-            {0x0D32, 0x0F02, 0x1F03, 0x1E15, 0x1A2B, 0x103D, 0xFFFF},
-            {0x0D28, 0x1C31, 0x1E01,
-             0x1B33, 0x192D, 0xFFFF},
-            {0x0E20, 0x1C25, 0x1837, 0x1B29, 0x073F, 0xFFFF},
-            {0x1D21, 0x1639, 0xFFFF},
-            {0x0F16,
-             0x083C, 0x1E13, 0x1F17, 0xFFFF},
-            {0x0E22, 0x1A35, 0xFFFF},
-            {0x1D23, 0x1C27, 0xFFFF},
-            {0x0D2A, 0x1E11, 0x143B,
-             0x182F, 0xFFFF},
-            {0x0E30, 0x0F14, 0x0C36, 0x1F15, 0x1B2B, 0x113D, 0xFFFF},
-            {0x0F00, 0x0E24, 0x0B38, 0x1D31, 0x1F01,
-             0x1A2D, 0xFFFF},
-            {0x1C33, 0x1D25, 0x1937, 0xFFFF},
-            {0x1E21, 0x1739, 0x1C29, 0x083F, 0xFFFF},
-            {0x0F12, 0x0D34,
-             0x0A3A, 0x1F13, 0xFFFF},
-            {0x0E26, 0x043E, 0x0C2E, 0x1B35, 0xFFFF},
-            {0x1E23, 0x1D27, 0xFFFF},
-            {0x0F10, 0x1F11,
-             0x153B, 0x192F, 0xFFFF},
-            {0x0D2C, 0x123D, 0xFFFF},
+        static const uint16 g_color8_to_etc_block_config_1_to_254[254][12] = {
+            { 0x021C, 0x0D0D, 0xFFFF },
+            { 0x0020, 0x0021, 0x0A0B, 0x061F, 0xFFFF },
+            { 0x0113, 0x0217, 0xFFFF },
+            { 0x0116, 0x031E,
+                0x0B0E, 0x0405, 0xFFFF },
+            { 0x0022, 0x0204, 0x050A, 0x0023, 0xFFFF },
+            { 0x0111, 0x0319, 0x0809, 0x170F, 0xFFFF },
+            { 0x0303, 0x0215, 0x0607, 0xFFFF },
+            { 0x0030, 0x0114, 0x0408, 0x0031, 0x0201, 0x051D, 0xFFFF },
+            { 0x0100, 0x0024, 0x0306,
+                0x0025, 0x041B, 0x0E0D, 0xFFFF },
+            { 0x021A, 0x0121, 0x0B0B, 0x071F, 0xFFFF },
+            { 0x0213, 0x0317, 0xFFFF },
+            { 0x0112,
+                0x0505, 0xFFFF },
+            { 0x0026, 0x070C, 0x0123, 0x0027, 0xFFFF },
+            { 0x0211, 0x0909, 0xFFFF },
+            { 0x0110, 0x0315, 0x0707,
+                0x0419, 0x180F, 0xFFFF },
+            { 0x0218, 0x0131, 0x0301, 0x0403, 0x061D, 0xFFFF },
+            { 0x0032, 0x0202, 0x0033, 0x0125, 0x051B,
+                0x0F0D, 0xFFFF },
+            { 0x0028, 0x031C, 0x0221, 0x0029, 0xFFFF },
+            { 0x0120, 0x0313, 0x0C0B, 0x081F, 0xFFFF },
+            { 0x0605,
+                0x0417, 0xFFFF },
+            { 0x0216, 0x041E, 0x0C0E, 0x0223, 0x0127, 0xFFFF },
+            { 0x0122, 0x0304, 0x060A, 0x0311, 0x0A09, 0xFFFF },
+            { 0x0519, 0x190F, 0xFFFF },
+            { 0x002A, 0x0231, 0x0503, 0x0415, 0x0807, 0x002B, 0x071D, 0xFFFF },
+            { 0x0130, 0x0214,
+                0x0508, 0x0401, 0x0133, 0x0225, 0x061B, 0xFFFF },
+            { 0x0200, 0x0124, 0x0406, 0x0321, 0x0129, 0x100D, 0xFFFF },
+            { 0x031A,
+                0x0D0B, 0x091F, 0xFFFF },
+            { 0x0413, 0x0705, 0x0517, 0xFFFF },
+            { 0x0212, 0x0034, 0x0323, 0x0035, 0x0227, 0xFFFF },
+            { 0x0126, 0x080C, 0x0B09, 0xFFFF },
+            { 0x0411, 0x0619, 0x1A0F, 0xFFFF },
+            { 0x0210, 0x0331, 0x0603, 0x0515, 0x0907, 0x012B,
+                0xFFFF },
+            { 0x0318, 0x002C, 0x0501, 0x0233, 0x0325, 0x071B, 0x002D, 0x081D, 0xFFFF },
+            { 0x0132, 0x0302, 0x0229, 0x110D,
+                0xFFFF },
+            { 0x0128, 0x041C, 0x0421, 0x0E0B, 0x0A1F, 0xFFFF },
+            { 0x0220, 0x0513, 0x0617, 0xFFFF },
+            { 0x0135, 0x0805,
+                0x0327, 0xFFFF },
+            { 0x0316, 0x051E, 0x0D0E, 0x0423, 0xFFFF },
+            { 0x0222, 0x0404, 0x070A, 0x0511, 0x0719, 0x0C09, 0x1B0F,
+                0xFFFF },
+            { 0x0703, 0x0615, 0x0A07, 0x022B, 0xFFFF },
+            { 0x012A, 0x0431, 0x0601, 0x0333, 0x012D, 0x091D, 0xFFFF },
+            { 0x0230, 0x0314, 0x0036, 0x0608, 0x0425, 0x0037, 0x0329, 0x081B, 0x120D, 0xFFFF },
+            { 0x0300, 0x0224, 0x0506, 0x0521,
+                0x0F0B, 0x0B1F, 0xFFFF },
+            { 0x041A, 0x0613, 0x0717, 0xFFFF },
+            { 0x0235, 0x0905, 0xFFFF },
+            { 0x0312, 0x0134, 0x0523,
+                0x0427, 0xFFFF },
+            { 0x0226, 0x090C, 0x002E, 0x0611, 0x0D09, 0x002F, 0xFFFF },
+            { 0x0715, 0x0B07, 0x0819, 0x032B, 0x1C0F,
+                0xFFFF },
+            { 0x0310, 0x0531, 0x0701, 0x0803, 0x022D, 0x0A1D, 0xFFFF },
+            { 0x0418, 0x012C, 0x0433, 0x0525, 0x0137, 0x091B,
+                0x130D, 0xFFFF },
+            { 0x0232, 0x0402, 0x0621, 0x0429, 0xFFFF },
+            { 0x0228, 0x051C, 0x0713, 0x100B, 0x0C1F, 0xFFFF },
+            { 0x0320, 0x0335, 0x0A05, 0x0817, 0xFFFF },
+            { 0x0623, 0x0527, 0xFFFF },
+            { 0x0416, 0x061E, 0x0E0E, 0x0711, 0x0E09, 0x012F,
+                0xFFFF },
+            { 0x0322, 0x0504, 0x080A, 0x0919, 0x1D0F, 0xFFFF },
+            { 0x0631, 0x0903, 0x0815, 0x0C07, 0x042B, 0x032D, 0x0B1D,
+                0xFFFF },
+            { 0x022A, 0x0801, 0x0533, 0x0625, 0x0237, 0x0A1B, 0xFFFF },
+            { 0x0330, 0x0414, 0x0136, 0x0708, 0x0721, 0x0529,
+                0x140D, 0xFFFF },
+            { 0x0400, 0x0324, 0x0606, 0x0038, 0x0039, 0x110B, 0x0D1F, 0xFFFF },
+            { 0x051A, 0x0813, 0x0B05, 0x0917,
+                0xFFFF },
+            { 0x0723, 0x0435, 0x0627, 0xFFFF },
+            { 0x0412, 0x0234, 0x0F09, 0x022F, 0xFFFF },
+            { 0x0326, 0x0A0C, 0x012E,
+                0x0811, 0x0A19, 0x1E0F, 0xFFFF },
+            { 0x0731, 0x0A03, 0x0915, 0x0D07, 0x052B, 0xFFFF },
+            { 0x0410, 0x0901, 0x0633, 0x0725,
+                0x0337, 0x0B1B, 0x042D, 0x0C1D, 0xFFFF },
+            { 0x0518, 0x022C, 0x0629, 0x150D, 0xFFFF },
+            { 0x0332, 0x0502, 0x0821, 0x0139,
+                0x120B, 0x0E1F, 0xFFFF },
+            { 0x0328, 0x061C, 0x0913, 0x0A17, 0xFFFF },
+            { 0x0420, 0x0535, 0x0C05, 0x0727, 0xFFFF },
+            { 0x0823, 0x032F, 0xFFFF },
+            { 0x0516, 0x071E, 0x0F0E, 0x0911, 0x0B19, 0x1009, 0x1F0F, 0xFFFF },
+            { 0x0422, 0x0604, 0x090A,
+                0x0B03, 0x0A15, 0x0E07, 0x062B, 0xFFFF },
+            { 0x0831, 0x0A01, 0x0733, 0x052D, 0x0D1D, 0xFFFF },
+            { 0x032A, 0x0825, 0x0437,
+                0x0729, 0x0C1B, 0x160D, 0xFFFF },
+            { 0x0430, 0x0514, 0x0236, 0x0808, 0x0921, 0x0239, 0x130B, 0x0F1F, 0xFFFF },
+            { 0x0500,
+                0x0424, 0x0706, 0x0138, 0x0A13, 0x0B17, 0xFFFF },
+            { 0x061A, 0x0635, 0x0D05, 0xFFFF },
+            { 0x0923, 0x0827, 0xFFFF },
+            { 0x0512, 0x0334, 0x003A, 0x0A11, 0x1109, 0x003B, 0x042F, 0xFFFF },
+            { 0x0426, 0x0B0C, 0x022E, 0x0B15, 0x0F07, 0x0C19,
+                0x072B, 0xFFFF },
+            { 0x0931, 0x0B01, 0x0C03, 0x062D, 0x0E1D, 0xFFFF },
+            { 0x0510, 0x0833, 0x0925, 0x0537, 0x0D1B, 0x170D,
+                0xFFFF },
+            { 0x0618, 0x032C, 0x0A21, 0x0339, 0x0829, 0xFFFF },
+            { 0x0432, 0x0602, 0x0B13, 0x140B, 0x101F, 0xFFFF },
+            { 0x0428, 0x071C, 0x0735, 0x0E05, 0x0C17, 0xFFFF },
+            { 0x0520, 0x0A23, 0x0927, 0xFFFF },
+            { 0x0B11, 0x1209, 0x013B, 0x052F,
+                0xFFFF },
+            { 0x0616, 0x081E, 0x0D19, 0xFFFF },
+            { 0x0522, 0x0704, 0x0A0A, 0x0A31, 0x0D03, 0x0C15, 0x1007, 0x082B, 0x072D,
+                0x0F1D, 0xFFFF },
+            { 0x0C01, 0x0933, 0x0A25, 0x0637, 0x0E1B, 0xFFFF },
+            { 0x042A, 0x0B21, 0x0929, 0x180D, 0xFFFF },
+            { 0x0530, 0x0614, 0x0336, 0x0908, 0x0439, 0x150B, 0x111F, 0xFFFF },
+            { 0x0600, 0x0524, 0x0806, 0x0238, 0x0C13, 0x0F05,
+                0x0D17, 0xFFFF },
+            { 0x071A, 0x0B23, 0x0835, 0x0A27, 0xFFFF },
+            { 0x1309, 0x023B, 0x062F, 0xFFFF },
+            { 0x0612, 0x0434,
+                0x013A, 0x0C11, 0x0E19, 0xFFFF },
+            { 0x0526, 0x0C0C, 0x032E, 0x0B31, 0x0E03, 0x0D15, 0x1107, 0x092B, 0xFFFF },
+            { 0x0D01,
+                0x0A33, 0x0B25, 0x0737, 0x0F1B, 0x082D, 0x101D, 0xFFFF },
+            { 0x0610, 0x0A29, 0x190D, 0xFFFF },
+            { 0x0718, 0x042C, 0x0C21,
+                0x0539, 0x160B, 0x121F, 0xFFFF },
+            { 0x0532, 0x0702, 0x0D13, 0x0E17, 0xFFFF },
+            { 0x0528, 0x081C, 0x0935, 0x1005, 0x0B27,
+                0xFFFF },
+            { 0x0620, 0x0C23, 0x033B, 0x072F, 0xFFFF },
+            { 0x0D11, 0x0F19, 0x1409, 0xFFFF },
+            { 0x0716, 0x003C, 0x091E,
+                0x0F03, 0x0E15, 0x1207, 0x0A2B, 0x003D, 0xFFFF },
+            { 0x0622, 0x0804, 0x0B0A, 0x0C31, 0x0E01, 0x0B33, 0x092D, 0x111D,
+                0xFFFF },
+            { 0x0C25, 0x0837, 0x0B29, 0x101B, 0x1A0D, 0xFFFF },
+            { 0x052A, 0x0D21, 0x0639, 0x170B, 0x131F, 0xFFFF },
+            { 0x0630, 0x0714, 0x0436, 0x0A08, 0x0E13, 0x0F17, 0xFFFF },
+            { 0x0700, 0x0624, 0x0906, 0x0338, 0x0A35, 0x1105, 0xFFFF },
+            { 0x081A, 0x0D23, 0x0C27, 0xFFFF },
+            { 0x0E11, 0x1509, 0x043B, 0x082F, 0xFFFF },
+            { 0x0712, 0x0534, 0x023A, 0x0F15, 0x1307,
+                0x1019, 0x0B2B, 0x013D, 0xFFFF },
+            { 0x0626, 0x0D0C, 0x042E, 0x0D31, 0x0F01, 0x1003, 0x0A2D, 0x121D, 0xFFFF },
+            { 0x0C33,
+                0x0D25, 0x0937, 0x111B, 0x1B0D, 0xFFFF },
+            { 0x0710, 0x0E21, 0x0739, 0x0C29, 0xFFFF },
+            { 0x0818, 0x052C, 0x0F13, 0x180B,
+                0x141F, 0xFFFF },
+            { 0x0632, 0x0802, 0x0B35, 0x1205, 0x1017, 0xFFFF },
+            { 0x0628, 0x091C, 0x0E23, 0x0D27, 0xFFFF },
+            { 0x0720, 0x0F11, 0x1609, 0x053B, 0x092F, 0xFFFF },
+            { 0x1119, 0x023D, 0xFFFF },
+            { 0x0816, 0x013C, 0x0A1E, 0x0E31, 0x1103,
+                0x1015, 0x1407, 0x0C2B, 0x0B2D, 0x131D, 0xFFFF },
+            { 0x0722, 0x0904, 0x0C0A, 0x1001, 0x0D33, 0x0E25, 0x0A37, 0x121B,
+                0xFFFF },
+            { 0x0F21, 0x0D29, 0x1C0D, 0xFFFF },
+            { 0x062A, 0x0839, 0x190B, 0x151F, 0xFFFF },
+            { 0x0730, 0x0814, 0x0536,
+                0x0B08, 0x1013, 0x1305, 0x1117, 0xFFFF },
+            { 0x0800, 0x0724, 0x0A06, 0x0438, 0x0F23, 0x0C35, 0x0E27, 0xFFFF },
+            { 0x091A,
+                0x1709, 0x063B, 0x0A2F, 0xFFFF },
+            { 0x1011, 0x1219, 0x033D, 0xFFFF },
+            { 0x0812, 0x0634, 0x033A, 0x0F31, 0x1203, 0x1115,
+                0x1507, 0x0D2B, 0xFFFF },
+            { 0x0726, 0x0E0C, 0x052E, 0x1101, 0x0E33, 0x0F25, 0x0B37, 0x131B, 0x0C2D, 0x141D, 0xFFFF },
+            { 0x0E29, 0x1D0D, 0xFFFF },
+            { 0x0810, 0x1021, 0x0939, 0x1A0B, 0x161F, 0xFFFF },
+            { 0x0918, 0x062C, 0x1113, 0x1217, 0xFFFF },
+            { 0x0732, 0x0902, 0x0D35, 0x1405, 0x0F27, 0xFFFF },
+            { 0x0728, 0x0A1C, 0x1023, 0x073B, 0x0B2F, 0xFFFF },
+            { 0x0820,
+                0x1111, 0x1319, 0x1809, 0xFFFF },
+            { 0x1303, 0x1215, 0x1607, 0x0E2B, 0x043D, 0xFFFF },
+            { 0x0916, 0x023C, 0x0B1E, 0x1031,
+                0x1201, 0x0F33, 0x0D2D, 0x151D, 0xFFFF },
+            { 0x0822, 0x0A04, 0x0D0A, 0x1025, 0x0C37, 0x0F29, 0x141B, 0x1E0D, 0xFFFF },
+            { 0x1121, 0x0A39, 0x1B0B, 0x171F, 0xFFFF },
+            { 0x072A, 0x1213, 0x1317, 0xFFFF },
+            { 0x0830, 0x0914, 0x0636, 0x0C08, 0x0E35,
+                0x1505, 0xFFFF },
+            { 0x0900, 0x0824, 0x0B06, 0x0538, 0x1123, 0x1027, 0xFFFF },
+            { 0x0A1A, 0x1211, 0x1909, 0x083B, 0x0C2F,
+                0xFFFF },
+            { 0x1315, 0x1707, 0x1419, 0x0F2B, 0x053D, 0xFFFF },
+            { 0x0912, 0x0734, 0x043A, 0x1131, 0x1301, 0x1403, 0x0E2D,
+                0x161D, 0xFFFF },
+            { 0x0826, 0x0F0C, 0x062E, 0x1033, 0x1125, 0x0D37, 0x151B, 0x1F0D, 0xFFFF },
+            { 0x1221, 0x0B39, 0x1029,
+                0xFFFF },
+            { 0x0910, 0x1313, 0x1C0B, 0x181F, 0xFFFF },
+            { 0x0A18, 0x072C, 0x0F35, 0x1605, 0x1417, 0xFFFF },
+            { 0x0832,
+                0x0A02, 0x1223, 0x1127, 0xFFFF },
+            { 0x0828, 0x0B1C, 0x1311, 0x1A09, 0x093B, 0x0D2F, 0xFFFF },
+            { 0x0920, 0x1519, 0x063D,
+                0xFFFF },
+            { 0x1231, 0x1503, 0x1415, 0x1807, 0x102B, 0x0F2D, 0x171D, 0xFFFF },
+            { 0x0A16, 0x033C, 0x0C1E, 0x1401, 0x1133,
+                0x1225, 0x0E37, 0x161B, 0xFFFF },
+            { 0x0922, 0x0B04, 0x0E0A, 0x1321, 0x1129, 0xFFFF },
+            { 0x0C39, 0x1D0B, 0x191F, 0xFFFF },
+            { 0x082A, 0x1413, 0x1705, 0x1517, 0xFFFF },
+            { 0x0930, 0x0A14, 0x0736, 0x0D08, 0x1323, 0x1035, 0x1227, 0xFFFF },
+            { 0x0A00, 0x0924, 0x0C06, 0x0638, 0x1B09, 0x0A3B, 0x0E2F, 0xFFFF },
+            { 0x0B1A, 0x1411, 0x1619, 0x073D, 0xFFFF },
+            { 0x1331,
+                0x1603, 0x1515, 0x1907, 0x112B, 0xFFFF },
+            { 0x0A12, 0x0834, 0x053A, 0x1501, 0x1233, 0x1325, 0x0F37, 0x171B, 0x102D,
+                0x181D, 0xFFFF },
+            { 0x0926, 0x072E, 0x1229, 0xFFFF },
+            { 0x1421, 0x0D39, 0x1E0B, 0x1A1F, 0xFFFF },
+            { 0x0A10, 0x1513,
+                0x1617, 0xFFFF },
+            { 0x0B18, 0x082C, 0x1135, 0x1805, 0x1327, 0xFFFF },
+            { 0x0932, 0x0B02, 0x1423, 0x0B3B, 0x0F2F, 0xFFFF },
+            { 0x0928, 0x0C1C, 0x1511, 0x1719, 0x1C09, 0xFFFF },
+            { 0x0A20, 0x1703, 0x1615, 0x1A07, 0x122B, 0x083D, 0xFFFF },
+            { 0x1431, 0x1601, 0x1333, 0x112D, 0x191D, 0xFFFF },
+            { 0x0B16, 0x043C, 0x0D1E, 0x1425, 0x1037, 0x1329, 0x181B, 0xFFFF },
+            { 0x0A22, 0x0C04, 0x0F0A, 0x1521, 0x0E39, 0x1F0B, 0x1B1F, 0xFFFF },
+            { 0x1613, 0x1717, 0xFFFF },
+            { 0x092A, 0x1235, 0x1905,
+                0xFFFF },
+            { 0x0A30, 0x0B14, 0x0836, 0x0E08, 0x1523, 0x1427, 0xFFFF },
+            { 0x0B00, 0x0A24, 0x0D06, 0x0738, 0x1611, 0x1D09,
+                0x0C3B, 0x102F, 0xFFFF },
+            { 0x0C1A, 0x1715, 0x1B07, 0x1819, 0x132B, 0x093D, 0xFFFF },
+            { 0x1531, 0x1701, 0x1803, 0x122D,
+                0x1A1D, 0xFFFF },
+            { 0x0B12, 0x0934, 0x063A, 0x1433, 0x1525, 0x1137, 0x191B, 0xFFFF },
+            { 0x0A26, 0x003E, 0x082E, 0x1621,
+                0x0F39, 0x1429, 0x003F, 0xFFFF },
+            { 0x1713, 0x1C1F, 0xFFFF },
+            { 0x0B10, 0x1335, 0x1A05, 0x1817, 0xFFFF },
+            { 0x0C18,
+                0x092C, 0x1623, 0x1527, 0xFFFF },
+            { 0x0A32, 0x0C02, 0x1711, 0x1E09, 0x0D3B, 0x112F, 0xFFFF },
+            { 0x0A28, 0x0D1C, 0x1919,
+                0x0A3D, 0xFFFF },
+            { 0x0B20, 0x1631, 0x1903, 0x1815, 0x1C07, 0x142B, 0x132D, 0x1B1D, 0xFFFF },
+            { 0x1801, 0x1533, 0x1625,
+                0x1237, 0x1A1B, 0xFFFF },
+            { 0x0C16, 0x053C, 0x0E1E, 0x1721, 0x1529, 0x013F, 0xFFFF },
+            { 0x0B22, 0x0D04, 0x1039, 0x1D1F,
+                0xFFFF },
+            { 0x1813, 0x1B05, 0x1917, 0xFFFF },
+            { 0x0A2A, 0x1723, 0x1435, 0x1627, 0xFFFF },
+            { 0x0B30, 0x0C14, 0x0936,
+                0x0F08, 0x1F09, 0x0E3B, 0x122F, 0xFFFF },
+            { 0x0C00, 0x0B24, 0x0E06, 0x0838, 0x1811, 0x1A19, 0x0B3D, 0xFFFF },
+            { 0x0D1A,
+                0x1731, 0x1A03, 0x1915, 0x1D07, 0x152B, 0xFFFF },
+            { 0x1901, 0x1633, 0x1725, 0x1337, 0x1B1B, 0x142D, 0x1C1D, 0xFFFF },
+            { 0x0C12, 0x0A34, 0x073A, 0x1629, 0x023F, 0xFFFF },
+            { 0x0B26, 0x013E, 0x092E, 0x1821, 0x1139, 0x1E1F, 0xFFFF },
+            { 0x1913,
+                0x1A17, 0xFFFF },
+            { 0x0C10, 0x1535, 0x1C05, 0x1727, 0xFFFF },
+            { 0x0D18, 0x0A2C, 0x1823, 0x0F3B, 0x132F, 0xFFFF },
+            { 0x0B32, 0x0D02, 0x1911, 0x1B19, 0xFFFF },
+            { 0x0B28, 0x0E1C, 0x1B03, 0x1A15, 0x1E07, 0x162B, 0x0C3D, 0xFFFF },
+            { 0x0C20,
+                0x1831, 0x1A01, 0x1733, 0x152D, 0x1D1D, 0xFFFF },
+            { 0x1825, 0x1437, 0x1729, 0x1C1B, 0x033F, 0xFFFF },
+            { 0x0D16, 0x063C,
+                0x0F1E, 0x1921, 0x1239, 0x1F1F, 0xFFFF },
+            { 0x0C22, 0x0E04, 0x1A13, 0x1B17, 0xFFFF },
+            { 0x1635, 0x1D05, 0xFFFF },
+            { 0x0B2A, 0x1923, 0x1827, 0xFFFF },
+            { 0x0C30, 0x0D14, 0x0A36, 0x1A11, 0x103B, 0x142F, 0xFFFF },
+            { 0x0D00, 0x0C24, 0x0F06,
+                0x0938, 0x1B15, 0x1F07, 0x1C19, 0x172B, 0x0D3D, 0xFFFF },
+            { 0x0E1A, 0x1931, 0x1B01, 0x1C03, 0x162D, 0x1E1D, 0xFFFF },
+            { 0x1833, 0x1925, 0x1537, 0x1D1B, 0xFFFF },
+            { 0x0D12, 0x0B34, 0x083A, 0x1A21, 0x1339, 0x1829, 0x043F, 0xFFFF },
+            { 0x0C26,
+                0x023E, 0x0A2E, 0x1B13, 0xFFFF },
+            { 0x1735, 0x1E05, 0x1C17, 0xFFFF },
+            { 0x0D10, 0x1A23, 0x1927, 0xFFFF },
+            { 0x0E18,
+                0x0B2C, 0x1B11, 0x113B, 0x152F, 0xFFFF },
+            { 0x0C32, 0x0E02, 0x1D19, 0x0E3D, 0xFFFF },
+            { 0x0C28, 0x0F1C, 0x1A31, 0x1D03,
+                0x1C15, 0x182B, 0x172D, 0x1F1D, 0xFFFF },
+            { 0x0D20, 0x1C01, 0x1933, 0x1A25, 0x1637, 0x1E1B, 0xFFFF },
+            { 0x1B21, 0x1929,
+                0x053F, 0xFFFF },
+            { 0x0E16, 0x073C, 0x1439, 0xFFFF },
+            { 0x0D22, 0x0F04, 0x1C13, 0x1F05, 0x1D17, 0xFFFF },
+            { 0x1B23,
+                0x1835, 0x1A27, 0xFFFF },
+            { 0x0C2A, 0x123B, 0x162F, 0xFFFF },
+            { 0x0D30, 0x0E14, 0x0B36, 0x1C11, 0x1E19, 0x0F3D, 0xFFFF },
+            { 0x0E00, 0x0D24, 0x0A38, 0x1B31, 0x1E03, 0x1D15, 0x192B, 0xFFFF },
+            { 0x0F1A, 0x1D01, 0x1A33, 0x1B25, 0x1737, 0x1F1B,
+                0x182D, 0xFFFF },
+            { 0x1A29, 0x063F, 0xFFFF },
+            { 0x0E12, 0x0C34, 0x093A, 0x1C21, 0x1539, 0xFFFF },
+            { 0x0D26, 0x033E,
+                0x0B2E, 0x1D13, 0x1E17, 0xFFFF },
+            { 0x1935, 0x1B27, 0xFFFF },
+            { 0x0E10, 0x1C23, 0x133B, 0x172F, 0xFFFF },
+            { 0x0F18,
+                0x0C2C, 0x1D11, 0x1F19, 0xFFFF },
+            { 0x0D32, 0x0F02, 0x1F03, 0x1E15, 0x1A2B, 0x103D, 0xFFFF },
+            { 0x0D28, 0x1C31, 0x1E01,
+                0x1B33, 0x192D, 0xFFFF },
+            { 0x0E20, 0x1C25, 0x1837, 0x1B29, 0x073F, 0xFFFF },
+            { 0x1D21, 0x1639, 0xFFFF },
+            { 0x0F16,
+                0x083C, 0x1E13, 0x1F17, 0xFFFF },
+            { 0x0E22, 0x1A35, 0xFFFF },
+            { 0x1D23, 0x1C27, 0xFFFF },
+            { 0x0D2A, 0x1E11, 0x143B,
+                0x182F, 0xFFFF },
+            { 0x0E30, 0x0F14, 0x0C36, 0x1F15, 0x1B2B, 0x113D, 0xFFFF },
+            { 0x0F00, 0x0E24, 0x0B38, 0x1D31, 0x1F01,
+                0x1A2D, 0xFFFF },
+            { 0x1C33, 0x1D25, 0x1937, 0xFFFF },
+            { 0x1E21, 0x1739, 0x1C29, 0x083F, 0xFFFF },
+            { 0x0F12, 0x0D34,
+                0x0A3A, 0x1F13, 0xFFFF },
+            { 0x0E26, 0x043E, 0x0C2E, 0x1B35, 0xFFFF },
+            { 0x1E23, 0x1D27, 0xFFFF },
+            { 0x0F10, 0x1F11,
+                0x153B, 0x192F, 0xFFFF },
+            { 0x0D2C, 0x123D, 0xFFFF },
         };
 
-        struct etc1_block {
+        struct etc1_block
+        {
             // big endian uint64:
             // bit ofs:  56  48  40  32  24  16   8   0
             // byte ofs: b0, b1, b2, b3, b4, b5, b6, b7
-            union {
+            union
+            {
                 uint64 m_uint64;
                 uint8 m_bytes[8];
             };
@@ -800,14 +883,19 @@ namespace crnlib {
             uint8 m_low_color[2];
             uint8 m_high_color[2];
 
-            enum { cNumSelectorBytes = 4 };
+            enum
+            {
+                cNumSelectorBytes = 4
+            };
             uint8 m_selectors[cNumSelectorBytes];
 
-            inline void clear() {
+            inline void clear()
+            {
                 zero_this(this);
             }
 
-            inline uint get_byte_bits(uint ofs, uint num) const {
+            inline uint get_byte_bits(uint ofs, uint num) const
+            {
                 RG_ETC1_ASSERT((ofs + num) <= 64U);
                 RG_ETC1_ASSERT(num && (num <= 8U));
                 RG_ETC1_ASSERT((ofs >> 3) == ((ofs + num - 1) >> 3));
@@ -816,7 +904,8 @@ namespace crnlib {
                 return (m_bytes[byte_ofs] >> byte_bit_ofs) & ((1 << num) - 1);
             }
 
-            inline void set_byte_bits(uint ofs, uint num, uint bits) {
+            inline void set_byte_bits(uint ofs, uint num, uint bits)
+            {
                 RG_ETC1_ASSERT((ofs + num) <= 64U);
                 RG_ETC1_ASSERT(num && (num < 32U));
                 RG_ETC1_ASSERT((ofs >> 3) == ((ofs + num - 1) >> 3));
@@ -830,34 +919,40 @@ namespace crnlib {
 
             // false = left/right subblocks
             // true = upper/lower subblocks
-            inline bool get_flip_bit() const {
+            inline bool get_flip_bit() const
+            {
                 return (m_bytes[3] & 1) != 0;
             }
 
-            inline void set_flip_bit(bool flip) {
+            inline void set_flip_bit(bool flip)
+            {
                 m_bytes[3] &= ~1;
                 m_bytes[3] |= static_cast<uint8>(flip);
             }
 
-            inline bool get_diff_bit() const {
+            inline bool get_diff_bit() const
+            {
                 return (m_bytes[3] & 2) != 0;
             }
 
-            inline void set_diff_bit(bool diff) {
+            inline void set_diff_bit(bool diff)
+            {
                 m_bytes[3] &= ~2;
                 m_bytes[3] |= (static_cast<uint>(diff) << 1);
             }
 
             // Returns intensity modifier table (0-7) used by subblock subblock_id.
             // subblock_id=0 left/top (CW 1), 1=right/bottom (CW 2)
-            inline uint get_inten_table(uint subblock_id) const {
+            inline uint get_inten_table(uint subblock_id) const
+            {
                 RG_ETC1_ASSERT(subblock_id < 2);
                 const uint ofs = subblock_id ? 2 : 5;
                 return (m_bytes[3] >> ofs) & 7;
             }
 
             // Sets intensity modifier table (0-7) used by subblock subblock_id (0 or 1)
-            inline void set_inten_table(uint subblock_id, uint t) {
+            inline void set_inten_table(uint subblock_id, uint t)
+            {
                 RG_ETC1_ASSERT(subblock_id < 2);
                 RG_ETC1_ASSERT(t < 8);
                 const uint ofs = subblock_id ? 2 : 5;
@@ -866,7 +961,8 @@ namespace crnlib {
             }
 
             // Returned selector value ranges from 0-3 and is a direct index into g_etc1_inten_tables.
-            inline uint get_selector(uint x, uint y) const {
+            inline uint get_selector(uint x, uint y) const
+            {
                 RG_ETC1_ASSERT((x | y) < 4);
 
                 const uint bit_index = x * 4 + y;
@@ -880,7 +976,8 @@ namespace crnlib {
             }
 
             // Selector "val" ranges from 0-3 and is a direct index into g_etc1_inten_tables.
-            inline void set_selector(uint x, uint y, uint val) {
+            inline void set_selector(uint x, uint y, uint val)
+            {
                 RG_ETC1_ASSERT((x | y | val) < 4);
                 const uint bit_index = x * 4 + y;
 
@@ -901,27 +998,33 @@ namespace crnlib {
                 p[-2] |= (msb << byte_bit_ofs);
             }
 
-            inline void set_base4_color(uint idx, uint16 c) {
-                if (idx) {
+            inline void set_base4_color(uint idx, uint16 c)
+            {
+                if (idx)
+                {
                     set_byte_bits(cETC1AbsColor4R2BitOffset, 4, (c >> 8) & 15);
                     set_byte_bits(cETC1AbsColor4G2BitOffset, 4, (c >> 4) & 15);
                     set_byte_bits(cETC1AbsColor4B2BitOffset, 4, c & 15);
                 }
-                else {
+                else
+                {
                     set_byte_bits(cETC1AbsColor4R1BitOffset, 4, (c >> 8) & 15);
                     set_byte_bits(cETC1AbsColor4G1BitOffset, 4, (c >> 4) & 15);
                     set_byte_bits(cETC1AbsColor4B1BitOffset, 4, c & 15);
                 }
             }
 
-            inline uint16 get_base4_color(uint idx) const {
+            inline uint16 get_base4_color(uint idx) const
+            {
                 uint r, g, b;
-                if (idx) {
+                if (idx)
+                {
                     r = get_byte_bits(cETC1AbsColor4R2BitOffset, 4);
                     g = get_byte_bits(cETC1AbsColor4G2BitOffset, 4);
                     b = get_byte_bits(cETC1AbsColor4B2BitOffset, 4);
                 }
-                else {
+                else
+                {
                     r = get_byte_bits(cETC1AbsColor4R1BitOffset, 4);
                     g = get_byte_bits(cETC1AbsColor4G1BitOffset, 4);
                     b = get_byte_bits(cETC1AbsColor4B1BitOffset, 4);
@@ -929,26 +1032,30 @@ namespace crnlib {
                 return static_cast<uint16>(b | (g << 4U) | (r << 8U));
             }
 
-            inline void set_base5_color(uint16 c) {
+            inline void set_base5_color(uint16 c)
+            {
                 set_byte_bits(cETC1BaseColor5RBitOffset, 5, (c >> 10) & 31);
                 set_byte_bits(cETC1BaseColor5GBitOffset, 5, (c >> 5) & 31);
                 set_byte_bits(cETC1BaseColor5BBitOffset, 5, c & 31);
             }
 
-            inline uint16 get_base5_color() const {
+            inline uint16 get_base5_color() const
+            {
                 const uint r = get_byte_bits(cETC1BaseColor5RBitOffset, 5);
                 const uint g = get_byte_bits(cETC1BaseColor5GBitOffset, 5);
                 const uint b = get_byte_bits(cETC1BaseColor5BBitOffset, 5);
                 return static_cast<uint16>(b | (g << 5U) | (r << 10U));
             }
 
-            void set_delta3_color(uint16 c) {
+            void set_delta3_color(uint16 c)
+            {
                 set_byte_bits(cETC1DeltaColor3RBitOffset, 3, (c >> 6) & 7);
                 set_byte_bits(cETC1DeltaColor3GBitOffset, 3, (c >> 3) & 7);
                 set_byte_bits(cETC1DeltaColor3BBitOffset, 3, c & 7);
             }
 
-            inline uint16 get_delta3_color() const {
+            inline uint16 get_delta3_color() const
+            {
                 const uint r = get_byte_bits(cETC1DeltaColor3RBitOffset, 3);
                 const uint g = get_byte_bits(cETC1DeltaColor3GBitOffset, 3);
                 const uint b = get_byte_bits(cETC1DeltaColor3BBitOffset, 3);
@@ -984,13 +1091,16 @@ namespace crnlib {
             static bool get_diff_subblock_colors(color_quad_u8* pDst, uint16 packed_color5, uint16 packed_delta3, uint table_idx);
             static void get_abs_subblock_colors(color_quad_u8* pDst, uint16 packed_color4, uint table_idx);
 
-            static inline void unscaled_to_scaled_color(color_quad_u8& dst, const color_quad_u8& src, bool color4) {
-                if (color4) {
+            static inline void unscaled_to_scaled_color(color_quad_u8& dst, const color_quad_u8& src, bool color4)
+            {
+                if (color4)
+                {
                     dst.r = src.r | (src.r << 4);
                     dst.g = src.g | (src.g << 4);
                     dst.b = src.b | (src.b << 4);
                 }
-                else {
+                else
+                {
                     dst.r = (src.r >> 2) | (src.r << 3);
                     dst.g = (src.g >> 2) | (src.g << 3);
                     dst.b = (src.b >> 2) | (src.b << 3);
@@ -1000,22 +1110,27 @@ namespace crnlib {
         };
 
         // Returns pointer to sorted array.
-        template <typename T, typename Q>
-        T* indirect_radix_sort(uint num_indices, T* pIndices0, T* pIndices1, const Q* pKeys, uint key_ofs, uint key_size, bool init_indices) {
+        template<typename T, typename Q>
+        T* indirect_radix_sort(uint num_indices, T* pIndices0, T* pIndices1, const Q* pKeys, uint key_ofs, uint key_size, bool init_indices)
+        {
             RG_ETC1_ASSERT((key_ofs >= 0) && (key_ofs < sizeof(T)));
             RG_ETC1_ASSERT((key_size >= 1) && (key_size <= 4));
 
-            if (init_indices) {
+            if (init_indices)
+            {
                 T* p = pIndices0;
                 T* q = pIndices0 + (num_indices >> 1) * 2;
                 uint i;
-                for (i = 0; p != q; p += 2, i += 2) {
+                for (i = 0; p != q; p += 2, i += 2)
+                {
                     p[0] = static_cast<T>(i);
                     p[1] = static_cast<T>(i + 1);
                 }
 
                 if (num_indices & 1)
+                {
                     *p = static_cast<T>(i);
+                }
             }
 
             uint hist[256 * 4];
@@ -1025,10 +1140,12 @@ namespace crnlib {
 #define RG_ETC1_GET_KEY(p) (*(const uint*)((const uint8*)(pKeys + *(p)) + key_ofs))
 #define RG_ETC1_GET_KEY_FROM_INDEX(i) (*(const uint*)((const uint8*)(pKeys + (i)) + key_ofs))
 
-            if (key_size == 4) {
+            if (key_size == 4)
+            {
                 T* p = pIndices0;
                 T* q = pIndices0 + num_indices;
-                for (; p != q; p++) {
+                for (; p != q; p++)
+                {
                     const uint key = RG_ETC1_GET_KEY(p);
 
                     hist[key & 0xFF]++;
@@ -1037,10 +1154,12 @@ namespace crnlib {
                     hist[768 + ((key >> 24) & 0xFF)]++;
                 }
             }
-            else if (key_size == 3) {
+            else if (key_size == 3)
+            {
                 T* p = pIndices0;
                 T* q = pIndices0 + num_indices;
-                for (; p != q; p++) {
+                for (; p != q; p++)
+                {
                     const uint key = RG_ETC1_GET_KEY(p);
 
                     hist[key & 0xFF]++;
@@ -1048,11 +1167,13 @@ namespace crnlib {
                     hist[512 + ((key >> 16) & 0xFF)]++;
                 }
             }
-            else if (key_size == 2) {
+            else if (key_size == 2)
+            {
                 T* p = pIndices0;
                 T* q = pIndices0 + (num_indices >> 1) * 2;
 
-                for (; p != q; p += 2) {
+                for (; p != q; p += 2)
+                {
                     const uint key0 = RG_ETC1_GET_KEY(p);
                     const uint key1 = RG_ETC1_GET_KEY(p + 1);
 
@@ -1063,22 +1184,27 @@ namespace crnlib {
                     hist[256 + ((key1 >> 8) & 0xFF)]++;
                 }
 
-                if (num_indices & 1) {
+                if (num_indices & 1)
+                {
                     const uint key = RG_ETC1_GET_KEY(p);
 
                     hist[key & 0xFF]++;
                     hist[256 + ((key >> 8) & 0xFF)]++;
                 }
             }
-            else {
+            else
+            {
                 RG_ETC1_ASSERT(key_size == 1);
                 if (key_size != 1)
+                {
                     return nullptr;
+                }
 
                 T* p = pIndices0;
                 T* q = pIndices0 + (num_indices >> 1) * 2;
 
-                for (; p != q; p += 2) {
+                for (; p != q; p += 2)
+                {
                     const uint key0 = RG_ETC1_GET_KEY(p);
                     const uint key1 = RG_ETC1_GET_KEY(p + 1);
 
@@ -1086,7 +1212,8 @@ namespace crnlib {
                     hist[key1 & 0xFF]++;
                 }
 
-                if (num_indices & 1) {
+                if (num_indices & 1)
+                {
                     const uint key = RG_ETC1_GET_KEY(p);
 
                     hist[key & 0xFF]++;
@@ -1096,13 +1223,15 @@ namespace crnlib {
             T* pCur = pIndices0;
             T* pNew = pIndices1;
 
-            for (uint pass = 0; pass < key_size; pass++) {
+            for (uint pass = 0; pass < key_size; pass++)
+            {
                 const uint* pHist = &hist[pass << 8];
 
                 uint offsets[256];
 
                 uint cur_ofs = 0;
-                for (uint i = 0; i < 256; i += 2) {
+                for (uint i = 0; i < 256; i += 2)
+                {
                     offsets[i] = cur_ofs;
                     cur_ofs += pHist[i];
 
@@ -1115,14 +1244,16 @@ namespace crnlib {
                 T* p = pCur;
                 T* q = pCur + (num_indices >> 1) * 2;
 
-                for (; p != q; p += 2) {
+                for (; p != q; p += 2)
+                {
                     uint index0 = p[0];
                     uint index1 = p[1];
 
                     uint c0 = (RG_ETC1_GET_KEY_FROM_INDEX(index0) >> pass_shift) & 0xFF;
                     uint c1 = (RG_ETC1_GET_KEY_FROM_INDEX(index1) >> pass_shift) & 0xFF;
 
-                    if (c0 == c1) {
+                    if (c0 == c1)
+                    {
                         uint dst_offset0 = offsets[c0];
 
                         offsets[c0] = dst_offset0 + 2;
@@ -1130,7 +1261,8 @@ namespace crnlib {
                         pNew[dst_offset0] = static_cast<T>(index0);
                         pNew[dst_offset0 + 1] = static_cast<T>(index1);
                     }
-                    else {
+                    else
+                    {
                         uint dst_offset0 = offsets[c0]++;
                         uint dst_offset1 = offsets[c1]++;
 
@@ -1139,7 +1271,8 @@ namespace crnlib {
                     }
                 }
 
-                if (num_indices & 1) {
+                if (num_indices & 1)
+                {
                     uint index = *p;
                     uint c = (RG_ETC1_GET_KEY_FROM_INDEX(index) >> pass_shift) & 0xFF;
 
@@ -1160,12 +1293,15 @@ namespace crnlib {
 #undef RG_ETC1_GET_KEY
 #undef RG_ETC1_GET_KEY_FROM_INDEX
 
-        uint16 etc1_block::pack_color5(const color_quad_u8& color, bool scaled, uint bias) {
+        uint16 etc1_block::pack_color5(const color_quad_u8& color, bool scaled, uint bias)
+        {
             return pack_color5(color.r, color.g, color.b, scaled, bias);
         }
 
-        uint16 etc1_block::pack_color5(uint r, uint g, uint b, bool scaled, uint bias) {
-            if (scaled) {
+        uint16 etc1_block::pack_color5(uint r, uint g, uint b, bool scaled, uint bias)
+        {
+            if (scaled)
+            {
                 r = (r * 31U + bias) / 255U;
                 g = (g * 31U + bias) / 255U;
                 b = (b * 31U + bias) / 255U;
@@ -1178,12 +1314,14 @@ namespace crnlib {
             return static_cast<uint16>(b | (g << 5U) | (r << 10U));
         }
 
-        color_quad_u8 etc1_block::unpack_color5(uint16 packed_color5, bool scaled, uint alpha) {
+        color_quad_u8 etc1_block::unpack_color5(uint16 packed_color5, bool scaled, uint alpha)
+        {
             uint b = packed_color5 & 31U;
             uint g = (packed_color5 >> 5U) & 31U;
             uint r = (packed_color5 >> 10U) & 31U;
 
-            if (scaled) {
+            if (scaled)
+            {
                 b = (b << 3U) | (b >> 2U);
                 g = (g << 3U) | (g >> 2U);
                 r = (r << 3U) | (r >> 2U);
@@ -1192,14 +1330,16 @@ namespace crnlib {
             return color_quad_u8(cNoClamp, r, g, b, rg_etc1::minimum(alpha, 255U));
         }
 
-        void etc1_block::unpack_color5(uint& r, uint& g, uint& b, uint16 packed_color5, bool scaled) {
+        void etc1_block::unpack_color5(uint& r, uint& g, uint& b, uint16 packed_color5, bool scaled)
+        {
             color_quad_u8 c(unpack_color5(packed_color5, scaled, 0));
             r = c.r;
             g = c.g;
             b = c.b;
         }
 
-        bool etc1_block::unpack_color5(color_quad_u8& result, uint16 packed_color5, uint16 packed_delta3, bool scaled, uint alpha) {
+        bool etc1_block::unpack_color5(color_quad_u8& result, uint16 packed_color5, uint16 packed_delta3, bool scaled, uint alpha)
+        {
             int dc_r, dc_g, dc_b;
             unpack_delta3(dc_r, dc_g, dc_b, packed_delta3);
 
@@ -1208,14 +1348,16 @@ namespace crnlib {
             int r = ((packed_color5 >> 10U) & 31U) + dc_r;
 
             bool success = true;
-            if (static_cast<uint>(r | g | b) > 31U) {
+            if (static_cast<uint>(r | g | b) > 31U)
+            {
                 success = false;
                 r = rg_etc1::clamp<int>(r, 0, 31);
                 g = rg_etc1::clamp<int>(g, 0, 31);
                 b = rg_etc1::clamp<int>(b, 0, 31);
             }
 
-            if (scaled) {
+            if (scaled)
+            {
                 b = (b << 3U) | (b >> 2U);
                 g = (g << 3U) | (g >> 2U);
                 r = (r << 3U) | (r >> 2U);
@@ -1225,7 +1367,8 @@ namespace crnlib {
             return success;
         }
 
-        bool etc1_block::unpack_color5(uint& r, uint& g, uint& b, uint16 packed_color5, uint16 packed_delta3, bool scaled, uint alpha) {
+        bool etc1_block::unpack_color5(uint& r, uint& g, uint& b, uint16 packed_color5, uint16 packed_delta3, bool scaled, uint alpha)
+        {
             color_quad_u8 result;
             const bool success = unpack_color5(result, packed_color5, packed_delta3, scaled, alpha);
             r = result.r;
@@ -1234,37 +1377,54 @@ namespace crnlib {
             return success;
         }
 
-        uint16 etc1_block::pack_delta3(int r, int g, int b) {
+        uint16 etc1_block::pack_delta3(int r, int g, int b)
+        {
             RG_ETC1_ASSERT((r >= cETC1ColorDeltaMin) && (r <= cETC1ColorDeltaMax));
             RG_ETC1_ASSERT((g >= cETC1ColorDeltaMin) && (g <= cETC1ColorDeltaMax));
             RG_ETC1_ASSERT((b >= cETC1ColorDeltaMin) && (b <= cETC1ColorDeltaMax));
             if (r < 0)
+            {
                 r += 8;
+            }
             if (g < 0)
+            {
                 g += 8;
+            }
             if (b < 0)
+            {
                 b += 8;
+            }
             return static_cast<uint16>(b | (g << 3) | (r << 6));
         }
 
-        void etc1_block::unpack_delta3(int& r, int& g, int& b, uint16 packed_delta3) {
+        void etc1_block::unpack_delta3(int& r, int& g, int& b, uint16 packed_delta3)
+        {
             r = (packed_delta3 >> 6) & 7;
             g = (packed_delta3 >> 3) & 7;
             b = packed_delta3 & 7;
             if (r >= 4)
+            {
                 r -= 8;
+            }
             if (g >= 4)
+            {
                 g -= 8;
+            }
             if (b >= 4)
+            {
                 b -= 8;
+            }
         }
 
-        uint16 etc1_block::pack_color4(const color_quad_u8& color, bool scaled, uint bias) {
+        uint16 etc1_block::pack_color4(const color_quad_u8& color, bool scaled, uint bias)
+        {
             return pack_color4(color.r, color.g, color.b, scaled, bias);
         }
 
-        uint16 etc1_block::pack_color4(uint r, uint g, uint b, bool scaled, uint bias) {
-            if (scaled) {
+        uint16 etc1_block::pack_color4(uint r, uint g, uint b, bool scaled, uint bias)
+        {
+            if (scaled)
+            {
                 r = (r * 15U + bias) / 255U;
                 g = (g * 15U + bias) / 255U;
                 b = (b * 15U + bias) / 255U;
@@ -1277,12 +1437,14 @@ namespace crnlib {
             return static_cast<uint16>(b | (g << 4U) | (r << 8U));
         }
 
-        color_quad_u8 etc1_block::unpack_color4(uint16 packed_color4, bool scaled, uint alpha) {
+        color_quad_u8 etc1_block::unpack_color4(uint16 packed_color4, bool scaled, uint alpha)
+        {
             uint b = packed_color4 & 15U;
             uint g = (packed_color4 >> 4U) & 15U;
             uint r = (packed_color4 >> 8U) & 15U;
 
-            if (scaled) {
+            if (scaled)
+            {
                 b = (b << 4U) | b;
                 g = (g << 4U) | g;
                 r = (r << 4U) | r;
@@ -1291,14 +1453,16 @@ namespace crnlib {
             return color_quad_u8(cNoClamp, r, g, b, rg_etc1::minimum(alpha, 255U));
         }
 
-        void etc1_block::unpack_color4(uint& r, uint& g, uint& b, uint16 packed_color4, bool scaled) {
+        void etc1_block::unpack_color4(uint& r, uint& g, uint& b, uint16 packed_color4, bool scaled)
+        {
             color_quad_u8 c(unpack_color4(packed_color4, scaled, 0));
             r = c.r;
             g = c.g;
             b = c.b;
         }
 
-        void etc1_block::get_diff_subblock_colors(color_quad_u8* pDst, uint16 packed_color5, uint table_idx) {
+        void etc1_block::get_diff_subblock_colors(color_quad_u8* pDst, uint16 packed_color5, uint table_idx)
+        {
             RG_ETC1_ASSERT(table_idx < cETC1IntenModifierValues);
             const int* pInten_modifer_table = &g_etc1_inten_tables[table_idx][0];
 
@@ -1320,7 +1484,8 @@ namespace crnlib {
             pDst[3].set(ir + y3, ig + y3, ib + y3);
         }
 
-        bool etc1_block::get_diff_subblock_colors(color_quad_u8* pDst, uint16 packed_color5, uint16 packed_delta3, uint table_idx) {
+        bool etc1_block::get_diff_subblock_colors(color_quad_u8* pDst, uint16 packed_color5, uint16 packed_delta3, uint table_idx)
+        {
             RG_ETC1_ASSERT(table_idx < cETC1IntenModifierValues);
             const int* pInten_modifer_table = &g_etc1_inten_tables[table_idx][0];
 
@@ -1344,7 +1509,8 @@ namespace crnlib {
             return success;
         }
 
-        void etc1_block::get_abs_subblock_colors(color_quad_u8* pDst, uint16 packed_color4, uint table_idx) {
+        void etc1_block::get_abs_subblock_colors(color_quad_u8* pDst, uint16 packed_color4, uint table_idx)
+        {
             RG_ETC1_ASSERT(table_idx < cETC1IntenModifierValues);
             const int* pInten_modifer_table = &g_etc1_inten_tables[table_idx][0];
 
@@ -1366,7 +1532,8 @@ namespace crnlib {
             pDst[3].set(ir + y3, ig + y3, ib + y3);
         }
 
-        bool unpack_etc1_block(const void* pETC1_block, unsigned int* pDst_pixels_rgba, bool preserve_alpha) {
+        bool unpack_etc1_block(const void* pETC1_block, unsigned int* pDst_pixels_rgba, bool preserve_alpha)
+        {
             color_quad_u8* pDst = reinterpret_cast<color_quad_u8*>(pDst_pixels_rgba);
             const etc1_block& block = *static_cast<const etc1_block*>(pETC1_block);
 
@@ -1379,15 +1546,19 @@ namespace crnlib {
             color_quad_u8 subblock_colors1[4];
             bool success = true;
 
-            if (diff_flag) {
+            if (diff_flag)
+            {
                 const uint16 base_color5 = block.get_base5_color();
                 const uint16 delta_color3 = block.get_delta3_color();
                 etc1_block::get_diff_subblock_colors(subblock_colors0, base_color5, table_index0);
 
                 if (!etc1_block::get_diff_subblock_colors(subblock_colors1, base_color5, delta_color3, table_index1))
+                {
                     success = false;
+                }
             }
-            else {
+            else
+            {
                 const uint16 base_color4_0 = block.get_base4_color(0);
                 etc1_block::get_abs_subblock_colors(subblock_colors0, base_color4_0, table_index0);
 
@@ -1395,9 +1566,12 @@ namespace crnlib {
                 etc1_block::get_abs_subblock_colors(subblock_colors1, base_color4_1, table_index1);
             }
 
-            if (preserve_alpha) {
-                if (flip_flag) {
-                    for (uint y = 0; y < 2; y++) {
+            if (preserve_alpha)
+            {
+                if (flip_flag)
+                {
+                    for (uint y = 0; y < 2; y++)
+                    {
                         pDst[0].set_rgb(subblock_colors0[block.get_selector(0, y)]);
                         pDst[1].set_rgb(subblock_colors0[block.get_selector(1, y)]);
                         pDst[2].set_rgb(subblock_colors0[block.get_selector(2, y)]);
@@ -1405,7 +1579,8 @@ namespace crnlib {
                         pDst += 4;
                     }
 
-                    for (uint y = 2; y < 4; y++) {
+                    for (uint y = 2; y < 4; y++)
+                    {
                         pDst[0].set_rgb(subblock_colors1[block.get_selector(0, y)]);
                         pDst[1].set_rgb(subblock_colors1[block.get_selector(1, y)]);
                         pDst[2].set_rgb(subblock_colors1[block.get_selector(2, y)]);
@@ -1413,8 +1588,10 @@ namespace crnlib {
                         pDst += 4;
                     }
                 }
-                else {
-                    for (uint y = 0; y < 4; y++) {
+                else
+                {
+                    for (uint y = 0; y < 4; y++)
+                    {
                         pDst[0].set_rgb(subblock_colors0[block.get_selector(0, y)]);
                         pDst[1].set_rgb(subblock_colors0[block.get_selector(1, y)]);
                         pDst[2].set_rgb(subblock_colors1[block.get_selector(2, y)]);
@@ -1423,13 +1600,16 @@ namespace crnlib {
                     }
                 }
             }
-            else {
-                if (flip_flag) {
+            else
+            {
+                if (flip_flag)
+                {
                     // 0000
                     // 0000
                     // 1111
                     // 1111
-                    for (uint y = 0; y < 2; y++) {
+                    for (uint y = 0; y < 2; y++)
+                    {
                         pDst[0] = subblock_colors0[block.get_selector(0, y)];
                         pDst[1] = subblock_colors0[block.get_selector(1, y)];
                         pDst[2] = subblock_colors0[block.get_selector(2, y)];
@@ -1437,7 +1617,8 @@ namespace crnlib {
                         pDst += 4;
                     }
 
-                    for (uint y = 2; y < 4; y++) {
+                    for (uint y = 2; y < 4; y++)
+                    {
                         pDst[0] = subblock_colors1[block.get_selector(0, y)];
                         pDst[1] = subblock_colors1[block.get_selector(1, y)];
                         pDst[2] = subblock_colors1[block.get_selector(2, y)];
@@ -1445,12 +1626,14 @@ namespace crnlib {
                         pDst += 4;
                     }
                 }
-                else {
+                else
+                {
                     // 0011
                     // 0011
                     // 0011
                     // 0011
-                    for (uint y = 0; y < 4; y++) {
+                    for (uint y = 0; y < 4; y++)
+                    {
                         pDst[0] = subblock_colors0[block.get_selector(0, y)];
                         pDst[1] = subblock_colors0[block.get_selector(1, y)];
                         pDst[2] = subblock_colors1[block.get_selector(2, y)];
@@ -1463,9 +1646,12 @@ namespace crnlib {
             return success;
         }
 
-        bool unpack_etc2_color(const void* pBlock, unsigned int* pDst_pixels_rgba, bool preserve_alpha) {
+        bool unpack_etc2_color(const void* pBlock, unsigned int* pDst_pixels_rgba, bool preserve_alpha)
+        {
             if (unpack_etc1_block(pBlock, pDst_pixels_rgba, preserve_alpha))
+            {
                 return true;
+            }
 
             color_quad_u8* pDst = reinterpret_cast<color_quad_u8*>(pDst_pixels_rgba);
             const etc1_block& block = *static_cast<const etc1_block*>(pBlock);
@@ -1473,30 +1659,37 @@ namespace crnlib {
             const bool rOverflow = ((int8(B[0] << 5) >> 5) + (B[0] >> 3)) & 0x20;
             const bool gOverflow = ((int8(B[1] << 5) >> 5) + (B[1] >> 3)) & 0x20;
 
-            if (rOverflow || gOverflow) {
+            if (rOverflow || gOverflow)
+            {
                 color_quad_u8 block_colors[4];
                 uint8 unpacked[3];
-                if (rOverflow) {
+                if (rOverflow)
+                {
                     unpacked[0] = (B[0] & 0x3) | (B[0] >> 1 & 0xC) | (B[2] & 0xF0);
                     unpacked[1] = B[1] >> 4 | B[2] << 4;
                     unpacked[2] = (B[1] & 0xF) | (B[3] & 0xF0);
                     uint8 delta = g_etc2_modifier_table[(B[3] & 1) | (B[3] >> 1 & 6)];
-                    for (uint c = 0; c < 3; c++) {
+                    for (uint c = 0; c < 3; c++)
+                    {
                         block_colors[2][c] = unpacked[c] << 4 | (unpacked[c] & 0xF);
                         block_colors[1][c] = unpacked[c] >> 4 | (unpacked[c] & 0xF0);
                         block_colors[0][c] = math::maximum(0, block_colors[1][c] - delta);
                         block_colors[3][c] = math::minimum(255, block_colors[1][c] + delta);
                     }
                 }
-                else {
+                else
+                {
                     unpacked[0] = (B[0] >> 3 & 0xF) | (B[2] << 1 & 0xF0);
                     unpacked[1] = (B[1] >> 4 & 0x1) | (B[0] << 1 & 0xE) | (B[3] >> 3 & 0x10) | B[2] << 5;
                     unpacked[2] = B[2] >> 7 | (B[1] << 1 & 0x6) | (B[1] & 0x8) | (B[3] << 1 & 0xF0);
                     uint8 modifier = (B[3] & 4) | (B[3] << 1 & 2) | 1;
                     for (int d = 0, c = 0; !d && c < 3; c++, modifier &= d < 0 ? 6 : 7)
+                    {
                         d = (unpacked[c] & 0xF) - (unpacked[c] >> 4);
+                    }
                     uint8 delta = g_etc2_modifier_table[modifier];
-                    for (uint c = 0; c < 3; c++) {
+                    for (uint c = 0; c < 3; c++)
+                    {
                         uint8 c0 = unpacked[c] << 4 | (unpacked[c] & 0xF);
                         uint8 c1 = unpacked[c] >> 4 | (unpacked[c] & 0xF0);
                         block_colors[0][c] = math::maximum(0, c1 - delta);
@@ -1505,15 +1698,20 @@ namespace crnlib {
                         block_colors[3][c] = math::maximum(0, c0 - delta);
                     }
                 }
-                for (uint i = 0; i < 4; i++) {
-                    for (uint j = 0; j < 4; j++, pDst++) {
+                for (uint i = 0; i < 4; i++)
+                {
+                    for (uint j = 0; j < 4; j++, pDst++)
+                    {
                         pDst->set_rgb(block_colors[block.get_selector(j, i)]);
                         if (!preserve_alpha)
+                        {
                             pDst->a = 255;
+                        }
                     }
                 }
             }
-            else {
+            else
+            {
                 int16 base[3], dj[3], di[3], color[3];
                 base[0] = (B[0] << 1 & 0xFC) | (B[0] >> 5 & 3);
                 base[1] = (B[0] << 7 & 0x80) | (B[1] & 0x7E) | (B[0] & 1);
@@ -1525,85 +1723,112 @@ namespace crnlib {
                 dj[1] = ((B[4] & 0xFE) | B[4] >> 7) - base[1];
                 dj[2] = ((B[4] << 7 & 0x80) | (B[5] >> 1 & 0x7C) | (B[4] << 1 & 0x2) | B[5] >> 7) - base[2];
                 for (uint c = 0; c < 3; c++)
+                {
                     base[c] = (base[c] << 2) + 2;
-                for (uint i = 0; i < 4; i++) {
+                }
+                for (uint i = 0; i < 4; i++)
+                {
                     for (uint c = 0; c < 3; base[c] += di[c], c++)
+                    {
                         color[c] = base[c];
-                    for (uint j = 0; j < 4; j++, pDst++) {
+                    }
+                    for (uint j = 0; j < 4; j++, pDst++)
+                    {
                         for (uint c = 0; c < 3; color[c] += dj[c], c++)
+                        {
                             pDst->c[c] = math::clamp<int16>(color[c], 0, 1020) >> 2;
+                        }
                         if (!preserve_alpha)
+                        {
                             pDst->a = 255;
+                        }
                     }
                 }
             }
             return true;
         }
 
-        bool unpack_etc2_alpha(const void* pBlock, unsigned int* pDst_pixels_rgba, int comp_index) {
+        bool unpack_etc2_alpha(const void* pBlock, unsigned int* pDst_pixels_rgba, int comp_index)
+        {
             color_quad_u8* pDst = (color_quad_u8*)pDst_pixels_rgba;
             const uint8* B = (const uint8*)pBlock;
             const int* modifier = g_etc2a_modifier_table[B[1] & 0xF];
             uint8 values[8];
             for (int base_codeword = B[0], multiplier = B[1] >> 4, i = 0; i < 8; i++)
+            {
                 values[i] = math::clamp<int>(base_codeword + modifier[i] * multiplier, 0, 255);
-            for (uint d0 = 3, i = 0; i < 4; i++, d0 += 3) {
-                for (uint d = d0, j = 0; j < 4; j++, pDst++, d += 12) {
+            }
+            for (uint d0 = 3, i = 0; i < 4; i++, d0 += 3)
+            {
+                for (uint d = d0, j = 0; j < 4; j++, pDst++, d += 12)
+                {
                     int byte_offset = 2 + (d >> 3);
                     int bit_offset = d & 7;
                     int s = B[byte_offset] >> (8 - bit_offset) & 7;
                     if (bit_offset < 3)
+                    {
                         s |= B[byte_offset - 1] << bit_offset & 7;
+                    }
                     pDst->c[comp_index] = values[s];
                 }
             }
             return true;
         }
 
-        struct etc1_solution_coordinates {
-            inline etc1_solution_coordinates()
-                : m_unscaled_color(0, 0, 0, 0),
+        struct etc1_solution_coordinates
+        {
+            inline etc1_solution_coordinates() :
+                m_unscaled_color(0, 0, 0, 0),
                 m_inten_table(0),
-                m_color4(false) {
+                m_color4(false)
+            {
             }
 
-            inline etc1_solution_coordinates(uint r, uint g, uint b, uint inten_table, bool color4)
-                : m_unscaled_color(r, g, b, 255),
+            inline etc1_solution_coordinates(uint r, uint g, uint b, uint inten_table, bool color4) :
+                m_unscaled_color(r, g, b, 255),
                 m_inten_table(inten_table),
-                m_color4(color4) {
+                m_color4(color4)
+            {
             }
 
-            inline etc1_solution_coordinates(const color_quad_u8& c, uint inten_table, bool color4)
-                : m_unscaled_color(c),
+            inline etc1_solution_coordinates(const color_quad_u8& c, uint inten_table, bool color4) :
+                m_unscaled_color(c),
                 m_inten_table(inten_table),
-                m_color4(color4) {
+                m_color4(color4)
+            {
             }
 
-            inline etc1_solution_coordinates(const etc1_solution_coordinates& other) {
+            inline etc1_solution_coordinates(const etc1_solution_coordinates& other)
+            {
                 *this = other;
             }
 
-            inline etc1_solution_coordinates& operator=(const etc1_solution_coordinates& rhs) {
+            inline etc1_solution_coordinates& operator=(const etc1_solution_coordinates& rhs)
+            {
                 m_unscaled_color = rhs.m_unscaled_color;
                 m_inten_table = rhs.m_inten_table;
                 m_color4 = rhs.m_color4;
                 return *this;
             }
 
-            inline void clear() {
+            inline void clear()
+            {
                 m_unscaled_color.clear();
                 m_inten_table = 0;
                 m_color4 = false;
             }
 
-            inline color_quad_u8 get_scaled_color() const {
+            inline color_quad_u8 get_scaled_color() const
+            {
                 int br, bg, bb;
-                if (m_color4) {
+                if (m_color4)
+                {
                     br = m_unscaled_color.r | (m_unscaled_color.r << 4);
                     bg = m_unscaled_color.g | (m_unscaled_color.g << 4);
                     bb = m_unscaled_color.b | (m_unscaled_color.b << 4);
                 }
-                else {
+                else
+                {
                     br = (m_unscaled_color.r >> 2) | (m_unscaled_color.r << 3);
                     bg = (m_unscaled_color.g >> 2) | (m_unscaled_color.g << 3);
                     bb = (m_unscaled_color.b >> 2) | (m_unscaled_color.b << 3);
@@ -1611,14 +1836,17 @@ namespace crnlib {
                 return color_quad_u8(br, bg, bb);
             }
 
-            inline void get_block_colors(color_quad_u8* pBlock_colors) {
+            inline void get_block_colors(color_quad_u8* pBlock_colors)
+            {
                 int br, bg, bb;
-                if (m_color4) {
+                if (m_color4)
+                {
                     br = m_unscaled_color.r | (m_unscaled_color.r << 4);
                     bg = m_unscaled_color.g | (m_unscaled_color.g << 4);
                     bb = m_unscaled_color.b | (m_unscaled_color.b << 4);
                 }
-                else {
+                else
+                {
                     br = (m_unscaled_color.r >> 2) | (m_unscaled_color.r << 3);
                     bg = (m_unscaled_color.g >> 2) | (m_unscaled_color.g << 3);
                     bb = (m_unscaled_color.b >> 2) | (m_unscaled_color.b << 3);
@@ -1635,38 +1863,46 @@ namespace crnlib {
             bool m_color4;
         };
 
-        class etc1_optimizer {
+        class etc1_optimizer
+        {
             etc1_optimizer(const etc1_optimizer&);
             etc1_optimizer& operator=(const etc1_optimizer&);
 
         public:
-            etc1_optimizer() {
+            etc1_optimizer()
+            {
                 clear();
             }
 
-            void clear() {
+            void clear()
+            {
                 m_pParams = nullptr;
                 m_pResult = nullptr;
                 m_pSorted_luma = nullptr;
                 m_pSorted_luma_indices = nullptr;
             }
 
-            struct params : etc1_pack_params {
-                params() {
+            struct params : etc1_pack_params
+            {
+                params()
+                {
                     clear();
                 }
 
-                params(const etc1_pack_params& base_params)
-                    : etc1_pack_params(base_params) {
+                params(const etc1_pack_params& base_params) :
+                    etc1_pack_params(base_params)
+                {
                     clear_optimizer_params();
                 }
 
-                void clear() {
+                void clear()
+                {
                     etc1_pack_params::clear();
                     clear_optimizer_params();
                 }
 
-                void clear_optimizer_params() {
+                void clear_optimizer_params()
+                {
                     m_num_src_pixels = 0;
                     m_pSrc_pixels = 0;
 
@@ -1690,7 +1926,8 @@ namespace crnlib {
                 bool m_constrain_against_base_color5;
             };
 
-            struct results {
+            struct results
+            {
                 uint64 m_error;
                 color_quad_u8 m_block_color_unscaled;
                 uint m_block_inten_table;
@@ -1698,7 +1935,8 @@ namespace crnlib {
                 uint8* m_pSelectors;
                 bool m_block_color4;
 
-                inline results& operator=(const results& rhs) {
+                inline results& operator=(const results& rhs)
+                {
                     m_block_color_unscaled = rhs.m_block_color_unscaled;
                     m_block_color4 = rhs.m_block_color4;
                     m_block_inten_table = rhs.m_block_inten_table;
@@ -1713,9 +1951,11 @@ namespace crnlib {
             bool compute();
 
         private:
-            struct potential_solution {
-                potential_solution()
-                    : m_coords(), m_error(cUINT64_MAX), m_valid(false) {
+            struct potential_solution
+            {
+                potential_solution() :
+                    m_coords(), m_error(cUINT64_MAX), m_valid(false)
+                {
                 }
 
                 etc1_solution_coordinates m_coords;
@@ -1723,7 +1963,8 @@ namespace crnlib {
                 uint64 m_error;
                 bool m_valid;
 
-                void clear() {
+                void clear()
+                {
                     m_coords.clear();
                     m_error = cUINT64_MAX;
                     m_valid = false;
@@ -1753,44 +1994,66 @@ namespace crnlib {
             bool evaluate_solution_fast(const etc1_solution_coordinates& coords, potential_solution& trial_solution, potential_solution* pBest_solution);
         };
 
-        bool etc1_optimizer::compute() {
+        bool etc1_optimizer::compute()
+        {
             const uint n = m_pParams->m_num_src_pixels;
             const int scan_delta_size = m_pParams->m_scan_delta_size;
 
             // Scan through a subset of the 3D lattice centered around the avg block color trying each 3D (555 or 444) lattice point as a potential block color.
             // Each time a better solution is found try to refine the current solution's block color based of the current selectors and intensity table index.
-            for (int zdi = 0; zdi < scan_delta_size; zdi++) {
+            for (int zdi = 0; zdi < scan_delta_size; zdi++)
+            {
                 const int zd = m_pParams->m_pScan_deltas[zdi];
                 const int mbb = m_bb + zd;
                 if (mbb < 0)
+                {
                     continue;
+                }
                 else if (mbb > m_limit)
+                {
                     break;
+                }
 
-                for (int ydi = 0; ydi < scan_delta_size; ydi++) {
+                for (int ydi = 0; ydi < scan_delta_size; ydi++)
+                {
                     const int yd = m_pParams->m_pScan_deltas[ydi];
                     const int mbg = m_bg + yd;
                     if (mbg < 0)
+                    {
                         continue;
+                    }
                     else if (mbg > m_limit)
+                    {
                         break;
+                    }
 
-                    for (int xdi = 0; xdi < scan_delta_size; xdi++) {
+                    for (int xdi = 0; xdi < scan_delta_size; xdi++)
+                    {
                         const int xd = m_pParams->m_pScan_deltas[xdi];
                         const int mbr = m_br + xd;
                         if (mbr < 0)
+                        {
                             continue;
+                        }
                         else if (mbr > m_limit)
+                        {
                             break;
+                        }
 
                         etc1_solution_coordinates coords(mbr, mbg, mbb, 0, m_pParams->m_use_color4);
-                        if (m_pParams->m_quality == cHighQuality) {
+                        if (m_pParams->m_quality == cHighQuality)
+                        {
                             if (!evaluate_solution(coords, m_trial_solution, &m_best_solution))
+                            {
                                 continue;
+                            }
                         }
-                        else {
+                        else
+                        {
                             if (!evaluate_solution_fast(coords, m_trial_solution, &m_best_solution))
+                            {
                                 continue;
+                            }
                         }
 
                         // Now we have the input block, the avg. color of the input pixels, a set of trial selector indices, and the block color+intensity index.
@@ -1811,13 +2074,15 @@ namespace crnlib {
                         // Also, the above formula is for unclamped intensity deltas. The actual implementation takes into account clamping.
 
                         const uint max_refinement_trials = (m_pParams->m_quality == cLowQuality) ? 2 : (((xd | yd | zd) == 0) ? 4 : 2);
-                        for (uint refinement_trial = 0; refinement_trial < max_refinement_trials; refinement_trial++) {
+                        for (uint refinement_trial = 0; refinement_trial < max_refinement_trials; refinement_trial++)
+                        {
                             const uint8* pSelectors = m_best_solution.m_selectors;
                             const int* pInten_table = g_etc1_inten_tables[m_best_solution.m_coords.m_inten_table];
 
                             int delta_sum_r = 0, delta_sum_g = 0, delta_sum_b = 0;
                             const color_quad_u8 base_color(m_best_solution.m_coords.get_scaled_color());
-                            for (uint r = 0; r < n; r++) {
+                            for (uint r = 0; r < n; r++)
+                            {
                                 const uint s = *pSelectors++;
                                 const int yd = pInten_table[s];
                                 // Compute actual delta being applied to each pixel, taking into account clamping.
@@ -1826,7 +2091,9 @@ namespace crnlib {
                                 delta_sum_b += rg_etc1::clamp<int>(base_color.b + yd, 0, 255) - base_color.b;
                             }
                             if ((!delta_sum_r) && (!delta_sum_g) && (!delta_sum_b))
+                            {
                                 break;
+                            }
                             const float avg_delta_r_f = static_cast<float>(delta_sum_r) / n;
                             const float avg_delta_g_f = static_cast<float>(delta_sum_g) / n;
                             const float avg_delta_b_f = static_cast<float>(delta_sum_b) / n;
@@ -1837,32 +2104,47 @@ namespace crnlib {
                             bool skip = false;
 
                             if ((mbr == br1) && (mbg == bg1) && (mbb == bb1))
+                            {
                                 skip = true;
+                            }
                             else if ((br1 == m_best_solution.m_coords.m_unscaled_color.r) && (bg1 == m_best_solution.m_coords.m_unscaled_color.g) && (bb1 == m_best_solution.m_coords.m_unscaled_color.b))
+                            {
                                 skip = true;
+                            }
                             else if ((m_br == br1) && (m_bg == bg1) && (m_bb == bb1))
+                            {
                                 skip = true;
+                            }
 
                             if (skip)
+                            {
                                 break;
+                            }
 
                             etc1_solution_coordinates coords1(br1, bg1, bb1, 0, m_pParams->m_use_color4);
-                            if (m_pParams->m_quality == cHighQuality) {
+                            if (m_pParams->m_quality == cHighQuality)
+                            {
                                 if (!evaluate_solution(coords1, m_trial_solution, &m_best_solution))
+                                {
                                     break;
+                                }
                             }
-                            else {
+                            else
+                            {
                                 if (!evaluate_solution_fast(coords1, m_trial_solution, &m_best_solution))
+                                {
                                     break;
+                                }
                             }
 
-                        }  // refinement_trial
+                        } // refinement_trial
 
-                    }  // xdi
-                }    // ydi
-            }      // zdi
+                    } // xdi
+                } // ydi
+            } // zdi
 
-            if (!m_best_solution.m_valid) {
+            if (!m_best_solution.m_valid)
+            {
                 m_pResult->m_error = cUINT32_MAX;
                 return false;
             }
@@ -1895,7 +2177,8 @@ namespace crnlib {
             return true;
         }
 
-        void etc1_optimizer::init(const params& p, results& r) {
+        void etc1_optimizer::init(const params& p, results& r)
+        {
             // This version is hardcoded for 8 pixel subblocks.
             RG_ETC1_ASSERT(p.m_num_src_pixels == 8);
 
@@ -1908,7 +2191,8 @@ namespace crnlib {
 
             vec3F avg_color(0.0f);
 
-            for (uint i = 0; i < n; i++) {
+            for (uint i = 0; i < n; i++)
+            {
                 const color_quad_u8& c = m_pParams->m_pSrc_pixels[i];
                 const vec3F fc(c.r, c.g, c.b);
 
@@ -1924,14 +2208,19 @@ namespace crnlib {
             m_bg = rg_etc1::clamp<int>(static_cast<uint>(m_avg_color[1] * m_limit / 255.0f + .5f), 0, m_limit);
             m_bb = rg_etc1::clamp<int>(static_cast<uint>(m_avg_color[2] * m_limit / 255.0f + .5f), 0, m_limit);
 
-            if (m_pParams->m_quality <= cMediumQuality) {
+            if (m_pParams->m_quality <= cMediumQuality)
+            {
                 m_pSorted_luma_indices = indirect_radix_sort(n, m_sorted_luma[0], m_sorted_luma[1], m_luma, 0, sizeof(m_luma[0]), false);
                 m_pSorted_luma = m_sorted_luma[0];
                 if (m_pSorted_luma_indices == m_sorted_luma[0])
+                {
                     m_pSorted_luma = m_sorted_luma[1];
+                }
 
                 for (uint i = 0; i < n; i++)
+                {
                     m_pSorted_luma[i] = m_luma[m_pSorted_luma_indices[i]];
+                }
             }
 
             m_best_solution.m_coords.clear();
@@ -1939,16 +2228,20 @@ namespace crnlib {
             m_best_solution.m_error = cUINT64_MAX;
         }
 
-        bool etc1_optimizer::evaluate_solution(const etc1_solution_coordinates& coords, potential_solution& trial_solution, potential_solution* pBest_solution) {
+        bool etc1_optimizer::evaluate_solution(const etc1_solution_coordinates& coords, potential_solution& trial_solution, potential_solution* pBest_solution)
+        {
             trial_solution.m_valid = false;
 
-            if (m_pParams->m_constrain_against_base_color5) {
+            if (m_pParams->m_constrain_against_base_color5)
+            {
                 const int dr = coords.m_unscaled_color.r - m_pParams->m_base_color5.r;
                 const int dg = coords.m_unscaled_color.g - m_pParams->m_base_color5.g;
                 const int db = coords.m_unscaled_color.b - m_pParams->m_base_color5.b;
 
                 if ((rg_etc1::minimum(dr, dg, db) < cETC1ColorDeltaMin) || (rg_etc1::maximum(dr, dg, db) > cETC1ColorDeltaMax))
+                {
                     return false;
+                }
             }
 
             const color_quad_u8 base_color(coords.get_scaled_color());
@@ -1957,11 +2250,13 @@ namespace crnlib {
 
             trial_solution.m_error = cUINT64_MAX;
 
-            for (uint inten_table = 0; inten_table < cETC1IntenModifierValues; inten_table++) {
+            for (uint inten_table = 0; inten_table < cETC1IntenModifierValues; inten_table++)
+            {
                 const int* pInten_table = g_etc1_inten_tables[inten_table];
 
                 color_quad_u8 block_colors[4];
-                for (uint s = 0; s < 4; s++) {
+                for (uint s = 0; s < 4; s++)
+                {
                     const int yd = pInten_table[s];
                     block_colors[s].set(base_color.r + yd, base_color.g + yd, base_color.b + yd, 0);
                 }
@@ -1969,26 +2264,30 @@ namespace crnlib {
                 uint64 total_error = 0;
 
                 const color_quad_u8* pSrc_pixels = m_pParams->m_pSrc_pixels;
-                for (uint c = 0; c < n; c++) {
+                for (uint c = 0; c < n; c++)
+                {
                     const color_quad_u8& src_pixel = *pSrc_pixels++;
 
                     uint best_selector_index = 0;
                     uint best_error = rg_etc1::square(src_pixel.r - block_colors[0].r) + rg_etc1::square(src_pixel.g - block_colors[0].g) + rg_etc1::square(src_pixel.b - block_colors[0].b);
 
                     uint trial_error = rg_etc1::square(src_pixel.r - block_colors[1].r) + rg_etc1::square(src_pixel.g - block_colors[1].g) + rg_etc1::square(src_pixel.b - block_colors[1].b);
-                    if (trial_error < best_error) {
+                    if (trial_error < best_error)
+                    {
                         best_error = trial_error;
                         best_selector_index = 1;
                     }
 
                     trial_error = rg_etc1::square(src_pixel.r - block_colors[2].r) + rg_etc1::square(src_pixel.g - block_colors[2].g) + rg_etc1::square(src_pixel.b - block_colors[2].b);
-                    if (trial_error < best_error) {
+                    if (trial_error < best_error)
+                    {
                         best_error = trial_error;
                         best_selector_index = 2;
                     }
 
                     trial_error = rg_etc1::square(src_pixel.r - block_colors[3].r) + rg_etc1::square(src_pixel.g - block_colors[3].g) + rg_etc1::square(src_pixel.b - block_colors[3].b);
-                    if (trial_error < best_error) {
+                    if (trial_error < best_error)
+                    {
                         best_error = trial_error;
                         best_selector_index = 3;
                     }
@@ -1997,10 +2296,13 @@ namespace crnlib {
 
                     total_error += best_error;
                     if (total_error >= trial_solution.m_error)
+                    {
                         break;
+                    }
                 }
 
-                if (total_error < trial_solution.m_error) {
+                if (total_error < trial_solution.m_error)
+                {
                     trial_solution.m_error = total_error;
                     trial_solution.m_coords.m_inten_table = inten_table;
                     memcpy(trial_solution.m_selectors, m_temp_selectors, 8);
@@ -2011,8 +2313,10 @@ namespace crnlib {
             trial_solution.m_coords.m_color4 = m_pParams->m_use_color4;
 
             bool success = false;
-            if (pBest_solution) {
-                if (trial_solution.m_error < pBest_solution->m_error) {
+            if (pBest_solution)
+            {
+                if (trial_solution.m_error < pBest_solution->m_error)
+                {
                     *pBest_solution = trial_solution;
                     success = true;
                 }
@@ -2021,13 +2325,16 @@ namespace crnlib {
             return success;
         }
 
-        bool etc1_optimizer::evaluate_solution_fast(const etc1_solution_coordinates& coords, potential_solution& trial_solution, potential_solution* pBest_solution) {
-            if (m_pParams->m_constrain_against_base_color5) {
+        bool etc1_optimizer::evaluate_solution_fast(const etc1_solution_coordinates& coords, potential_solution& trial_solution, potential_solution* pBest_solution)
+        {
+            if (m_pParams->m_constrain_against_base_color5)
+            {
                 const int dr = coords.m_unscaled_color.r - m_pParams->m_base_color5.r;
                 const int dg = coords.m_unscaled_color.g - m_pParams->m_base_color5.g;
                 const int db = coords.m_unscaled_color.b - m_pParams->m_base_color5.b;
 
-                if ((rg_etc1::minimum(dr, dg, db) < cETC1ColorDeltaMin) || (rg_etc1::maximum(dr, dg, db) > cETC1ColorDeltaMax)) {
+                if ((rg_etc1::minimum(dr, dg, db) < cETC1ColorDeltaMin) || (rg_etc1::maximum(dr, dg, db) > cETC1ColorDeltaMax))
+                {
                     trial_solution.m_valid = false;
                     return false;
                 }
@@ -2039,12 +2346,14 @@ namespace crnlib {
 
             trial_solution.m_error = cUINT64_MAX;
 
-            for (int inten_table = cETC1IntenModifierValues - 1; inten_table >= 0; --inten_table) {
+            for (int inten_table = cETC1IntenModifierValues - 1; inten_table >= 0; --inten_table)
+            {
                 const int* pInten_table = g_etc1_inten_tables[inten_table];
 
                 uint block_inten[4];
                 color_quad_u8 block_colors[4];
-                for (uint s = 0; s < 4; s++) {
+                for (uint s = 0; s < 4; s++)
+                {
                     const int yd = pInten_table[s];
                     color_quad_u8 block_color(base_color.r + yd, base_color.g + yd, base_color.b + yd, 0);
                     block_colors[s] = block_color;
@@ -2059,43 +2368,62 @@ namespace crnlib {
 
                 uint64 total_error = 0;
                 const color_quad_u8* pSrc_pixels = m_pParams->m_pSrc_pixels;
-                if ((m_pSorted_luma[n - 1] * 2) < block_inten_midpoints[0]) {
-                    if (block_inten[0] > m_pSorted_luma[n - 1]) {
+                if ((m_pSorted_luma[n - 1] * 2) < block_inten_midpoints[0])
+                {
+                    if (block_inten[0] > m_pSorted_luma[n - 1])
+                    {
                         const uint min_error = block_inten[0] - m_pSorted_luma[n - 1];
                         if (min_error >= trial_solution.m_error)
+                        {
                             continue;
+                        }
                     }
 
                     memset(&m_temp_selectors[0], 0, n);
 
                     for (uint c = 0; c < n; c++)
+                    {
                         total_error += block_colors[0].squared_distance_rgb(pSrc_pixels[c]);
+                    }
                 }
-                else if ((m_pSorted_luma[0] * 2) >= block_inten_midpoints[2]) {
-                    if (m_pSorted_luma[0] > block_inten[3]) {
+                else if ((m_pSorted_luma[0] * 2) >= block_inten_midpoints[2])
+                {
+                    if (m_pSorted_luma[0] > block_inten[3])
+                    {
                         const uint min_error = m_pSorted_luma[0] - block_inten[3];
                         if (min_error >= trial_solution.m_error)
+                        {
                             continue;
+                        }
                     }
 
                     memset(&m_temp_selectors[0], 3, n);
 
                     for (uint c = 0; c < n; c++)
+                    {
                         total_error += block_colors[3].squared_distance_rgb(pSrc_pixels[c]);
+                    }
                 }
-                else {
+                else
+                {
                     uint cur_selector = 0, c;
-                    for (c = 0; c < n; c++) {
+                    for (c = 0; c < n; c++)
+                    {
                         const uint y = m_pSorted_luma[c];
                         while ((y * 2) >= block_inten_midpoints[cur_selector])
+                        {
                             if (++cur_selector > 2)
+                            {
                                 goto done;
+                            }
+                        }
                         const uint sorted_pixel_index = m_pSorted_luma_indices[c];
                         m_temp_selectors[sorted_pixel_index] = static_cast<uint8>(cur_selector);
                         total_error += block_colors[cur_selector].squared_distance_rgb(pSrc_pixels[sorted_pixel_index]);
                     }
                 done:
-                    while (c < n) {
+                    while (c < n)
+                    {
                         const uint sorted_pixel_index = m_pSorted_luma_indices[c];
                         m_temp_selectors[sorted_pixel_index] = 3;
                         total_error += block_colors[3].squared_distance_rgb(pSrc_pixels[sorted_pixel_index]);
@@ -2103,21 +2431,26 @@ namespace crnlib {
                     }
                 }
 
-                if (total_error < trial_solution.m_error) {
+                if (total_error < trial_solution.m_error)
+                {
                     trial_solution.m_error = total_error;
                     trial_solution.m_coords.m_inten_table = inten_table;
                     memcpy(trial_solution.m_selectors, m_temp_selectors, n);
                     trial_solution.m_valid = true;
                     if (!total_error)
+                    {
                         break;
+                    }
                 }
             }
             trial_solution.m_coords.m_unscaled_color = coords.m_unscaled_color;
             trial_solution.m_coords.m_color4 = m_pParams->m_use_color4;
 
             bool success = false;
-            if (pBest_solution) {
-                if (trial_solution.m_error < pBest_solution->m_error) {
+            if (pBest_solution)
+            {
+                if (trial_solution.m_error < pBest_solution->m_error)
+                {
                     *pBest_solution = trial_solution;
                     success = true;
                 }
@@ -2126,40 +2459,55 @@ namespace crnlib {
             return success;
         }
 
-        static uint etc1_decode_value(uint diff, uint inten, uint selector, uint packed_c) {
+        static uint etc1_decode_value(uint diff, uint inten, uint selector, uint packed_c)
+        {
             RG_ETC1_ASSERT((diff < 2) && (inten < 8) && (selector < 4) && (packed_c < (diff ? 32 : 16)));
             int c;
             if (diff)
+            {
                 c = (packed_c >> 2) | (packed_c << 3);
+            }
             else
+            {
                 c = packed_c | (packed_c << 4);
+            }
             c += g_etc1_inten_tables[inten][selector];
             c = rg_etc1::clamp<int>(c, 0, 255);
             return c;
         }
 
-        static inline int mul_8bit(int a, int b) {
+        static inline int mul_8bit(int a, int b)
+        {
             int t = a * b + 128;
             return (t + (t >> 8)) >> 8;
         }
 
-        void pack_etc1_block_init() {
-            for (uint diff = 0; diff < 2; diff++) {
+        void pack_etc1_block_init()
+        {
+            for (uint diff = 0; diff < 2; diff++)
+            {
                 const uint limit = diff ? 32 : 16;
 
-                for (uint inten = 0; inten < 8; inten++) {
-                    for (uint selector = 0; selector < 4; selector++) {
+                for (uint inten = 0; inten < 8; inten++)
+                {
+                    for (uint selector = 0; selector < 4; selector++)
+                    {
                         const uint inverse_table_index = diff + (inten << 1) + (selector << 4);
-                        for (int color = 0; color < 256; color++) {
+                        for (int color = 0; color < 256; color++)
+                        {
                             uint best_error = cUINT32_MAX, best_packed_c = 0;
-                            for (uint packed_c = 0; packed_c < limit; packed_c++) {
+                            for (uint packed_c = 0; packed_c < limit; packed_c++)
+                            {
                                 int v = etc1_decode_value(diff, inten, selector, packed_c);
                                 uint err = labs(v - color);
-                                if (err < best_error) {
+                                if (err < best_error)
+                                {
                                     best_error = err;
                                     best_packed_c = packed_c;
                                     if (!best_error)
+                                    {
                                         break;
+                                    }
                                 }
                             }
                             RG_ETC1_ASSERT(best_error <= 255);
@@ -2171,9 +2519,12 @@ namespace crnlib {
 
             uint expand5[32];
             for (int i = 0; i < 32; i++)
+            {
                 expand5[i] = (i << 3) | (i >> 2);
+            }
 
-            for (int i = 0; i < 256 + 16; i++) {
+            for (int i = 0; i < 256 + 16; i++)
+            {
                 int v = clamp<int>(i - 8, 0, 255);
                 g_quant5_tab[i] = static_cast<uint8>(expand5[mul_8bit(v, 31)]);
             }
@@ -2181,7 +2532,8 @@ namespace crnlib {
 
         // Packs solid color blocks efficiently using a set of small precomputed tables.
         // For random 888 inputs, MSE results are better than Erricson's ETC1 packer in "slow" mode ~9.5% of the time, is slightly worse only ~.01% of the time, and is equal the rest of the time.
-        static uint64 pack_etc1_block_solid_color(etc1_block& block, const uint8* pColor) {
+        static uint64 pack_etc1_block_solid_color(etc1_block& block, const uint8* pColor)
+        {
             RG_ETC1_ASSERT(g_etc1_inverse_lookup[0][255]);
 
             static uint s_next_comp[4] = { 1, 2, 0, 1 };
@@ -2190,22 +2542,31 @@ namespace crnlib {
             int best_x = 0, best_packed_c1 = 0, best_packed_c2 = 0;
 
             // For each possible 8-bit value, there is a precomputed list of diff/inten/selector configurations that allow that 8-bit value to be encoded with no error.
-            for (uint i = 0; i < 3; i++) {
+            for (uint i = 0; i < 3; i++)
+            {
                 const uint c1 = pColor[s_next_comp[i]], c2 = pColor[s_next_comp[i + 1]];
 
                 const int delta_range = 1;
-                for (int delta = -delta_range; delta <= delta_range; delta++) {
+                for (int delta = -delta_range; delta <= delta_range; delta++)
+                {
                     const int c_plus_delta = rg_etc1::clamp<int>(pColor[i] + delta, 0, 255);
 
                     const uint16* pTable;
                     if (!c_plus_delta)
+                    {
                         pTable = g_color8_to_etc_block_config_0_255[0];
+                    }
                     else if (c_plus_delta == 255)
+                    {
                         pTable = g_color8_to_etc_block_config_0_255[1];
+                    }
                     else
+                    {
                         pTable = g_color8_to_etc_block_config_1_to_254[c_plus_delta - 1];
+                    }
 
-                    do {
+                    do
+                    {
                         const uint x = *pTable++;
 
 #ifdef RG_ETC1_BUILD_DEBUG
@@ -2220,14 +2581,17 @@ namespace crnlib {
                         uint16 p1 = pInverse_table[c1];
                         uint16 p2 = pInverse_table[c2];
                         const uint trial_error = rg_etc1::square(c_plus_delta - pColor[i]) + rg_etc1::square(p1 >> 8) + rg_etc1::square(p2 >> 8);
-                        if (trial_error < best_error) {
+                        if (trial_error < best_error)
+                        {
                             best_error = trial_error;
                             best_x = x;
                             best_packed_c1 = p1 & 0xFF;
                             best_packed_c2 = p2 & 0xFF;
                             best_i = i;
                             if (!best_error)
+                            {
                                 goto found_perfect_match;
+                            }
                         }
                     } while (*pTable != 0xFFFF);
                 }
@@ -2244,12 +2608,14 @@ namespace crnlib {
             *reinterpret_cast<uint16*>(&block.m_bytes[6]) = (etc1_selector & 1) ? 0xFFFF : 0;
 
             const uint best_packed_c0 = (best_x >> 8) & 255;
-            if (diff) {
+            if (diff)
+            {
                 block.m_bytes[best_i] = static_cast<uint8>(best_packed_c0 << 3);
                 block.m_bytes[s_next_comp[best_i]] = static_cast<uint8>(best_packed_c1 << 3);
                 block.m_bytes[s_next_comp[best_i + 1]] = static_cast<uint8>(best_packed_c2 << 3);
             }
-            else {
+            else
+            {
                 block.m_bytes[best_i] = static_cast<uint8>(best_packed_c0 | (best_packed_c0 << 4));
                 block.m_bytes[s_next_comp[best_i]] = static_cast<uint8>(best_packed_c1 | (best_packed_c1 << 4));
                 block.m_bytes[s_next_comp[best_i + 1]] = static_cast<uint8>(best_packed_c2 | (best_packed_c2 << 4));
@@ -2262,7 +2628,8 @@ namespace crnlib {
             etc1_optimizer::results& results,
             uint num_colors, const uint8* pColor,
             bool use_diff,
-            const color_quad_u8* pBase_color5_unscaled) {
+            const color_quad_u8* pBase_color5_unscaled)
+        {
             RG_ETC1_ASSERT(g_etc1_inverse_lookup[0][255]);
 
             static uint s_next_comp[4] = { 1, 2, 0, 1 };
@@ -2271,36 +2638,52 @@ namespace crnlib {
             int best_x = 0, best_packed_c1 = 0, best_packed_c2 = 0;
 
             // For each possible 8-bit value, there is a precomputed list of diff/inten/selector configurations that allow that 8-bit value to be encoded with no error.
-            for (uint i = 0; i < 3; i++) {
+            for (uint i = 0; i < 3; i++)
+            {
                 const uint c1 = pColor[s_next_comp[i]], c2 = pColor[s_next_comp[i + 1]];
 
                 const int delta_range = 1;
-                for (int delta = -delta_range; delta <= delta_range; delta++) {
+                for (int delta = -delta_range; delta <= delta_range; delta++)
+                {
                     const int c_plus_delta = rg_etc1::clamp<int>(pColor[i] + delta, 0, 255);
 
                     const uint16* pTable;
                     if (!c_plus_delta)
+                    {
                         pTable = g_color8_to_etc_block_config_0_255[0];
+                    }
                     else if (c_plus_delta == 255)
+                    {
                         pTable = g_color8_to_etc_block_config_0_255[1];
+                    }
                     else
+                    {
                         pTable = g_color8_to_etc_block_config_1_to_254[c_plus_delta - 1];
+                    }
 
-                    do {
+                    do
+                    {
                         const uint x = *pTable++;
                         const uint diff = x & 1;
-                        if (static_cast<uint>(use_diff) != diff) {
+                        if (static_cast<uint>(use_diff) != diff)
+                        {
                             if (*pTable == 0xFFFF)
+                            {
                                 break;
+                            }
                             continue;
                         }
 
-                        if ((diff) && (pBase_color5_unscaled)) {
+                        if ((diff) && (pBase_color5_unscaled))
+                        {
                             const int p0 = (x >> 8) & 255;
                             int delta = p0 - static_cast<int>(pBase_color5_unscaled->c[i]);
-                            if ((delta < cETC1ColorDeltaMin) || (delta > cETC1ColorDeltaMax)) {
+                            if ((delta < cETC1ColorDeltaMin) || (delta > cETC1ColorDeltaMax))
+                            {
                                 if (*pTable == 0xFFFF)
+                                {
                                     break;
+                                }
                                 continue;
                             }
                         }
@@ -2318,25 +2701,32 @@ namespace crnlib {
                         uint16 p1 = pInverse_table[c1];
                         uint16 p2 = pInverse_table[c2];
 
-                        if ((diff) && (pBase_color5_unscaled)) {
+                        if ((diff) && (pBase_color5_unscaled))
+                        {
                             int delta1 = (p1 & 0xFF) - static_cast<int>(pBase_color5_unscaled->c[s_next_comp[i]]);
                             int delta2 = (p2 & 0xFF) - static_cast<int>(pBase_color5_unscaled->c[s_next_comp[i + 1]]);
-                            if ((delta1 < cETC1ColorDeltaMin) || (delta1 > cETC1ColorDeltaMax) || (delta2 < cETC1ColorDeltaMin) || (delta2 > cETC1ColorDeltaMax)) {
+                            if ((delta1 < cETC1ColorDeltaMin) || (delta1 > cETC1ColorDeltaMax) || (delta2 < cETC1ColorDeltaMin) || (delta2 > cETC1ColorDeltaMax))
+                            {
                                 if (*pTable == 0xFFFF)
+                                {
                                     break;
+                                }
                                 continue;
                             }
                         }
 
                         const uint trial_error = rg_etc1::square(c_plus_delta - pColor[i]) + rg_etc1::square(p1 >> 8) + rg_etc1::square(p2 >> 8);
-                        if (trial_error < best_error) {
+                        if (trial_error < best_error)
+                        {
                             best_error = trial_error;
                             best_x = x;
                             best_packed_c1 = p1 & 0xFF;
                             best_packed_c2 = p2 & 0xFF;
                             best_i = i;
                             if (!best_error)
+                            {
                                 goto found_perfect_match;
+                            }
                         }
                     } while (*pTable != 0xFFFF);
                 }
@@ -2344,7 +2734,9 @@ namespace crnlib {
         found_perfect_match:
 
             if (best_error == cUINT32_MAX)
+            {
                 return best_error;
+            }
 
             best_error *= num_colors;
 
@@ -2363,14 +2755,16 @@ namespace crnlib {
         }
 
         // Function originally from RYG's public domain real-time DXT1 compressor, modified for 555.
-        static void dither_block_555(color_quad_u8* dest, const color_quad_u8* block) {
-            int err[8], * ep1 = err, * ep2 = err + 4;
+        static void dither_block_555(color_quad_u8* dest, const color_quad_u8* block)
+        {
+            int err[8], *ep1 = err, *ep2 = err + 4;
             uint8* quant = g_quant5_tab + 8;
 
             memset(dest, 0xFF, sizeof(color_quad_u8) * 16);
 
             // process channels seperately
-            for (int ch = 0; ch < 3; ch++) {
+            for (int ch = 0; ch < 3; ch++)
+            {
                 uint8* bp = (uint8*)block;
                 uint8* dp = (uint8*)dest;
 
@@ -2378,7 +2772,8 @@ namespace crnlib {
                 dp += ch;
 
                 memset(err, 0, sizeof(err));
-                for (int y = 0; y < 4; y++) {
+                for (int y = 0; y < 4; y++)
+                {
                     // pixel 0
                     dp[0] = quant[bp[0] + ((3 * ep2[1] + 5 * ep2[0]) >> 4)];
                     ep1[0] = bp[0] - dp[0];
@@ -2405,7 +2800,8 @@ namespace crnlib {
             }
         }
 
-        unsigned int pack_etc1_block(void* pETC1_block, const unsigned int* pSrc_pixels_rgba, etc1_pack_params& pack_params) {
+        unsigned int pack_etc1_block(void* pETC1_block, const unsigned int* pSrc_pixels_rgba, etc1_pack_params& pack_params)
+        {
             const color_quad_u8* pSrc_pixels = reinterpret_cast<const color_quad_u8*>(pSrc_pixels_rgba);
             etc1_block& dst_block = *static_cast<etc1_block*>(pETC1_block);
 
@@ -2415,13 +2811,21 @@ namespace crnlib {
             const uint32 first_pixel_u32 = pSrc_pixels->m_u32;
             int r;
             for (r = 15; r >= 1; --r)
+            {
                 if (pSrc_pixels[r].m_u32 != first_pixel_u32)
+                {
                     break;
+                }
+            }
+
             if (!r)
+            {
                 return static_cast<unsigned int>(16 * pack_etc1_block_solid_color(dst_block, &pSrc_pixels[0].r));
+            }
 
             color_quad_u8 dithered_pixels[16];
-            if (pack_params.m_dithering) {
+            if (pack_params.m_dithering)
+            {
                 dither_block_555(dithered_pixels, pSrc_pixels);
                 pSrc_pixels = dithered_pixels;
             }
@@ -2433,7 +2837,8 @@ namespace crnlib {
 
             uint8 best_selectors[2][8];
             etc1_optimizer::results best_results[2];
-            for (uint i = 0; i < 2; i++) {
+            for (uint i = 0; i < 2; i++)
+            {
                 best_results[i].m_n = 8;
                 best_results[i].m_pSelectors = best_selectors[i];
             }
@@ -2441,7 +2846,8 @@ namespace crnlib {
             uint8 selectors[3][8];
             etc1_optimizer::results results[3];
 
-            for (uint i = 0; i < 3; i++) {
+            for (uint i = 0; i < 3; i++)
+            {
                 results[i].m_n = 8;
                 results[i].m_pSelectors = selectors[i];
             }
@@ -2452,15 +2858,21 @@ namespace crnlib {
             params.m_num_src_pixels = 8;
             params.m_pSrc_pixels = subblock_pixels;
 
-            for (uint flip = 0; flip < 2; flip++) {
-                for (uint use_color4 = 0; use_color4 < 2; use_color4++) {
+            for (uint flip = 0; flip < 2; flip++)
+            {
+                for (uint use_color4 = 0; use_color4 < 2; use_color4++)
+                {
                     uint64 trial_error = 0;
 
                     uint subblock;
-                    for (subblock = 0; subblock < 2; subblock++) {
+                    for (subblock = 0; subblock < 2; subblock++)
+                    {
                         if (flip)
+                        {
                             memcpy(subblock_pixels, pSrc_pixels + subblock * 8, sizeof(color_quad_u8) * 8);
-                        else {
+                        }
+                        else
+                        {
                             const color_quad_u8* pSrc_col = pSrc_pixels + subblock * 2;
                             subblock_pixels[0] = pSrc_col[0];
                             subblock_pixels[1] = pSrc_col[4];
@@ -2473,12 +2885,18 @@ namespace crnlib {
                         }
 
                         results[2].m_error = cUINT64_MAX;
-                        if ((params.m_quality >= cMediumQuality) && ((subblock) || (use_color4))) {
+                        if ((params.m_quality >= cMediumQuality) && ((subblock) || (use_color4)))
+                        {
                             const uint32 subblock_pixel0_u32 = subblock_pixels[0].m_u32;
                             for (r = 7; r >= 1; --r)
+                            {
                                 if (subblock_pixels[r].m_u32 != subblock_pixel0_u32)
+                                {
                                     break;
-                            if (!r) {
+                                }
+                            }
+                            if (!r)
+                            {
                                 pack_etc1_block_solid_color_constrained(results[2], 8, &subblock_pixels[0].r, !use_color4, (subblock && !use_color4) ? &results[0].m_block_color_unscaled : nullptr);
                             }
                         }
@@ -2486,22 +2904,26 @@ namespace crnlib {
                         params.m_use_color4 = (use_color4 != 0);
                         params.m_constrain_against_base_color5 = false;
 
-                        if ((!use_color4) && (subblock)) {
+                        if ((!use_color4) && (subblock))
+                        {
                             params.m_constrain_against_base_color5 = true;
                             params.m_base_color5 = results[0].m_block_color_unscaled;
                         }
 
-                        if (params.m_quality == cHighQuality) {
+                        if (params.m_quality == cHighQuality)
+                        {
                             static const int s_scan_delta_0_to_4[] = { -4, -3, -2, -1, 0, 1, 2, 3, 4 };
                             params.m_scan_delta_size = RG_ETC1_ARRAY_SIZE(s_scan_delta_0_to_4);
                             params.m_pScan_deltas = s_scan_delta_0_to_4;
                         }
-                        else if (params.m_quality == cMediumQuality) {
+                        else if (params.m_quality == cMediumQuality)
+                        {
                             static const int s_scan_delta_0_to_1[] = { -1, 0, 1 };
                             params.m_scan_delta_size = RG_ETC1_ARRAY_SIZE(s_scan_delta_0_to_1);
                             params.m_pScan_deltas = s_scan_delta_0_to_1;
                         }
-                        else {
+                        else
+                        {
                             static const int s_scan_delta_0[] = { 0 };
                             params.m_scan_delta_size = RG_ETC1_ARRAY_SIZE(s_scan_delta_0);
                             params.m_pScan_deltas = s_scan_delta_0;
@@ -2509,46 +2931,62 @@ namespace crnlib {
 
                         optimizer.init(params, results[subblock]);
                         if (!optimizer.compute())
+                        {
                             break;
+                        }
 
-                        if (params.m_quality >= cMediumQuality) {
+                        if (params.m_quality >= cMediumQuality)
+                        {
                             // TODO: Fix fairly arbitrary/unrefined thresholds that control how far away to scan for potentially better solutions.
                             const uint refinement_error_thresh0 = 3000;
                             const uint refinement_error_thresh1 = 6000;
-                            if (results[subblock].m_error > refinement_error_thresh0) {
-                                if (params.m_quality == cMediumQuality) {
+                            if (results[subblock].m_error > refinement_error_thresh0)
+                            {
+                                if (params.m_quality == cMediumQuality)
+                                {
                                     static const int s_scan_delta_2_to_3[] = { -3, -2, 2, 3 };
                                     params.m_scan_delta_size = RG_ETC1_ARRAY_SIZE(s_scan_delta_2_to_3);
                                     params.m_pScan_deltas = s_scan_delta_2_to_3;
                                 }
-                                else {
+                                else
+                                {
                                     static const int s_scan_delta_5_to_5[] = { -5, 5 };
                                     static const int s_scan_delta_5_to_8[] = { -8, -7, -6, -5, 5, 6, 7, 8 };
-                                    if (results[subblock].m_error > refinement_error_thresh1) {
+                                    if (results[subblock].m_error > refinement_error_thresh1)
+                                    {
                                         params.m_scan_delta_size = RG_ETC1_ARRAY_SIZE(s_scan_delta_5_to_8);
                                         params.m_pScan_deltas = s_scan_delta_5_to_8;
                                     }
-                                    else {
+                                    else
+                                    {
                                         params.m_scan_delta_size = RG_ETC1_ARRAY_SIZE(s_scan_delta_5_to_5);
                                         params.m_pScan_deltas = s_scan_delta_5_to_5;
                                     }
                                 }
 
                                 if (!optimizer.compute())
+                                {
                                     break;
+                                }
                             }
 
                             if (results[2].m_error < results[subblock].m_error)
+                            {
                                 results[subblock] = results[2];
+                            }
                         }
 
                         trial_error += results[subblock].m_error;
                         if (trial_error >= best_error)
+                        {
                             break;
+                        }
                     }
 
                     if (subblock < 2)
+                    {
                         continue;
+                    }
 
                     best_error = trial_error;
                     best_results[0] = results[0];
@@ -2556,36 +2994,45 @@ namespace crnlib {
                     best_flip = flip;
                     best_use_color4 = use_color4;
 
-                }  // use_color4
+                } // use_color4
 
-            }  // flip
+            } // flip
 
             int dr = best_results[1].m_block_color_unscaled.r - best_results[0].m_block_color_unscaled.r;
             int dg = best_results[1].m_block_color_unscaled.g - best_results[0].m_block_color_unscaled.g;
             int db = best_results[1].m_block_color_unscaled.b - best_results[0].m_block_color_unscaled.b;
             RG_ETC1_ASSERT(best_use_color4 || (rg_etc1::minimum(dr, dg, db) >= cETC1ColorDeltaMin) && (rg_etc1::maximum(dr, dg, db) <= cETC1ColorDeltaMax));
 
-            if (best_use_color4) {
+            if (best_use_color4)
+            {
                 dst_block.m_bytes[0] = static_cast<uint8>(best_results[1].m_block_color_unscaled.r | (best_results[0].m_block_color_unscaled.r << 4));
                 dst_block.m_bytes[1] = static_cast<uint8>(best_results[1].m_block_color_unscaled.g | (best_results[0].m_block_color_unscaled.g << 4));
                 dst_block.m_bytes[2] = static_cast<uint8>(best_results[1].m_block_color_unscaled.b | (best_results[0].m_block_color_unscaled.b << 4));
             }
-            else {
+            else
+            {
                 if (dr < 0)
+                {
                     dr += 8;
+                }
                 dst_block.m_bytes[0] = static_cast<uint8>((best_results[0].m_block_color_unscaled.r << 3) | dr);
                 if (dg < 0)
+                {
                     dg += 8;
+                }
                 dst_block.m_bytes[1] = static_cast<uint8>((best_results[0].m_block_color_unscaled.g << 3) | dg);
                 if (db < 0)
+                {
                     db += 8;
+                }
                 dst_block.m_bytes[2] = static_cast<uint8>((best_results[0].m_block_color_unscaled.b << 3) | db);
             }
 
             dst_block.m_bytes[3] = static_cast<uint8>((best_results[1].m_block_inten_table << 2) | (best_results[0].m_block_inten_table << 5) | ((~best_use_color4 & 1) << 1) | best_flip);
 
             uint selector0 = 0, selector1 = 0;
-            if (best_flip) {
+            if (best_flip)
+            {
                 // flipped:
                 // { 0, 0 }, { 1, 0 }, { 2, 0 }, { 3, 0 },
                 // { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 }
@@ -2594,7 +3041,8 @@ namespace crnlib {
                 // { 0, 3 }, { 1, 3 }, { 2, 3 }, { 3, 3 }
                 const uint8* pSelectors0 = best_results[0].m_pSelectors;
                 const uint8* pSelectors1 = best_results[1].m_pSelectors;
-                for (int x = 3; x >= 0; --x) {
+                for (int x = 3; x >= 0; --x)
+                {
                     uint b;
                     b = g_selector_index_to_etc1[pSelectors1[4 + x]];
                     selector0 = (selector0 << 1) | (b & 1);
@@ -2613,16 +3061,19 @@ namespace crnlib {
                     selector1 = (selector1 << 1) | (b >> 1);
                 }
             }
-            else {
+            else
+            {
                 // non-flipped:
                 // { 0, 0 }, { 0, 1 }, { 0, 2 }, { 0, 3 },
                 // { 1, 0 }, { 1, 1 }, { 1, 2 }, { 1, 3 }
                 //
                 // { 2, 0 }, { 2, 1 }, { 2, 2 }, { 2, 3 },
                 // { 3, 0 }, { 3, 1 }, { 3, 2 }, { 3, 3 }
-                for (int subblock = 1; subblock >= 0; --subblock) {
+                for (int subblock = 1; subblock >= 0; --subblock)
+                {
                     const uint8* pSelectors = best_results[subblock].m_pSelectors + 4;
-                    for (uint i = 0; i < 2; i++) {
+                    for (uint i = 0; i < 2; i++)
+                    {
                         uint b;
                         b = g_selector_index_to_etc1[pSelectors[3]];
                         selector0 = (selector0 << 1) | (b & 1);
@@ -2653,7 +3104,8 @@ namespace crnlib {
             return static_cast<unsigned int>(best_error);
         }
 
-        unsigned int pack_etc2_alpha(void* pBlock, const unsigned int* pSrc_pixels_rgba, etc2a_pack_params& pack_params) {
+        unsigned int pack_etc2_alpha(void* pBlock, const unsigned int* pSrc_pixels_rgba, etc2a_pack_params& pack_params)
+        {
             crnlib::color_quad_u8* pixels = (crnlib::color_quad_u8*)pSrc_pixels_rgba;
             dxt5_endpoint_optimizer dxt5_optimizer;
 
@@ -2665,29 +3117,37 @@ namespace crnlib {
             params.m_pPixels = pixels;
             params.m_num_pixels = 16;
             params.m_comp_index = pack_params.comp_index;
-            params.m_quality = pack_params.m_quality == cHighQuality ? cCRNDXTQualityUber : pack_params.m_quality == cMediumQuality ? cCRNDXTQualityNormal : cCRNDXTQualityFast;
+            params.m_quality = pack_params.m_quality == cHighQuality ? cCRNDXTQualityUber : pack_params.m_quality == cMediumQuality ? cCRNDXTQualityNormal
+                                                                                                                                    : cCRNDXTQualityFast;
             params.m_use_both_block_types = false;
             dxt5_optimizer.compute(params, results);
 
             uint base_codeword = (results.m_first_endpoint + results.m_second_endpoint + 1) >> 1;
             uint best_error = cUINT32_MAX;
-            for (int modifier_index = 0; modifier_index < 16; modifier_index++) {
+            for (int modifier_index = 0; modifier_index < 16; modifier_index++)
+            {
                 const int* modifier = g_etc2a_modifier_table[modifier_index];
                 int multiplier = math::clamp<int>((results.m_first_endpoint - results.m_second_endpoint + modifier[7] + (modifier[7] >> 1)) / (modifier[7] << 1), 1, 15);
                 uint8 data[8] = { (uint8)base_codeword, (uint8)(multiplier << 4 | modifier_index) }, values[8];
                 for (int i = 0; i < 8; i++)
+                {
                     values[i] = math::clamp<int>(base_codeword + modifier[i] * multiplier, 0, 255);
+                }
                 uint error = 0;
-                for (uint d0 = 3, t = 0, i = 0; i < 4; i++, d0 += 3) {
-                    for (uint d = d0, j = 0; j < 4; j++, t++, d += 12) {
+                for (uint d0 = 3, t = 0, i = 0; i < 4; i++, d0 += 3)
+                {
+                    for (uint d = d0, j = 0; j < 4; j++, t++, d += 12)
+                    {
                         int a = pixels[t].a;
                         uint byte_offset = 2 + (d >> 3);
                         uint bit_offset = d & 7;
                         uint best_s = 0;
                         uint best_delta = cUINT32_MAX;
-                        for (uint s = 0; s < 8; s++) {
+                        for (uint s = 0; s < 8; s++)
+                        {
                             uint delta = abs(a - values[s]);
-                            if (delta < best_delta) {
+                            if (delta < best_delta)
+                            {
                                 best_s = s;
                                 best_delta = delta;
                             }
@@ -2695,10 +3155,13 @@ namespace crnlib {
                         error += best_delta * best_delta;
                         data[byte_offset] |= best_s << (8 - bit_offset);
                         if (bit_offset < 3)
+                        {
                             data[byte_offset - 1] |= best_s >> bit_offset;
+                        }
                     }
                 }
-                if (error < best_error) {
+                if (error < best_error)
+                {
                     memcpy(pBlock, data, 8);
                     best_error = error;
                 }
@@ -2707,6 +3170,6 @@ namespace crnlib {
             return best_error;
         }
 
-    }  // namespace rg_etc1
+    } // namespace rg_etc1
 
-}  // namespace crnlib
+} // namespace crnlib

@@ -86,6 +86,7 @@ namespace crnlib
         {
             m_mutex.lock();
         }
+
         inline ~scoped_mutex()
         {
             m_mutex.unlock();
@@ -139,6 +140,7 @@ namespace crnlib
         {
             m_lock.lock();
         }
+
         inline ~scoped_spinlock()
         {
             m_lock.unlock();
@@ -208,6 +210,7 @@ namespace crnlib
         ~task_pool();
 
         enum { cMaxThreads = 16 };
+
         bool init(uint num_threads);
         void deinit();
 
@@ -215,6 +218,7 @@ namespace crnlib
         {
             return m_num_threads;
         }
+
         inline uint32 get_num_outstanding_tasks() const
         {
             return m_total_submitted_tasks - m_total_completed_tasks;
@@ -237,7 +241,8 @@ namespace crnlib
         inline bool queue_object_task(S* pObject, T pObject_method, uint64 data = 0, void* pData_ptr = nullptr);
 
         template <typename S, typename T>
-        inline bool queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks, void* pData_ptr = nullptr);
+        inline bool queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks,
+                                                void* pData_ptr = nullptr);
 
         void join();
 
@@ -255,7 +260,8 @@ namespace crnlib
             uint64 m_data;
             void* m_pData_ptr;
 
-            union {
+            union
+            {
                 task_callback_func m_callback;
                 executable_task* m_pObj;
             };
@@ -328,6 +334,7 @@ namespace crnlib
         {
             return m_pObject;
         }
+
         object_method_ptr get_method() const
         {
             return m_pMethod;
@@ -354,7 +361,7 @@ namespace crnlib
     template <typename S, typename T>
     inline bool task_pool::queue_object_task(S* pObject, T pObject_method, uint64 data, void* pData_ptr)
     {
-        object_task<S>* pTask = crnlib_new<object_task<S> >(pObject, pObject_method, cObjectTaskFlagDeleteAfterExecution);
+        object_task<S>* pTask = crnlib_new<object_task<S>>(pObject, pObject_method, cObjectTaskFlagDeleteAfterExecution);
         if (!pTask)
         {
             return false;
@@ -363,7 +370,8 @@ namespace crnlib
     }
 
     template <typename S, typename T>
-    inline bool task_pool::queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks, void* pData_ptr)
+    inline bool task_pool::queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks,
+                                                       void* pData_ptr)
     {
         CRNLIB_ASSERT(pObject);
         CRNLIB_ASSERT(num_tasks);
@@ -379,7 +387,7 @@ namespace crnlib
         {
             task tsk;
 
-            tsk.m_pObj = crnlib_new<object_task<S> >(pObject, pObject_method, cObjectTaskFlagDeleteAfterExecution);
+            tsk.m_pObj = crnlib_new<object_task<S>>(pObject, pObject_method, cObjectTaskFlagDeleteAfterExecution);
             if (!tsk.m_pObj)
             {
                 status = false;
@@ -408,6 +416,6 @@ namespace crnlib
 
         return status;
     }
-}  // namespace crnlib
+} // namespace crnlib
 
 #endif  // CRNLIB_USE_PTHREADS_API
