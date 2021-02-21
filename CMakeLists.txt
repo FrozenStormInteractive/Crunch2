@@ -28,5 +28,8 @@ add_subdirectory(3rdparty/miniz)
 add_subdirectory(3rdparty/stb)
 
 if (CRN_BUILD_EXAMPLES)
+    if(NOT WIN32)
+        message(WARNING "Examples aren't supported this platform.")
+    endif()
 	add_subdirectory(examples)
 endif(CRN_BUILD_EXAMPLES)
