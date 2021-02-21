@@ -5,19 +5,19 @@
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
  * arising from the use of this software.
- * 
+ *
  * Permission is granted to anyone to use this software for any purpose,
  * including commercial applications, and to alter it and redistribute it
  * freely, subject to the following restrictions:
- * 
+ *
  * 1. The origin of this software must not be misrepresented; you must not
  *    claim that you wrote the original software. If you use this software
  *    in a product, an acknowledgment in the product documentation or credits
  *    is required.
- * 
+ *
  * 2. Altered source versions must be plainly marked as such, and must not be
  *    misrepresented as being the original software.
- * 
+ *
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
@@ -28,10 +28,9 @@
 #include "crn_matrix.h"
 #include "crn_threading.h"
 
-
 namespace crnlib
 {
-    template <typename VectorType>
+    template<typename VectorType>
     class tree_clusterizer
     {
     public:
@@ -56,7 +55,7 @@ namespace crnlib
             }
             bool operator<(const NodeInfo& other) const
             {
-                return m_index < other.m_index ? m_variance < other.m_variance : !(other.m_variance < m_variance);
+                return m_index < other.m_index ? m_variance < other.m_variance : other.m_variance >= m_variance;
             }
         };
 
@@ -86,7 +85,6 @@ namespace crnlib
             m_nodes[pParams->main_node] = m_nodes[pParams->alternative_node];
             m_nodes[pParams->main_node].m_alternative = true;
         }
-
 
         void generate_codebook(VectorType* vectors, uint* weights, uint size, uint max_splits, bool generate_node_index_map = false, task_pool* pTask_pool = 0)
         {
@@ -203,7 +201,7 @@ namespace crnlib
 
         struct vq_node
         {
-            vq_node():
+            vq_node() :
                 m_centroid(cClear),
                 m_total_weight(0),
                 m_left(-1),
@@ -573,7 +571,7 @@ namespace crnlib
     };
 
     template<typename VectorType>
-    void split_vectors(VectorType(&vectors)[64], uint(&weights)[64], uint size, VectorType(&result)[2])
+    void split_vectors(VectorType (&vectors)[64], uint (&weights)[64], uint size, VectorType (&result)[2])
     {
         VectorType weightedVectors[64];
         double weightedDotProducts[64];
@@ -635,7 +633,9 @@ namespace crnlib
                 for (uint x = 0; x < N; x++)
                 {
                     for (uint y = x; y < N; y++)
+                    {
                         covar[x][y] = covar[x][y] + v[x] * w[y];
+                    }
                 }
             }
             float divider = (float)total_weight;
@@ -751,5 +751,4 @@ namespace crnlib
         result[0] = left_child;
         result[1] = right_child;
     }
-
-}  // namespace crnlib
+} // namespace crnlib
