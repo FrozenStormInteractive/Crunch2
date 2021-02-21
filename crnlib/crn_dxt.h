@@ -1,6 +1,28 @@
-// File: crn_dxt.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #pragma once
+
 #include "crnlib.h"
 #include "crn_color.h"
 #include "crn_vec.h"
@@ -43,8 +65,8 @@ namespace crnlib
         cDXT5,
         cDXT5A,
 
-        cDXN_XY,  // inverted relative to standard ATI2, 360's DXN
-        cDXN_YX,  // standard ATI2,
+        cDXN_XY, // inverted relative to standard ATI2, 360's DXN
+        cDXN_YX, // standard ATI2,
 
         cETC1,
         cETC2,
@@ -89,7 +111,10 @@ namespace crnlib
         uint8 m_low_color[2];
         uint8 m_high_color[2];
 
-        enum { cNumSelectorBytes = 4 };
+        enum
+        {
+            cNumSelectorBytes = 4
+        };
         uint8 m_selectors[cNumSelectorBytes];
 
         inline void clear()
@@ -128,7 +153,8 @@ namespace crnlib
         {
             return get_low_color() <= get_high_color();
         }
-        inline bool is_non_alpha_block() const {
+        inline bool is_non_alpha_block() const
+        {
             return !is_alpha_block();
         }
 
@@ -199,7 +225,10 @@ namespace crnlib
 
     struct dxt3_block
     {
-        enum { cNumAlphaBytes = 8 };
+        enum
+        {
+            cNumAlphaBytes = 8
+        };
         uint8 m_alpha[cNumAlphaBytes];
 
         void set_alpha(uint x, uint y, uint value, bool scaled);
@@ -238,7 +267,10 @@ namespace crnlib
     {
         uint8 m_endpoints[2];
 
-        enum { cNumSelectorBytes = 6 };
+        enum
+        {
+            cNumSelectorBytes = 6
+        };
         uint8 m_selectors[cNumSelectorBytes];
 
         inline void clear()
@@ -295,7 +327,9 @@ namespace crnlib
 
             uint v = m_selectors[byte_index];
             if (byte_index < (cNumSelectorBytes - 1))
+            {
                 v |= (m_selectors[byte_index + 1] << 8);
+            }
 
             return (v >> bit_ofs) & 7;
         }
@@ -312,7 +346,9 @@ namespace crnlib
 
             uint v = m_selectors[byte_index];
             if (byte_index < (cNumSelectorBytes - 1))
+            {
                 v |= (m_selectors[byte_index + 1] << 8);
+            }
 
             v &= (~(7 << bit_ofs));
             v |= (val << bit_ofs);
@@ -350,7 +386,10 @@ namespace crnlib
             }
         }
 
-        enum { cMaxSelectorValues = 8 };
+        enum
+        {
+            cMaxSelectorValues = 8
+        };
 
         // Results written to alpha channel.
         static uint get_block_values6(color_quad_u8* pDst, uint l, uint h);
@@ -370,7 +409,7 @@ namespace crnlib
 
     struct dxt_pixel_block
     {
-        color_quad_u8 m_pixels[cDXTBlockSize][cDXTBlockSize];  // [y][x]
+        color_quad_u8 m_pixels[cDXTBlockSize][cDXTBlockSize]; // [y][x]
 
         inline void clear()
         {
@@ -380,4 +419,4 @@ namespace crnlib
 
     CRNLIB_DEFINE_BITWISE_COPYABLE(dxt_pixel_block);
 
-}  // namespace crnlib
+} // namespace crnlib

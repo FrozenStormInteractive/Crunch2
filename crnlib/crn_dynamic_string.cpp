@@ -1,5 +1,25 @@
-// File: crn_dynamic_string.cpp
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
 
 #include "crn_core.h"
 #include "crn_strutils.h"
@@ -8,7 +28,7 @@ namespace crnlib
 {
     dynamic_string g_empty_dynamic_string;
 
-    dynamic_string::dynamic_string(eVarArg, const char* p, ...):
+    dynamic_string::dynamic_string(eVarArg, const char* p, ...) :
         m_buf_size(0),
         m_len(0),
         m_pStr(nullptr)
@@ -21,7 +41,7 @@ namespace crnlib
         va_end(args);
     }
 
-    dynamic_string::dynamic_string(const char* p):
+    dynamic_string::dynamic_string(const char* p) :
         m_buf_size(0),
         m_len(0),
         m_pStr(nullptr)
@@ -30,7 +50,7 @@ namespace crnlib
         set(p);
     }
 
-    dynamic_string::dynamic_string(const char* p, uint len):
+    dynamic_string::dynamic_string(const char* p, uint len) :
         m_buf_size(0),
         m_len(0),
         m_pStr(nullptr)
@@ -39,7 +59,7 @@ namespace crnlib
         set_from_buf(p, len);
     }
 
-    dynamic_string::dynamic_string(const dynamic_string& other):
+    dynamic_string::dynamic_string(const dynamic_string& other) :
         m_buf_size(0),
         m_len(0),
         m_pStr(nullptr)
@@ -553,7 +573,8 @@ namespace crnlib
         return -1;
     }
 
-    dynamic_string& dynamic_string::trim() {
+    dynamic_string& dynamic_string::trim()
+    {
         int s, e;
         for (s = 0; s < (int)m_len; s++)
         {
@@ -574,7 +595,8 @@ namespace crnlib
         return crop(s, e - s + 1);
     }
 
-    dynamic_string& dynamic_string::trim_crlf() {
+    dynamic_string& dynamic_string::trim_crlf()
+    {
         int s = 0, e;
 
         for (e = m_len - 1; e > s; e--)
@@ -588,7 +610,8 @@ namespace crnlib
         return crop(s, e - s + 1);
     }
 
-    dynamic_string& dynamic_string::remap(int from_char, int to_char) {
+    dynamic_string& dynamic_string::remap(int from_char, int to_char)
+    {
         for (uint i = 0; i < m_len; i++)
         {
             if (m_pStr[i] == from_char)
@@ -628,7 +651,9 @@ namespace crnlib
         if (buf_size_needed <= cUINT16_MAX)
         {
             if (buf_size_needed > m_buf_size)
+            {
                 expand_buf(buf_size_needed, preserve_contents);
+            }
         }
 
         return m_buf_size >= buf_size_needed;
@@ -749,4 +774,4 @@ namespace crnlib
 
         swap(tmp);
     }
-}  // namespace crnlib
+} // namespace crnlib

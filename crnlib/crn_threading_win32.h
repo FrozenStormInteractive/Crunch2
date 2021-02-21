@@ -1,5 +1,26 @@
-// File: crn_win32_threading.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #pragma once
 
 #include "crn_atomics.h"
@@ -9,380 +30,474 @@
 
 #include "crn_export.h"
 
-namespace crnlib {
-// g_number_of_processors defaults to 1. Will be higher on multicore machines.
+namespace crnlib
+{
+    // g_number_of_processors defaults to 1. Will be higher on multicore machines.
     CRN_EXPORT extern uint g_number_of_processors;
 
     CRN_EXPORT void crn_threading_init();
 
-typedef uint64 crn_thread_id_t;
-CRN_EXPORT crn_thread_id_t crn_get_current_thread_id();
+    typedef uint64 crn_thread_id_t;
+    CRN_EXPORT crn_thread_id_t crn_get_current_thread_id();
 
-CRN_EXPORT void crn_sleep(unsigned int milliseconds);
+    CRN_EXPORT void crn_sleep(unsigned int milliseconds);
 
-CRN_EXPORT uint crn_get_max_helper_threads();
+    CRN_EXPORT uint crn_get_max_helper_threads();
 
-class CRN_EXPORT mutex {
-  CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(mutex);
+    class CRN_EXPORT mutex
+    {
+        CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(mutex);
 
- public:
-  mutex(unsigned int spin_count = 0);
-  ~mutex();
-  void lock();
-  void unlock();
-  void set_spin_count(unsigned int count);
+    public:
+        mutex(unsigned int spin_count = 0);
+        ~mutex();
+        void lock();
+        void unlock();
+        void set_spin_count(unsigned int count);
 
- private:
-  int m_buf[12];
+    private:
+        int m_buf[12];
 
 #ifdef CRNLIB_BUILD_DEBUG
-  unsigned int m_lock_count;
+        unsigned int m_lock_count;
 #endif
-};
-
-class CRN_EXPORT scoped_mutex {
-  scoped_mutex(const scoped_mutex&);
-  scoped_mutex& operator=(const scoped_mutex&);
-
- public:
-  inline scoped_mutex(mutex& m)
-      : m_mutex(m) { m_mutex.lock(); }
-  inline ~scoped_mutex() { m_mutex.unlock(); }
-
- private:
-  mutex& m_mutex;
-};
-
-// Simple non-recursive spinlock.
-class CRN_EXPORT spinlock {
-  CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(spinlock);
-
- public:
-  inline spinlock()
-      : m_flag(0) {}
-
-  void lock(uint32 max_spins = 4096, bool yielding = true);
-
-  inline void lock_no_barrier(uint32 max_spins = 4096, bool yielding = true) { lock(max_spins, yielding); }
-
-  void unlock();
-
-  inline void unlock_no_barrier() { m_flag = CRNLIB_FALSE; }
-
- private:
-  volatile int32 m_flag;
-};
-
-class CRN_EXPORT scoped_spinlock {
-  scoped_spinlock(const scoped_spinlock&);
-  scoped_spinlock& operator=(const scoped_spinlock&);
-
- public:
-  inline scoped_spinlock(spinlock& lock)
-      : m_lock(lock) { m_lock.lock(); }
-  inline ~scoped_spinlock() { m_lock.unlock(); }
-
- private:
-  spinlock& m_lock;
-};
-
-class CRN_EXPORT semaphore {
-  CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(semaphore);
-
- public:
-  semaphore(int32 initialCount = 0, int32 maximumCount = 1, const char* pName = nullptr);
-
-  ~semaphore();
-
-  inline HANDLE get_handle(void) const { return m_handle; }
-
-  void release(int32 releaseCount = 1, int32* pPreviousCount = nullptr);
-  bool try_release(int32 releaseCount = 1, int32* pPreviousCount = nullptr);
-
-  bool wait(uint32 milliseconds = cUINT32_MAX);
-
- private:
-  HANDLE m_handle;
-};
-
-template <typename T>
-class tsstack {
-  CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(tsstack);
-
- public:
-  inline tsstack(bool use_freelist = true)
-      : m_use_freelist(use_freelist) {
-    CRNLIB_VERIFY(((ptr_bits_t)this & (CRNLIB_GET_ALIGNMENT(tsstack) - 1)) == 0);
-    InitializeSListHead(&m_stack_head);
-    InitializeSListHead(&m_freelist_head);
-  }
-
-  inline ~tsstack() {
-    clear();
-  }
-
-  inline void clear() {
-    for (;;) {
-      node* pNode = (node*)InterlockedPopEntrySList(&m_stack_head);
-      if (!pNode)
-        break;
-
-      CRNLIB_MEMORY_IMPORT_BARRIER
-
-      helpers::destruct(&pNode->m_obj);
-
-      crnlib_free(pNode);
-    }
-
-    flush_freelist();
-  }
-
-  inline void flush_freelist() {
-    if (!m_use_freelist)
-      return;
-
-    for (;;) {
-      node* pNode = (node*)InterlockedPopEntrySList(&m_freelist_head);
-      if (!pNode)
-        break;
-
-      CRNLIB_MEMORY_IMPORT_BARRIER
-
-      crnlib_free(pNode);
-    }
-  }
-
-  inline bool try_push(const T& obj) {
-    node* pNode = alloc_node();
-    if (!pNode)
-      return false;
-
-    helpers::construct(&pNode->m_obj, obj);
-
-    CRNLIB_MEMORY_EXPORT_BARRIER
-
-    InterlockedPushEntrySList(&m_stack_head, &pNode->m_slist_entry);
-
-    return true;
-  }
-
-  inline bool pop(T& obj) {
-    node* pNode = (node*)InterlockedPopEntrySList(&m_stack_head);
-    if (!pNode)
-      return false;
-
-    CRNLIB_MEMORY_IMPORT_BARRIER
-
-    obj = pNode->m_obj;
-
-    helpers::destruct(&pNode->m_obj);
-
-    free_node(pNode);
-
-    return true;
-  }
-
- private:
-  SLIST_HEADER m_stack_head;
-  SLIST_HEADER m_freelist_head;
-
-  struct node {
-    SLIST_ENTRY m_slist_entry;
-    T m_obj;
-  };
-
-  bool m_use_freelist;
-
-  inline node* alloc_node() {
-    node* pNode = m_use_freelist ? (node*)InterlockedPopEntrySList(&m_freelist_head) : nullptr;
-
-    if (!pNode)
-      pNode = (node*)crnlib_malloc(sizeof(node));
-
-    return pNode;
-  }
-
-  inline void free_node(node* pNode) {
-    if (m_use_freelist)
-      InterlockedPushEntrySList(&m_freelist_head, &pNode->m_slist_entry);
-    else
-      crnlib_free(pNode);
-  }
-};
-
-// Simple multithreaded task pool. This class assumes a single global thread will be issuing tasks and joining.
-class CRN_EXPORT task_pool {
-  CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(task_pool);
-
- public:
-  task_pool();
-  task_pool(uint num_threads);
-  ~task_pool();
-
-  enum { cMaxThreads = 16 };
-  bool init(uint num_threads);
-  void deinit();
-
-  inline uint get_num_threads() const { return m_num_threads; }
-  inline uint32 get_num_outstanding_tasks() const { return m_total_submitted_tasks - m_total_completed_tasks; }
-
-  // C-style task callback
-  typedef void (*task_callback_func)(uint64 data, void* pData_ptr);
-  bool queue_task(task_callback_func pFunc, uint64 data = 0, void* pData_ptr = nullptr);
-
-  class executable_task {
-   public:
-    virtual void execute_task(uint64 data, void* pData_ptr) = 0;
-  };
-
-  // It's the caller's responsibility to delete pObj within the execute_task() method, if needed!
-  bool queue_task(executable_task* pObj, uint64 data = 0, void* pData_ptr = nullptr);
-
-  template <typename S, typename T>
-  inline bool queue_object_task(S* pObject, T pObject_method, uint64 data = 0, void* pData_ptr = nullptr);
-
-  template <typename S, typename T>
-  inline bool queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks, void* pData_ptr = nullptr);
-
-  // Waits for all outstanding tasks (if any) to complete.
-  // The calling thread will steal any outstanding tasks from worker threads, if possible.
-  void join();
-
- private:
-  struct task {
-    //inline task() : m_data(0), m_pData_ptr(nullptr), m_pObj(nullptr), m_flags(0) { }
-
-    uint64 m_data;
-    void* m_pData_ptr;
-
-    union {
-      task_callback_func m_callback;
-      executable_task* m_pObj;
     };
 
-    uint m_flags;
-  };
+    class CRN_EXPORT scoped_mutex
+    {
+        scoped_mutex(const scoped_mutex&);
+        scoped_mutex& operator=(const scoped_mutex&);
 
-  typedef tsstack<task> ts_task_stack_t;
-  ts_task_stack_t* m_pTask_stack;
+    public:
+        inline scoped_mutex(mutex& m) :
+            m_mutex(m)
+        {
+            m_mutex.lock();
+        }
+        inline ~scoped_mutex()
+        {
+            m_mutex.unlock();
+        }
 
-  uint m_num_threads;
-  HANDLE m_threads[cMaxThreads];
+    private:
+        mutex& m_mutex;
+    };
 
-  // Signalled whenever a task is queued up.
-  semaphore m_tasks_available;
+    // Simple non-recursive spinlock.
+    class CRN_EXPORT spinlock
+    {
+        CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(spinlock);
 
-  // Signalled when all outstanding tasks are completed.
-  semaphore m_all_tasks_completed;
+    public:
+        inline spinlock() :
+            m_flag(0)
+        {
+        }
 
-  enum task_flags {
-    cTaskFlagObject = 1
-  };
+        void lock(uint32 max_spins = 4096, bool yielding = true);
 
-  volatile atomic32_t m_total_submitted_tasks;
-  volatile atomic32_t m_total_completed_tasks;
-  volatile atomic32_t m_exit_flag;
+        inline void lock_no_barrier(uint32 max_spins = 4096, bool yielding = true)
+        {
+            lock(max_spins, yielding);
+        }
 
-  void process_task(task& tsk);
+        void unlock();
 
-  static unsigned __stdcall thread_func(void* pContext);
-};
+        inline void unlock_no_barrier()
+        {
+            m_flag = CRNLIB_FALSE;
+        }
 
-enum object_task_flags {
-  cObjectTaskFlagDefault = 0,
-  cObjectTaskFlagDeleteAfterExecution = 1
-};
+    private:
+        volatile int32 m_flag;
+    };
 
-template <typename T>
-class object_task : public task_pool::executable_task {
- public:
-  object_task(uint flags = cObjectTaskFlagDefault)
-      : m_pObject(nullptr),
-        m_pMethod(nullptr),
-        m_flags(flags) {
-  }
+    class CRN_EXPORT scoped_spinlock
+    {
+        scoped_spinlock(const scoped_spinlock&);
+        scoped_spinlock& operator=(const scoped_spinlock&);
 
-  typedef void (T::*object_method_ptr)(uint64 data, void* pData_ptr);
+    public:
+        inline scoped_spinlock(spinlock& lock) :
+            m_lock(lock)
+        {
+            m_lock.lock();
+        }
+        inline ~scoped_spinlock()
+        {
+            m_lock.unlock();
+        }
 
-  object_task(T* pObject, object_method_ptr pMethod, uint flags = cObjectTaskFlagDefault)
-      : m_pObject(pObject),
-        m_pMethod(pMethod),
-        m_flags(flags) {
-    CRNLIB_ASSERT(pObject && pMethod);
-  }
+    private:
+        spinlock& m_lock;
+    };
 
-  void init(T* pObject, object_method_ptr pMethod, uint flags = cObjectTaskFlagDefault) {
-    CRNLIB_ASSERT(pObject && pMethod);
+    class CRN_EXPORT semaphore
+    {
+        CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(semaphore);
 
-    m_pObject = pObject;
-    m_pMethod = pMethod;
-    m_flags = flags;
-  }
+    public:
+        semaphore(int32 initialCount = 0, int32 maximumCount = 1, const char* pName = nullptr);
 
-  T* get_object() const { return m_pObject; }
-  object_method_ptr get_method() const { return m_pMethod; }
+        ~semaphore();
 
-  virtual void execute_task(uint64 data, void* pData_ptr) {
-    (m_pObject->*m_pMethod)(data, pData_ptr);
+        inline HANDLE get_handle(void) const
+        {
+            return m_handle;
+        }
 
-    if (m_flags & cObjectTaskFlagDeleteAfterExecution)
-      crnlib_delete(this);
-  }
+        void release(int32 releaseCount = 1, int32* pPreviousCount = nullptr);
+        bool try_release(int32 releaseCount = 1, int32* pPreviousCount = nullptr);
 
- protected:
-  T* m_pObject;
+        bool wait(uint32 milliseconds = cUINT32_MAX);
 
-  object_method_ptr m_pMethod;
+    private:
+        HANDLE m_handle;
+    };
 
-  uint m_flags;
-};
+    template<typename T>
+    class tsstack
+    {
+        CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(tsstack);
 
-template <typename S, typename T>
-inline bool task_pool::queue_object_task(S* pObject, T pObject_method, uint64 data, void* pData_ptr) {
-  object_task<S>* pTask = crnlib_new<object_task<S> >(pObject, pObject_method, cObjectTaskFlagDeleteAfterExecution);
-  if (!pTask)
-    return false;
-  return queue_task(pTask, data, pData_ptr);
-}
+    public:
+        inline tsstack(bool use_freelist = true) :
+            m_use_freelist(use_freelist)
+        {
+            CRNLIB_VERIFY(((ptr_bits_t)this & (CRNLIB_GET_ALIGNMENT(tsstack) - 1)) == 0);
+            InitializeSListHead(&m_stack_head);
+            InitializeSListHead(&m_freelist_head);
+        }
 
-template <typename S, typename T>
-inline bool task_pool::queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks, void* pData_ptr) {
-  CRNLIB_ASSERT(pObject);
-  CRNLIB_ASSERT(num_tasks);
-  if (!num_tasks)
-    return true;
+        inline ~tsstack()
+        {
+            clear();
+        }
 
-  bool status = true;
+        inline void clear()
+        {
+            for (;;)
+            {
+                node* pNode = (node*)InterlockedPopEntrySList(&m_stack_head);
+                if (!pNode)
+                {
+                    break;
+                }
 
-  uint i;
-  for (i = 0; i < num_tasks; i++) {
-    task tsk;
+                CRNLIB_MEMORY_IMPORT_BARRIER
 
-    tsk.m_pObj = crnlib_new<object_task<S> >(pObject, pObject_method, cObjectTaskFlagDeleteAfterExecution);
-    if (!tsk.m_pObj) {
-      status = false;
-      break;
+                helpers::destruct(&pNode->m_obj);
+
+                crnlib_free(pNode);
+            }
+
+            flush_freelist();
+        }
+
+        inline void flush_freelist()
+        {
+            if (!m_use_freelist)
+            {
+                return;
+            }
+
+            for (;;)
+            {
+                node* pNode = (node*)InterlockedPopEntrySList(&m_freelist_head);
+                if (!pNode)
+                {
+                    break;
+                }
+
+                CRNLIB_MEMORY_IMPORT_BARRIER
+
+                crnlib_free(pNode);
+            }
+        }
+
+        inline bool try_push(const T& obj)
+        {
+            node* pNode = alloc_node();
+            if (!pNode)
+            {
+                return false;
+            }
+
+            helpers::construct(&pNode->m_obj, obj);
+
+            CRNLIB_MEMORY_EXPORT_BARRIER
+
+            InterlockedPushEntrySList(&m_stack_head, &pNode->m_slist_entry);
+
+            return true;
+        }
+
+        inline bool pop(T& obj)
+        {
+            node* pNode = (node*)InterlockedPopEntrySList(&m_stack_head);
+            if (!pNode)
+            {
+                return false;
+            }
+
+            CRNLIB_MEMORY_IMPORT_BARRIER
+
+            obj = pNode->m_obj;
+
+            helpers::destruct(&pNode->m_obj);
+
+            free_node(pNode);
+
+            return true;
+        }
+
+    private:
+        SLIST_HEADER m_stack_head;
+        SLIST_HEADER m_freelist_head;
+
+        struct node
+        {
+            SLIST_ENTRY m_slist_entry;
+            T m_obj;
+        };
+
+        bool m_use_freelist;
+
+        inline node* alloc_node()
+        {
+            node* pNode = m_use_freelist ? (node*)InterlockedPopEntrySList(&m_freelist_head) : nullptr;
+
+            if (!pNode)
+            {
+                pNode = (node*)crnlib_malloc(sizeof(node));
+            }
+
+            return pNode;
+        }
+
+        inline void free_node(node* pNode)
+        {
+            if (m_use_freelist)
+            {
+                InterlockedPushEntrySList(&m_freelist_head, &pNode->m_slist_entry);
+            }
+            else
+            {
+                crnlib_free(pNode);
+            }
+        }
+    };
+
+    // Simple multithreaded task pool. This class assumes a single global thread will be issuing tasks and joining.
+    class CRN_EXPORT task_pool
+    {
+        CRNLIB_NO_COPY_OR_ASSIGNMENT_OP(task_pool);
+
+    public:
+        task_pool();
+        task_pool(uint num_threads);
+        ~task_pool();
+
+        enum
+        {
+            cMaxThreads = 16
+        };
+        bool init(uint num_threads);
+        void deinit();
+
+        inline uint get_num_threads() const
+        {
+            return m_num_threads;
+        }
+        inline uint32 get_num_outstanding_tasks() const
+        {
+            return m_total_submitted_tasks - m_total_completed_tasks;
+        }
+
+        // C-style task callback
+        typedef void (*task_callback_func)(uint64 data, void* pData_ptr);
+        bool queue_task(task_callback_func pFunc, uint64 data = 0, void* pData_ptr = nullptr);
+
+        class executable_task
+        {
+        public:
+            virtual void execute_task(uint64 data, void* pData_ptr) = 0;
+        };
+
+        // It's the caller's responsibility to delete pObj within the execute_task() method, if needed!
+        bool queue_task(executable_task* pObj, uint64 data = 0, void* pData_ptr = nullptr);
+
+        template<typename S, typename T>
+        inline bool queue_object_task(S* pObject, T pObject_method, uint64 data = 0, void* pData_ptr = nullptr);
+
+        template<typename S, typename T>
+        inline bool queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks, void* pData_ptr = nullptr);
+
+        // Waits for all outstanding tasks (if any) to complete.
+        // The calling thread will steal any outstanding tasks from worker threads, if possible.
+        void join();
+
+    private:
+        struct task
+        {
+            //inline task() : m_data(0), m_pData_ptr(nullptr), m_pObj(nullptr), m_flags(0) { }
+
+            uint64 m_data;
+            void* m_pData_ptr;
+
+            union
+            {
+                task_callback_func m_callback;
+                executable_task* m_pObj;
+            };
+
+            uint m_flags;
+        };
+
+        typedef tsstack<task> ts_task_stack_t;
+        ts_task_stack_t* m_pTask_stack;
+
+        uint m_num_threads;
+        HANDLE m_threads[cMaxThreads];
+
+        // Signalled whenever a task is queued up.
+        semaphore m_tasks_available;
+
+        // Signalled when all outstanding tasks are completed.
+        semaphore m_all_tasks_completed;
+
+        enum task_flags
+        {
+            cTaskFlagObject = 1
+        };
+
+        volatile atomic32_t m_total_submitted_tasks;
+        volatile atomic32_t m_total_completed_tasks;
+        volatile atomic32_t m_exit_flag;
+
+        void process_task(task& tsk);
+
+        static unsigned __stdcall thread_func(void* pContext);
+    };
+
+    enum object_task_flags
+    {
+        cObjectTaskFlagDefault = 0,
+        cObjectTaskFlagDeleteAfterExecution = 1
+    };
+
+    template<typename T>
+    class object_task : public task_pool::executable_task
+    {
+    public:
+        object_task(uint flags = cObjectTaskFlagDefault) :
+            m_pObject(nullptr),
+            m_pMethod(nullptr),
+            m_flags(flags)
+        {
+        }
+
+        typedef void (T::*object_method_ptr)(uint64 data, void* pData_ptr);
+
+        object_task(T* pObject, object_method_ptr pMethod, uint flags = cObjectTaskFlagDefault) :
+            m_pObject(pObject),
+            m_pMethod(pMethod),
+            m_flags(flags)
+        {
+            CRNLIB_ASSERT(pObject && pMethod);
+        }
+
+        void init(T* pObject, object_method_ptr pMethod, uint flags = cObjectTaskFlagDefault)
+        {
+            CRNLIB_ASSERT(pObject && pMethod);
+
+            m_pObject = pObject;
+            m_pMethod = pMethod;
+            m_flags = flags;
+        }
+
+        T* get_object() const
+        {
+            return m_pObject;
+        }
+        object_method_ptr get_method() const
+        {
+            return m_pMethod;
+        }
+
+        virtual void execute_task(uint64 data, void* pData_ptr)
+        {
+            (m_pObject->*m_pMethod)(data, pData_ptr);
+
+            if (m_flags & cObjectTaskFlagDeleteAfterExecution)
+            {
+                crnlib_delete(this);
+            }
+        }
+
+    protected:
+        T* m_pObject;
+
+        object_method_ptr m_pMethod;
+
+        uint m_flags;
+    };
+
+    template<typename S, typename T>
+    inline bool task_pool::queue_object_task(S* pObject, T pObject_method, uint64 data, void* pData_ptr)
+    {
+        object_task<S>* pTask = crnlib_new<object_task<S>>(pObject, pObject_method, cObjectTaskFlagDeleteAfterExecution);
+        if (!pTask)
+        {
+            return false;
+        }
+        return queue_task(pTask, data, pData_ptr);
     }
 
-    tsk.m_data = first_data + i;
-    tsk.m_pData_ptr = pData_ptr;
-    tsk.m_flags = cTaskFlagObject;
+    template<typename S, typename T>
+    inline bool task_pool::queue_multiple_object_tasks(S* pObject, T pObject_method, uint64 first_data, uint num_tasks, void* pData_ptr)
+    {
+        CRNLIB_ASSERT(pObject);
+        CRNLIB_ASSERT(num_tasks);
+        if (!num_tasks)
+        {
+            return true;
+        }
 
-    atomic_increment32(&m_total_submitted_tasks);
+        bool status = true;
 
-    if (!m_pTask_stack->try_push(tsk)) {
-      atomic_increment32(&m_total_completed_tasks);
+        uint i;
+        for (i = 0; i < num_tasks; i++)
+        {
+            task tsk;
 
-      status = false;
-      break;
+            tsk.m_pObj = crnlib_new<object_task<S>>(pObject, pObject_method, cObjectTaskFlagDeleteAfterExecution);
+            if (!tsk.m_pObj)
+            {
+                status = false;
+                break;
+            }
+
+            tsk.m_data = first_data + i;
+            tsk.m_pData_ptr = pData_ptr;
+            tsk.m_flags = cTaskFlagObject;
+
+            atomic_increment32(&m_total_submitted_tasks);
+
+            if (!m_pTask_stack->try_push(tsk))
+            {
+                atomic_increment32(&m_total_completed_tasks);
+
+                status = false;
+                break;
+            }
+        }
+
+        if (i)
+        {
+            m_tasks_available.release(i);
+        }
+
+        return status;
     }
-  }
-
-  if (i) {
-    m_tasks_available.release(i);
-  }
-
-  return status;
-}
-
-}  // namespace crnlib
+} // namespace crnlib

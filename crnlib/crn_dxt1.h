@@ -1,5 +1,26 @@
-// File: crn_dxt1.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #pragma once
 
 #include "crn_dxt.h"
@@ -9,19 +30,19 @@ namespace crnlib
 {
     struct CRN_EXPORT dxt1_solution_coordinates
     {
-        inline dxt1_solution_coordinates():
+        inline dxt1_solution_coordinates() :
             m_low_color(0),
             m_high_color(0)
         {
         }
 
-        inline dxt1_solution_coordinates(uint16 l, uint16 h):
+        inline dxt1_solution_coordinates(uint16 l, uint16 h) :
             m_low_color(l),
             m_high_color(h)
         {
         }
 
-        inline dxt1_solution_coordinates(const color_quad_u8& l, const color_quad_u8& h, bool scaled = true):
+        inline dxt1_solution_coordinates(const color_quad_u8& l, const color_quad_u8& h, bool scaled = true) :
             m_low_color(dxt1_block::pack_color(l, scaled)),
             m_high_color(dxt1_block::pack_color(h, scaled))
         {
@@ -117,7 +138,7 @@ namespace crnlib
         inline unique_color()
         {
         }
-        inline unique_color(const color_quad_u8& color, uint weight):
+        inline unique_color(const color_quad_u8& color, uint weight) :
             m_color(color),
             m_weight(weight)
         {
@@ -146,7 +167,7 @@ namespace crnlib
 
         struct params
         {
-            params():
+            params() :
                 m_block_index(0),
                 m_pPixels(nullptr),
                 m_num_pixels(0),
@@ -181,7 +202,8 @@ namespace crnlib
 
         struct results
         {
-            inline results(): m_pSelectors(nullptr)
+            inline results() :
+                m_pSelectors(nullptr)
             {
             }
 
@@ -213,11 +235,12 @@ namespace crnlib
         typedef crnlib::hash_map<uint32, uint32> unique_color_hash_map;
         unique_color_hash_map m_unique_color_hash_map;
 
-        unique_color_vec m_unique_colors;  // excludes transparent colors!
+        unique_color_vec m_unique_colors; // excludes transparent colors!
         unique_color_vec m_evaluated_colors;
         unique_color_vec m_temp_unique_colors;
 
-        struct {
+        struct
+        {
             uint64 low, high;
         } m_rDist[32], m_gDist[64], m_bDist[32];
 
@@ -239,7 +262,10 @@ namespace crnlib
         crnlib::vector<vec3F> m_low_coords;
         crnlib::vector<vec3F> m_high_coords;
 
-        enum { cMaxPrevResults = 4 };
+        enum
+        {
+            cMaxPrevResults = 4
+        };
         dxt1_solution_coordinates m_prev_results[cMaxPrevResults];
         uint m_num_prev_results;
 
@@ -248,7 +274,7 @@ namespace crnlib
 
         struct potential_solution
         {
-            potential_solution():
+            potential_solution() :
                 m_coords(),
                 m_error(cUINT64_MAX),
                 m_alpha_block(false)
@@ -311,7 +337,7 @@ namespace crnlib
         void compute_vectors(const vec3F& perceptual_weights);
         void return_solution();
         void try_combinatorial_encoding();
-        void compute_endpoint_component_errors(uint comp_index, uint64(&error)[4][256], uint64(&best_remaining_error)[4]);
+        void compute_endpoint_component_errors(uint comp_index, uint64 (&error)[4][256], uint64 (&best_remaining_error)[4]);
         void optimize_endpoint_comps();
         void optimize_endpoints(vec3F& low_color, vec3F& high_color);
         bool try_alpha_as_black_optimization();
@@ -324,4 +350,4 @@ namespace crnlib
 
         inline uint color_distance(bool perceptual, const color_quad_u8& e1, const color_quad_u8& e2, bool alpha);
     };
-}  // namespace crnlib
+} // namespace crnlib

@@ -1,6 +1,28 @@
-// File: crn_buffer_stream.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #pragma once
+
 #include "crn_data_stream.h"
 
 namespace crnlib
@@ -8,14 +30,16 @@ namespace crnlib
     class buffer_stream : public data_stream
     {
     public:
-        buffer_stream(): data_stream(),
+        buffer_stream() :
+            data_stream(),
             m_pBuf(nullptr),
             m_size(0),
             m_ofs(0)
         {
         }
 
-        buffer_stream(void* p, uint size): data_stream(),
+        buffer_stream(void* p, uint size) :
+            data_stream(),
             m_pBuf(nullptr),
             m_size(0),
             m_ofs(0)
@@ -23,7 +47,8 @@ namespace crnlib
             open(p, size);
         }
 
-        buffer_stream(const void* p, uint size): data_stream(),
+        buffer_stream(const void* p, uint size) :
+            data_stream(),
             m_pBuf(nullptr),
             m_size(0),
             m_ofs(0)
@@ -151,7 +176,8 @@ namespace crnlib
             return len;
         }
 
-        virtual bool flush() {
+        virtual bool flush()
+        {
             if (!m_opened)
             {
                 return false;
@@ -160,7 +186,8 @@ namespace crnlib
             return true;
         }
 
-        virtual uint64 get_size() {
+        virtual uint64 get_size()
+        {
             if (!m_opened)
             {
                 return 0;
@@ -169,7 +196,8 @@ namespace crnlib
             return m_size;
         }
 
-        virtual uint64 get_remaining() {
+        virtual uint64 get_remaining()
+        {
             if (!m_opened)
             {
                 return 0;
@@ -180,7 +208,8 @@ namespace crnlib
             return m_size - m_ofs;
         }
 
-        virtual uint64 get_ofs() {
+        virtual uint64 get_ofs()
+        {
             if (!m_opened)
             {
                 return 0;
@@ -189,7 +218,8 @@ namespace crnlib
             return m_ofs;
         }
 
-        virtual bool seek(int64 ofs, bool relative) {
+        virtual bool seek(int64 ofs, bool relative)
+        {
             if ((!m_opened) || (!is_seekable()))
             {
                 return false;
@@ -219,4 +249,4 @@ namespace crnlib
         uint m_ofs;
     };
 
-}  // namespace crnlib
+} // namespace crnlib

@@ -1,4 +1,26 @@
-// File: dds_defs.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ * 
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ * 
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ * 
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 // DX9 .DDS file header definitions.
 
 #ifndef CRNLIB_DDS_DEFS_H
@@ -19,9 +41,12 @@ namespace crnlib
         PIXEL_FMT_DXT3 = CRNLIB_PIXEL_FMT_FOURCC('D', 'X', 'T', '3'),
         PIXEL_FMT_DXT4 = CRNLIB_PIXEL_FMT_FOURCC('D', 'X', 'T', '4'),
         PIXEL_FMT_DXT5 = CRNLIB_PIXEL_FMT_FOURCC('D', 'X', 'T', '5'),
-        PIXEL_FMT_3DC = CRNLIB_PIXEL_FMT_FOURCC('A', 'T', 'I', '2'),    // DXN_YX
-        PIXEL_FMT_DXN = CRNLIB_PIXEL_FMT_FOURCC('A', '2', 'X', 'Y'),    // DXN_XY
-        PIXEL_FMT_DXT5A = CRNLIB_PIXEL_FMT_FOURCC('A', 'T', 'I', '1'),  // ATI1N, http://developer.amd.com/media/gpu_assets/Radeon_X1x00_Programming_Guide.pdf
+        PIXEL_FMT_3DC = CRNLIB_PIXEL_FMT_FOURCC('A', 'T', 'I', '2'),
+        // DXN_YX
+        PIXEL_FMT_DXN = CRNLIB_PIXEL_FMT_FOURCC('A', '2', 'X', 'Y'),
+        // DXN_XY
+        PIXEL_FMT_DXT5A = CRNLIB_PIXEL_FMT_FOURCC('A', 'T', 'I', '1'),
+        // ATI1N, http://developer.amd.com/media/gpu_assets/Radeon_X1x00_Programming_Guide.pdf
 
         // Non-standard, crnlib-specific pixel formats (some of these are supported by ATI's Compressonator)
         PIXEL_FMT_DXT5_CCxY = CRNLIB_PIXEL_FMT_FOURCC('C', 'C', 'x', 'Y'),
@@ -62,7 +87,7 @@ namespace crnlib
         crn_uint32 dwSize;
         crn_uint32 dwFlags;
         crn_uint32 dwFourCC;
-        crn_uint32 dwRGBBitCount;  // ATI compressonator and crnlib will place a FOURCC code here for swizzled/cooked DXTn formats
+        crn_uint32 dwRGBBitCount; // ATI compressonator and crnlib will place a FOURCC code here for swizzled/cooked DXTn formats
         crn_uint32 dwRBitMask;
         crn_uint32 dwGBitMask;
         crn_uint32 dwBBitMask;
@@ -83,10 +108,13 @@ namespace crnlib
         crn_uint32 dwFlags;
         crn_uint32 dwHeight;
         crn_uint32 dwWidth;
-        union {
+
+        union
+        {
             crn_int32 lPitch;
             crn_uint32 dwLinearSize;
         };
+
         crn_uint32 dwBackBufferCount;
         crn_uint32 dwMipMapCount;
         crn_uint32 dwAlphaBitDepth;
@@ -150,7 +178,6 @@ namespace crnlib
     const crn_uint32 DDSCAPS2_CUBEMAP_NEGATIVEZ = 0x00008000;
 
     const crn_uint32 DDSCAPS2_VOLUME = 0x00200000;
-
-}  // namespace crnlib
+} // namespace crnlib
 
 #endif  // CRNLIB_DDS_DEFS_H

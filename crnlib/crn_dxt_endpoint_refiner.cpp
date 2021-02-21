@@ -1,5 +1,25 @@
-// File: crn_dxt_endpoint_refiner.cpp
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
 
 #include "crn_core.h"
 #include "crn_dxt_endpoint_refiner.h"
@@ -140,7 +160,8 @@ namespace crnlib
 
         uint16 solutions[529];
         uint solutions_count = 0;
-        solutions[solutions_count++] = L0 == H0 ? H0 ? H0 - 1 << 8 | L0 : 1 : L0 > H0 ? H0 << 8 | L0 : L0 << 8 | H0;
+        solutions[solutions_count++] = L0 == H0 ? H0 ? H0 - 1 << 8 | L0 : 1 : L0 > H0 ? H0 << 8 | L0
+                                                                                      : L0 << 8 | H0;
         uint8 minL = L0 <= 11 ? 0 : L0 - 11, maxL = L0 >= 244 ? 255 : L0 + 11;
         uint8 minH = H0 <= 11 ? 0 : H0 - 11, maxH = H0 >= 244 ? 255 : H0 + 11;
         for (uint16 L = minL; L <= maxL; L++)
@@ -149,7 +170,8 @@ namespace crnlib
             {
                 if ((maxH < L || L <= H || H < minL) && (L != L0 || H != H0) && (L != H0 || H != L0))
                 {
-                    solutions[solutions_count++] = L == H ? H ? H - 1 << 8 | L : 1 : L > H ? H << 8 | L : L << 8 | H;
+                    solutions[solutions_count++] = L == H ? H ? H - 1 << 8 | L : 1 : L > H ? H << 8 | L
+                                                                                           : L << 8 | H;
                 }
             }
         }
@@ -242,8 +264,16 @@ namespace crnlib
                 uint16 H = solutions[i] >> 16;
                 if (L == H)
                 {
-                    L += !preserveL ? ~L & 0x1F ? 0x1 : ~L & 0xF800 ? 0x800 : ~L & 0x7E0 ? 0x20 : 0 : !L ? 0x1 : 0;
-                    H -= preserveL ? H & 0x1F ? 0x1 : H & 0xF800 ? 0x800 : H & 0x7E0 ? 0x20 : 0 : H == 0xFFFF ? 0x1 : 0;
+                    L += !preserveL ? ~L & 0x1F ? 0x1 : ~L & 0xF800 ? 0x800
+                            : ~L & 0x7E0                            ? 0x20
+                                                                    : 0
+                        : !L        ? 0x1
+                                    : 0;
+                    H -= preserveL    ? H & 0x1F ? 0x1 : H & 0xF800 ? 0x800
+                               : H & 0x7E0                          ? 0x20
+                                                                    : 0
+                        : H == 0xFFFF ? 0x1
+                                      : 0;
                 }
                 color_quad_u8 block_colors[4];
                 dxt1_block::get_block_colors4(block_colors, L, H);
@@ -270,4 +300,4 @@ namespace crnlib
             }
         }
     }
-}  // namespace crnlib
+} // namespace crnlib

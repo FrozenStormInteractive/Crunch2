@@ -1,6 +1,26 @@
-// File: crn_arealist.cpp - 2D shape algebra (currently unused)
-// See Copyright Notice and license at the end of inc/crnlib.h
-// Ported from the PowerView DOS image viewer, a product I wrote back in 1993. Not currently used in the open source release of crnlib.
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #include "crn_core.h"
 #include "crn_arealist.h"
 
@@ -8,7 +28,6 @@
 
 namespace crnlib
 {
-
     static void area_fatal_error(const char*, const char* pMsg, ...)
     {
         va_list args;
@@ -28,7 +47,7 @@ namespace crnlib
 
     static Area* delete_area(Area_List* Plist, Area* Parea)
     {
-        Area* p, * q;
+        Area *p, *q;
 
 #ifdef RECT_DEBUG
         if ((Parea == Plist->Phead) || (Parea == Plist->Ptail))
@@ -71,7 +90,7 @@ namespace crnlib
 
     static Area* insert_area_before(Area_List* Plist, Area* Parea, int x1, int y1, int x2, int y2)
     {
-        Area* p, * Pnew_area = alloc_area(Plist);
+        Area *p, *Pnew_area = alloc_area(Plist);
 
         p = Parea->Pprev;
 
@@ -92,7 +111,7 @@ namespace crnlib
 
     static Area* insert_area_after(Area_List* Plist, Area* Parea, int x1, int y1, int x2, int y2)
     {
-        Area* p, * Pnew_area = alloc_area(Plist);
+        Area *p, *Pnew_area = alloc_area(Plist);
 
         p = Parea->Pnext;
 
@@ -180,8 +199,12 @@ namespace crnlib
 
         for (i = 0; i < Plist->total_areas; i++)
         {
-            Pnew_list->Phead[i].Pnext = (Plist->Phead[i].Pnext == nullptr) ? nullptr : (Plist->Phead[i].Pnext - Plist->Phead) + Pnew_list->Phead;
-            Pnew_list->Phead[i].Pprev = (Plist->Phead[i].Pprev == nullptr) ? nullptr : (Plist->Phead[i].Pprev - Plist->Phead) + Pnew_list->Phead;
+            Pnew_list->Phead[i].Pnext = (Plist->Phead[i].Pnext == nullptr)
+                ? nullptr
+                : (Plist->Phead[i].Pnext - Plist->Phead) + Pnew_list->Phead;
+            Pnew_list->Phead[i].Pprev = (Plist->Phead[i].Pprev == nullptr)
+                ? nullptr
+                : (Plist->Phead[i].Pprev - Plist->Phead) + Pnew_list->Phead;
 
             Pnew_list->Phead[i].x1 += x_ofs;
             Pnew_list->Phead[i].y1 += y_ofs;
@@ -226,8 +249,12 @@ namespace crnlib
         {
             for (i = 0; i < Psrc_list->total_areas; i++)
             {
-                Pdst_list->Phead[i].Pnext = (Psrc_list->Phead[i].Pnext == nullptr) ? nullptr : (Psrc_list->Phead[i].Pnext - Psrc_list->Phead) + Pdst_list->Phead;
-                Pdst_list->Phead[i].Pprev = (Psrc_list->Phead[i].Pprev == nullptr) ? nullptr : (Psrc_list->Phead[i].Pprev - Psrc_list->Phead) + Pdst_list->Phead;
+                Pdst_list->Phead[i].Pnext = (Psrc_list->Phead[i].Pnext == nullptr)
+                    ? nullptr
+                    : (Psrc_list->Phead[i].Pnext - Psrc_list->Phead) + Pdst_list->Phead;
+                Pdst_list->Phead[i].Pprev = (Psrc_list->Phead[i].Pprev == nullptr)
+                    ? nullptr
+                    : (Psrc_list->Phead[i].Pprev - Psrc_list->Phead) + Pdst_list->Phead;
 
                 Pdst_list->Phead[i].x1 += x_ofs;
                 Pdst_list->Phead[i].y1 += y_ofs;
@@ -239,8 +266,12 @@ namespace crnlib
         {
             for (i = 0; i < Psrc_list->total_areas; i++)
             {
-                Pdst_list->Phead[i].Pnext = (Psrc_list->Phead[i].Pnext == nullptr) ? nullptr : (Psrc_list->Phead[i].Pnext - Psrc_list->Phead) + Pdst_list->Phead;
-                Pdst_list->Phead[i].Pprev = (Psrc_list->Phead[i].Pprev == nullptr) ? nullptr : (Psrc_list->Phead[i].Pprev - Psrc_list->Phead) + Pdst_list->Phead;
+                Pdst_list->Phead[i].Pnext = (Psrc_list->Phead[i].Pnext == nullptr)
+                    ? nullptr
+                    : (Psrc_list->Phead[i].Pnext - Psrc_list->Phead) + Pdst_list->Phead;
+                Pdst_list->Phead[i].Pprev = (Psrc_list->Phead[i].Pprev == nullptr)
+                    ? nullptr
+                    : (Psrc_list->Phead[i].Pprev - Psrc_list->Phead) + Pdst_list->Phead;
             }
         }
     }
@@ -484,7 +515,8 @@ namespace crnlib
                     if ((y2 == Parea->y1 - 1) || (y1 == Parea->y2 + 1))
                     {
                         delete_area(Plist, Parea);
-                        Area_List_insert(Plist, x1, math::minimum(y1, Parea->y1), x2, math::maximum(y2, Parea->y2), CRNLIB_TRUE);
+                        Area_List_insert(Plist, x1, math::minimum(y1, Parea->y1), x2, math::maximum(y2, Parea->y2),
+                            CRNLIB_TRUE);
                         return;
                     }
                 }
@@ -493,7 +525,8 @@ namespace crnlib
                     if ((x2 == Parea->x1 - 1) || (x1 == Parea->x2 + 1))
                     {
                         delete_area(Plist, Parea);
-                        Area_List_insert(Plist, math::minimum(x1, Parea->x1), y1, math::maximum(x2, Parea->x2), y2, CRNLIB_TRUE);
+                        Area_List_insert(Plist, math::minimum(x1, Parea->x1), y1, math::maximum(x2, Parea->x2), y2,
+                            CRNLIB_TRUE);
                         return;
                     }
                 }
@@ -669,5 +702,4 @@ namespace crnlib
 
         return Pnew_list;
     }
-
-}  // namespace crnlib
+} // namespace crnlib

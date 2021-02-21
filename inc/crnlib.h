@@ -1,8 +1,26 @@
-// File: crnlib.h - Advanced DXTn texture compression library.
-// Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
-// Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
-// See copyright notice and license at the end of this file.
-//
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 // This header file contains the public crnlib declarations for DXTn,
 // clustered DXTn, and CRN compression/decompression.
 //
@@ -10,15 +28,18 @@
 // all you want to do is transcode .CRN files to raw DXTn bits at run-time.
 // The crn_decomp.h header file library contains all the code necessary for
 // decompression.
-//
+
 // Important: If compiling with gcc, be sure strict aliasing is disabled: -fno-strict-aliasing
+
 #ifndef CRNLIB_H
 #define CRNLIB_H
+
+#include <cstddef>
 
 #include "crn_export.h"
 
 #ifdef _MSC_VER
-#pragma warning(disable : 4127)  //  conditional expression is constant
+#pragma warning(disable : 4127) //  conditional expression is constant
 #endif
 
 #define CRNLIB_SUPPORT_ATI_COMPRESS 0
@@ -33,7 +54,8 @@ typedef signed int crn_int32;
 typedef unsigned int crn_bool;
 
 // crnlib can compress to these file types.
-enum crn_file_type {
+enum crn_file_type
+{
     // .CRN
     cCRNFileTypeCRN = 0,
 
@@ -46,7 +68,8 @@ enum crn_file_type {
 // Supported compressed pixel formats.
 // Basically all the standard DX9 formats, with some swizzled DXT5 formats
 // (most of them supported by ATI's Compressonator), along with some ATI/X360 GPU specific formats.
-enum crn_format {
+enum crn_format
+{
     cCRNFmtInvalid = -1,
 
     cCRNFmtDXT1 = 0,
@@ -59,10 +82,14 @@ enum crn_format {
     cCRNFmtDXT5,
 
     // Various DXT5 derivatives
-    cCRNFmtDXT5_CCxY,  // Luma-chroma
-    cCRNFmtDXT5_xGxR,  // Swizzled 2-component
-    cCRNFmtDXT5_xGBR,  // Swizzled 3-component
-    cCRNFmtDXT5_AGBR,  // Swizzled 4-component
+    cCRNFmtDXT5_CCxY,
+    // Luma-chroma
+    cCRNFmtDXT5_xGxR,
+    // Swizzled 2-component
+    cCRNFmtDXT5_xGBR,
+    // Swizzled 3-component
+    cCRNFmtDXT5_AGBR,
+    // Swizzled 4-component
 
     // ATI 3DC and X360 DXN
     cCRNFmtDXN_XY,
@@ -83,7 +110,8 @@ enum crn_format {
 };
 
 // Various library/file format limits.
-enum crn_limits {
+enum crn_limits
+{
     // Max. mipmap level resolution on any axis.
     cCRNMaxLevelResolution = 4096,
 
@@ -101,7 +129,8 @@ enum crn_limits {
 
 // CRN/DDS compression flags.
 // See the m_flags member in the crn_comp_params struct, below.
-enum crn_comp_flags {
+enum crn_comp_flags
+{
     // Enables perceptual colorspace distance metrics if set.
     // Important: Be sure to disable this when compressing non-sRGB colorspace images, like normal maps!
     // Default: Set
@@ -156,7 +185,8 @@ enum crn_comp_flags {
 };
 
 // Controls DXTn quality vs. speed control - only used when compressing to .DDS.
-enum crn_dxt_quality {
+enum crn_dxt_quality
+{
     cCRNDXTQualitySuperFast,
     cCRNDXTQualityFast,
     cCRNDXTQualityNormal,
@@ -169,10 +199,14 @@ enum crn_dxt_quality {
 };
 
 // Which DXTn compressor to use when compressing to plain (non-clustered) .DDS.
-enum crn_dxt_compressor_type {
-    cCRNDXTCompressorCRN,   // Use crnlib's ETC1 or DXTc block compressor (default, highest quality, comparable or better than ati_compress or squish, and crnlib's ETC1 is a lot fasterw with similiar quality to Erricson's)
-    cCRNDXTCompressorCRNF,  // Use crnlib's "fast" DXTc block compressor
-    cCRNDXTCompressorRYG,   // Use RYG's DXTc block compressor (low quality, but very fast)
+enum crn_dxt_compressor_type
+{
+    cCRNDXTCompressorCRN,
+    // Use crnlib's ETC1 or DXTc block compressor (default, highest quality, comparable or better than ati_compress or squish, and crnlib's ETC1 is a lot fasterw with similiar quality to Erricson's)
+    cCRNDXTCompressorCRNF,
+    // Use crnlib's "fast" DXTc block compressor
+    cCRNDXTCompressorRYG,
+// Use RYG's DXTc block compressor (low quality, but very fast)
 
 #if CRNLIB_SUPPORT_ATI_COMPRESS
     cCRNDXTCompressorATI,
@@ -191,14 +225,19 @@ enum crn_dxt_compressor_type {
 // Processing will stop prematurely (and fail) if the callback returns false.
 // phase_index, total_phases - high level progress
 // subphase_index, total_subphases - progress within current phase
-typedef crn_bool(*crn_progress_callback_func)(crn_uint32 phase_index, crn_uint32 total_phases, crn_uint32 subphase_index, crn_uint32 total_subphases, void* pUser_data_ptr);
+typedef crn_bool (*crn_progress_callback_func)(crn_uint32 phase_index, crn_uint32 total_phases, crn_uint32 subphase_index, crn_uint32 total_subphases, void* pUser_data_ptr);
 
 // CRN/DDS compression parameters struct.
-struct crn_comp_params {
-    inline crn_comp_params() { clear(); }
+struct crn_comp_params
+{
+    inline crn_comp_params()
+    {
+        clear();
+    }
 
     // Clear struct to default parameters.
-    inline void clear() {
+    inline void clear()
+    {
         m_size_of_obj = sizeof(*this);
         m_file_type = cCRNFileTypeCRN;
         m_faces = 1;
@@ -209,8 +248,12 @@ struct crn_comp_params {
         m_flags = cCRNCompFlagPerceptual | cCRNCompFlagHierarchical | cCRNCompFlagUseBothBlockTypes;
 
         for (crn_uint32 f = 0; f < cCRNMaxFaces; f++)
+        {
             for (crn_uint32 l = 0; l < cCRNMaxLevels; l++)
+            {
                 m_pImages[f][l] = NULL;
+            }
+        }
 
         m_target_bitrate = 0.0f;
         m_quality_level = cCRNMaxQualityLevel;
@@ -233,12 +276,14 @@ struct crn_comp_params {
         m_pProgress_func_data = NULL;
     }
 
-    inline bool operator==(const crn_comp_params& rhs) const {
-#define CRNLIB_COMP(x)  \
-  do {                  \
-    if ((x) != (rhs.x)) \
-      return false;     \
-  } while (0)
+    inline bool operator==(const crn_comp_params& rhs) const
+    {
+#define CRNLIB_COMP(x) \
+    do \
+    { \
+        if ((x) != (rhs.x)) \
+            return false; \
+    } while (0)
         CRNLIB_COMP(m_size_of_obj);
         CRNLIB_COMP(m_file_type);
         CRNLIB_COMP(m_faces);
@@ -274,7 +319,8 @@ struct crn_comp_params {
     }
 
     // Returns true if the input parameters are reasonable.
-    inline bool check() const {
+    inline bool check() const
+    {
         if ((m_file_type > cCRNFileTypeDDS) ||
             (((int)m_quality_level < (int)cCRNMinQualityLevel) || ((int)m_quality_level > (int)cCRNMaxQualityLevel)) ||
             (m_dxt1a_alpha_threshold > 255) ||
@@ -290,32 +336,40 @@ struct crn_comp_params {
             (m_alpha_component > 3) ||
             (m_num_helper_threads > cCRNMaxHelperThreads) ||
             (m_dxt_quality > cCRNDXTQualityUber) ||
-            (m_dxt_compressor_type >= cCRNTotalDXTCompressors)) {
+            (m_dxt_compressor_type >= cCRNTotalDXTCompressors))
+        {
             return false;
         }
         return true;
     }
 
     // Helper to set/get flags from m_flags member.
-    inline bool get_flag(crn_comp_flags flag) const { return (m_flags & flag) != 0; }
-    inline void set_flag(crn_comp_flags flag, bool val) {
+    inline bool get_flag(crn_comp_flags flag) const
+    {
+        return (m_flags & flag) != 0;
+    }
+
+    inline void set_flag(crn_comp_flags flag, bool val)
+    {
         m_flags &= ~flag;
         if (val)
+        {
             m_flags |= flag;
+        }
     }
 
     crn_uint32 m_size_of_obj;
 
-    crn_file_type m_file_type;  // Output file type: cCRNFileTypeCRN or cCRNFileTypeDDS.
+    crn_file_type m_file_type; // Output file type: cCRNFileTypeCRN or cCRNFileTypeDDS.
 
-    crn_uint32 m_faces;   // 1 (2D map) or 6 (cubemap)
-    crn_uint32 m_width;   // [1,cCRNMaxLevelResolution], non-power of 2 OK, non-square OK
-    crn_uint32 m_height;  // [1,cCRNMaxLevelResolution], non-power of 2 OK, non-square OK
-    crn_uint32 m_levels;  // [1,cCRNMaxLevelResolution], non-power of 2 OK, non-square OK
+    crn_uint32 m_faces; // 1 (2D map) or 6 (cubemap)
+    crn_uint32 m_width; // [1,cCRNMaxLevelResolution], non-power of 2 OK, non-square OK
+    crn_uint32 m_height; // [1,cCRNMaxLevelResolution], non-power of 2 OK, non-square OK
+    crn_uint32 m_levels; // [1,cCRNMaxLevelResolution], non-power of 2 OK, non-square OK
 
-    crn_format m_format;  // Output pixel format.
+    crn_format m_format; // Output pixel format.
 
-    crn_uint32 m_flags;  // see crn_comp_flags enum
+    crn_uint32 m_flags; // see crn_comp_flags enum
 
     // Array of pointers to 32bpp input images.
     const crn_uint32* m_pImages[cCRNMaxFaces][cCRNMaxLevels];
@@ -327,7 +381,7 @@ struct crn_comp_params {
 
     // Desired quality level.
     // Currently, CRN and DDS quality levels are not compatible with eachother from an image quality standpoint.
-    crn_uint32 m_quality_level;  // [cCRNMinQualityLevel, cCRNMaxQualityLevel]
+    crn_uint32 m_quality_level; // [cCRNMinQualityLevel, cCRNMaxQualityLevel]
 
     // DXTn compression parameters.
     crn_uint32 m_dxt1a_alpha_threshold;
@@ -341,11 +395,11 @@ struct crn_comp_params {
     float m_crn_adaptive_tile_color_psnr_derating;
     float m_crn_adaptive_tile_alpha_psnr_derating;
 
-    crn_uint32 m_crn_color_endpoint_palette_size;  // [cCRNMinPaletteSize,cCRNMaxPaletteSize]
-    crn_uint32 m_crn_color_selector_palette_size;  // [cCRNMinPaletteSize,cCRNMaxPaletteSize]
+    crn_uint32 m_crn_color_endpoint_palette_size; // [cCRNMinPaletteSize,cCRNMaxPaletteSize]
+    crn_uint32 m_crn_color_selector_palette_size; // [cCRNMinPaletteSize,cCRNMaxPaletteSize]
 
-    crn_uint32 m_crn_alpha_endpoint_palette_size;  // [cCRNMinPaletteSize,cCRNMaxPaletteSize]
-    crn_uint32 m_crn_alpha_selector_palette_size;  // [cCRNMinPaletteSize,cCRNMaxPaletteSize]
+    crn_uint32 m_crn_alpha_endpoint_palette_size; // [cCRNMinPaletteSize,cCRNMaxPaletteSize]
+    crn_uint32 m_crn_alpha_selector_palette_size; // [cCRNMinPaletteSize,cCRNMaxPaletteSize]
 
     // Number of helper threads to create during compression. 0=no threading.
     crn_uint32 m_num_helper_threads;
@@ -360,11 +414,16 @@ struct crn_comp_params {
 };
 
 // Mipmap generator's mode.
-enum crn_mip_mode {
-    cCRNMipModeUseSourceOrGenerateMips,  // Use source texture's mipmaps if it has any, otherwise generate new mipmaps
-    cCRNMipModeUseSourceMips,            // Use source texture's mipmaps if it has any, otherwise the output has no mipmaps
-    cCRNMipModeGenerateMips,             // Always generate new mipmaps
-    cCRNMipModeNoMips,                   // Output texture has no mipmaps
+enum crn_mip_mode
+{
+    cCRNMipModeUseSourceOrGenerateMips,
+    // Use source texture's mipmaps if it has any, otherwise generate new mipmaps
+    cCRNMipModeUseSourceMips,
+    // Use source texture's mipmaps if it has any, otherwise the output has no mipmaps
+    cCRNMipModeGenerateMips,
+    // Always generate new mipmaps
+    cCRNMipModeNoMips,
+    // Output texture has no mipmaps
 
     cCRNMipModeTotal,
 
@@ -375,12 +434,14 @@ CRN_EXPORT const char* crn_get_mip_mode_desc(crn_mip_mode m);
 CRN_EXPORT const char* crn_get_mip_mode_name(crn_mip_mode m);
 
 // Mipmap generator's filter kernel.
-enum crn_mip_filter {
+enum crn_mip_filter
+{
     cCRNMipFilterBox,
     cCRNMipFilterTent,
     cCRNMipFilterLanczos4,
     cCRNMipFilterMitchell,
-    cCRNMipFilterKaiser,  // Kaiser=default mipmap filter
+    cCRNMipFilterKaiser,
+    // Kaiser=default mipmap filter
 
     cCRNMipFilterTotal,
 
@@ -390,7 +451,8 @@ enum crn_mip_filter {
 CRN_EXPORT const char* crn_get_mip_filter_name(crn_mip_filter f);
 
 // Mipmap generator's scale mode.
-enum crn_scale_mode {
+enum crn_scale_mode
+{
     cCRNSMDisabled,
     cCRNSMAbsolute,
     cCRNSMRelative,
@@ -406,10 +468,15 @@ enum crn_scale_mode {
 CRN_EXPORT const char* crn_get_scale_mode_desc(crn_scale_mode sm);
 
 // Mipmap generator parameters.
-struct crn_mipmap_params {
-    inline crn_mipmap_params() { clear(); }
+struct crn_mipmap_params
+{
+    inline crn_mipmap_params()
+    {
+        clear();
+    }
 
-    inline void clear() {
+    inline void clear()
+    {
         m_size_of_obj = sizeof(*this);
         m_mode = cCRNMipModeUseSourceOrGenerateMips;
         m_filter = cCRNMipFilterKaiser;
@@ -437,14 +504,19 @@ struct crn_mipmap_params {
         m_clamp_height = 0;
     }
 
-    inline bool check() const { return true; }
+    inline bool check() const
+    {
+        return true;
+    }
 
-    inline bool operator==(const crn_mipmap_params& rhs) const {
-#define CRNLIB_COMP(x)  \
-  do {                  \
-    if ((x) != (rhs.x)) \
-      return false;     \
-  } while (0)
+    inline bool operator==(const crn_mipmap_params& rhs) const
+    {
+#define CRNLIB_COMP(x) \
+    do \
+    { \
+        if ((x) != (rhs.x)) \
+            return false; \
+    } while (0)
         CRNLIB_COMP(m_size_of_obj);
         CRNLIB_COMP(m_mode);
         CRNLIB_COMP(m_filter);
@@ -469,6 +541,7 @@ struct crn_mipmap_params {
         return true;
 #undef CRNLIB_COMP
     }
+
     crn_uint32 m_size_of_obj;
 
     crn_mip_mode m_mode;
@@ -509,7 +582,7 @@ struct crn_mipmap_params {
 // Function to set an optional user provided memory allocation/reallocation/msize routines.
 // By default, crnlib just uses malloc(), free(), etc. for all allocations.
 typedef void* (*crn_realloc_func)(void* p, size_t size, size_t* pActual_size, bool movable, void* pUser_data);
-typedef size_t(*crn_msize_func)(void* p, void* pUser_data);
+typedef size_t (*crn_msize_func)(void* p, void* pUser_data);
 CRN_EXPORT void crn_set_memory_callbacks(crn_realloc_func pRealloc, crn_msize_func pMSize, void* pUser_data);
 
 // Frees memory blocks allocated by crn_compress(), crn_decompress_crn_to_dds(), or crn_decompress_dds_to_images().
@@ -549,13 +622,15 @@ CRN_EXPORT void* crn_decompress_crn_to_dds(const void* pCRN_file_data, crn_uint3
 // Decompresses an entire DDS file in any supported format to uncompressed 32-bit/pixel image(s).
 // See the crnlib::pixel_format enum in inc/dds_defs.h for a list of the supported DDS formats.
 // You are responsible for freeing each image block, either by calling crn_free_all_images() or manually calling crn_free_block() on each image pointer.
-struct crn_texture_desc {
+struct crn_texture_desc
+{
     crn_uint32 m_faces;
     crn_uint32 m_width;
     crn_uint32 m_height;
     crn_uint32 m_levels;
-    crn_uint32 m_fmt_fourcc;  // Same as crnlib::pixel_format
+    crn_uint32 m_fmt_fourcc; // Same as crnlib::pixel_format
 };
+
 CRN_EXPORT bool crn_decompress_dds_to_images(const void* pDDS_file_data, crn_uint32 dds_file_size, crn_uint32** ppImages, crn_texture_desc& tex_desc);
 
 // Frees all images allocated by crn_decompress_dds_to_images().
@@ -614,7 +689,6 @@ CRN_EXPORT void crn_free_block_compressor(crn_block_compressor_context_t pContex
 // Returns false if the crn_fmt is invalid.
 CRN_EXPORT bool crn_decompress_block(const void* pSrc_block, crn_uint32* pDst_pixels, crn_format crn_fmt);
 
-
 #define CRNLIB_VERSION 104
 
 CRN_EXPORT const char* crn_get_version();
@@ -623,32 +697,4 @@ CRN_EXPORT int crn_get_version_major();
 CRN_EXPORT int crn_get_version_minor();
 CRN_EXPORT int crn_get_version_patch();
 
-#endif  // CRNLIB_H
-
-//------------------------------------------------------------------------------
-//
-// crnlib uses the ZLIB license:
-// http://opensource.org/licenses/Zlib
-//
-// Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
-// Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
-//
-// This software is provided 'as-is', without any express or implied
-// warranty.  In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-// claim that you wrote the original software. If you use this software
-// in a product, an acknowledgment in the product documentation would be
-// appreciated but is not required.
-//
-// 2. Altered source versions must be plainly marked as such, and must not be
-// misrepresented as being the original software.
-//
-// 3. This notice may not be removed or altered from any source distribution.
-//
-//------------------------------------------------------------------------------
+#endif // CRNLIB_H

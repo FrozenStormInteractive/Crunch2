@@ -1,5 +1,25 @@
-// File: data_stream_serializer.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
 
 #pragma once
 
@@ -12,7 +32,7 @@ namespace crnlib
     class CRN_EXPORT data_stream_serializer
     {
     public:
-        data_stream_serializer():
+        data_stream_serializer() :
             m_pStream(nullptr),
             m_little_endian(true)
         {
@@ -22,12 +42,12 @@ namespace crnlib
             m_little_endian(true)
         {
         }
-        data_stream_serializer(data_stream& stream):
+        data_stream_serializer(data_stream& stream) :
             m_pStream(&stream),
             m_little_endian(true)
         {
         }
-        data_stream_serializer(const data_stream_serializer& other):
+        data_stream_serializer(const data_stream_serializer& other) :
             m_pStream(other.m_pStream),
             m_little_endian(other.m_little_endian)
         {
@@ -56,7 +76,7 @@ namespace crnlib
 
         bool get_error()
         {
-            return m_pStream ? m_pStream->get_error() : false;
+            return m_pStream != nullptr && m_pStream->get_error();
         }
 
         bool get_little_endian() const
@@ -125,7 +145,7 @@ namespace crnlib
             return m_pStream->skip(len) == len;
         }
 
-        template <typename T>
+        template<typename T>
         bool write_object(const T& obj)
         {
             if (m_little_endian == c_crnlib_little_endian_platform)
@@ -143,7 +163,7 @@ namespace crnlib
             }
         }
 
-        template <typename T>
+        template<typename T>
         bool read_object(T& obj)
         {
             if (m_little_endian == c_crnlib_little_endian_platform)
@@ -166,13 +186,13 @@ namespace crnlib
             }
         }
 
-        template <typename T>
+        template<typename T>
         bool write_value(T value)
         {
             return write_object(value);
         }
 
-        template <typename T>
+        template<typename T>
         T read_value(const T& on_error_value = T())
         {
             T result;
@@ -183,14 +203,14 @@ namespace crnlib
             return result;
         }
 
-        template <typename T>
+        template<typename T>
         bool write_enum(T e)
         {
             int val = static_cast<int>(e);
             return write_object(val);
         }
 
-        template <typename T>
+        template<typename T>
         T read_enum()
         {
             return static_cast<T>(read_value<int>());
@@ -213,8 +233,7 @@ namespace crnlib
                 }
 
                 val >>= 7;
-            }
-            while (val);
+            } while (val);
 
             return true;
         }
@@ -301,7 +320,8 @@ namespace crnlib
                 return false;
             }
 
-            if (len) {
+            if (len)
+            {
                 if (!read_chars(str.get_ptr_raw(), len))
                 {
                     return false;
@@ -317,7 +337,7 @@ namespace crnlib
             return true;
         }
 
-        template <typename T>
+        template<typename T>
         bool write_vector(const T& vec)
         {
             if (!write_uint_vlc(vec.size()))
@@ -337,7 +357,7 @@ namespace crnlib
             return true;
         };
 
-        template <typename T>
+        template<typename T>
         bool read_vector(T& vec, uint num_expected = UINT_MAX)
         {
             uint size;
@@ -571,14 +591,14 @@ namespace crnlib
         return serializer;
     }
 
-    template <typename T>
+    template<typename T>
     inline data_stream_serializer& operator<<(data_stream_serializer& serializer, const crnlib::vector<T>& vec)
     {
         serializer.write_vector(vec);
         return serializer;
     }
 
-    template <typename T>
+    template<typename T>
     inline data_stream_serializer& operator<<(data_stream_serializer& serializer, const T* p)
     {
         serializer.write_object(*p);
@@ -658,18 +678,18 @@ namespace crnlib
         return serializer;
     }
 
-    template <typename T>
+    template<typename T>
     inline data_stream_serializer& operator>>(data_stream_serializer& serializer, crnlib::vector<T>& vec)
     {
         serializer.read_vector(vec);
         return serializer;
     }
 
-    template <typename T>
+    template<typename T>
     inline data_stream_serializer& operator>>(data_stream_serializer& serializer, T* p)
     {
         serializer.read_object(*p);
         return serializer;
     }
 
-}  // namespace crnlib
+} // namespace crnlib

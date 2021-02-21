@@ -230,7 +230,7 @@ namespace crnlib
     }
 
 #define GAUSSIAN_SUPPORT (1.25f)
-    static float gaussian_filter(float t)  // with blackman window
+    static float gaussian_filter(float t) // with blackman window
     {
         if (t < 0)
         {
@@ -248,7 +248,8 @@ namespace crnlib
 
     // Windowed sinc -- see "Jimm Blinn's Corner: Dirty Pixels" pg. 26.
 #define LANCZOS3_SUPPORT (3.0f)
-    static float lanczos3_filter(float t) {
+    static float lanczos3_filter(float t)
+    {
         if (t < 0.0f)
         {
             t = -t;
@@ -283,7 +284,8 @@ namespace crnlib
     }
 
 #define LANCZOS6_SUPPORT (6.0f)
-    static float lanczos6_filter(float t) {
+    static float lanczos6_filter(float t)
+    {
         if (t < 0.0f)
         {
             t = -t;
@@ -300,7 +302,8 @@ namespace crnlib
     }
 
 #define LANCZOS12_SUPPORT (12.0f)
-    static float lanczos12_filter(float t) {
+    static float lanczos12_filter(float t)
+    {
         if (t < 0.0f)
         {
             t = -t;
@@ -327,7 +330,7 @@ namespace crnlib
         pow = 1.0;
         k = 0;
         ds = 1.0;
-        while (ds > sum * EPSILON_RATIO)  // FIXME: Shouldn't this stop after X iterations for max. safety?
+        while (ds > sum * EPSILON_RATIO) // FIXME: Shouldn't this stop after X iterations for max. safety?
         {
             ++k;
             pow = pow * (xh / k);
@@ -365,24 +368,23 @@ namespace crnlib
         return 0.0f;
     }
 
-    const resample_filter g_resample_filters[] =
-    {
-        {"box", box_filter, BOX_FILTER_SUPPORT},
-        {"tent", tent_filter, TENT_FILTER_SUPPORT},
-        {"bell", bell_filter, BELL_SUPPORT},
-        {"b-spline", B_spline_filter, B_SPLINE_SUPPORT},
-        {"mitchell", mitchell_filter, MITCHELL_SUPPORT},
-        {"lanczos3", lanczos3_filter, LANCZOS3_SUPPORT},
-        {"blackman", blackman_filter, BLACKMAN_SUPPORT},
-        {"lanczos4", lanczos4_filter, LANCZOS4_SUPPORT},
-        {"lanczos6", lanczos6_filter, LANCZOS6_SUPPORT},
-        {"lanczos12", lanczos12_filter, LANCZOS12_SUPPORT},
-        {"kaiser", kaiser_filter, KAISER_SUPPORT},
-        {"gaussian", gaussian_filter, GAUSSIAN_SUPPORT},
-        {"catmullrom", catmull_rom_filter, CATMULL_ROM_SUPPORT},
-        {"quadratic_interp", quadratic_interp_filter, QUADRATIC_SUPPORT},
-        {"quadratic_approx", quadratic_approx_filter, QUADRATIC_SUPPORT},
-        {"quadratic_mix", quadratic_mix_filter, QUADRATIC_SUPPORT},
+    const resample_filter g_resample_filters[] = {
+        { "box", box_filter, BOX_FILTER_SUPPORT },
+        { "tent", tent_filter, TENT_FILTER_SUPPORT },
+        { "bell", bell_filter, BELL_SUPPORT },
+        { "b-spline", B_spline_filter, B_SPLINE_SUPPORT },
+        { "mitchell", mitchell_filter, MITCHELL_SUPPORT },
+        { "lanczos3", lanczos3_filter, LANCZOS3_SUPPORT },
+        { "blackman", blackman_filter, BLACKMAN_SUPPORT },
+        { "lanczos4", lanczos4_filter, LANCZOS4_SUPPORT },
+        { "lanczos6", lanczos6_filter, LANCZOS6_SUPPORT },
+        { "lanczos12", lanczos12_filter, LANCZOS12_SUPPORT },
+        { "kaiser", kaiser_filter, KAISER_SUPPORT },
+        { "gaussian", gaussian_filter, GAUSSIAN_SUPPORT },
+        { "catmullrom", catmull_rom_filter, CATMULL_ROM_SUPPORT },
+        { "quadratic_interp", quadratic_interp_filter, QUADRATIC_SUPPORT },
+        { "quadratic_approx", quadratic_approx_filter, QUADRATIC_SUPPORT },
+        { "quadratic_mix", quadratic_mix_filter, QUADRATIC_SUPPORT },
     };
 
     const int g_num_resample_filters = sizeof(g_resample_filters) / sizeof(g_resample_filters[0]);
@@ -399,4 +401,4 @@ namespace crnlib
         return cInvalidIndex;
     }
 
-}  // namespace crnlib
+} // namespace crnlib

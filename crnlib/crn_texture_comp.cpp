@@ -1,5 +1,25 @@
-// File: crn_texture_comp.cpp
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
 
 #include "crn_core.h"
 #include "crn_texture_comp.h"
@@ -113,7 +133,9 @@ namespace crnlib
 
             float cached_bitrates[cNumQualityLevels];
             for (int i = 0; i < cNumQualityLevels; i++)
+            {
                 cached_bitrates[i] = -1.0f;
+            }
 
             float highest_bitrate = 0.0f;
 
@@ -133,7 +155,9 @@ namespace crnlib
                 {
                     int bracket_low = trial_quality;
                     while ((cached_bitrates[bracket_low] < 0) && (bracket_low > cLowestQuality))
+                    {
                         bracket_low--;
+                    }
 
                     if (cached_bitrates[bracket_low] < 0)
                     {
@@ -336,7 +360,9 @@ namespace crnlib
         case cCRNMipModeUseSourceOrGenerateMips:
         {
             if (work_tex.get_num_levels() == 1)
+            {
                 generate_new_mips = true;
+            }
             break;
         }
         case cCRNMipModeUseSourceMips:
@@ -461,7 +487,8 @@ namespace crnlib
                 }
                 break;
             }
-            case cCRNSMNextPow2: {
+            case cCRNSMNextPow2:
+            {
                 if (!is_pow2)
                 {
                     math::compute_upper_pow2_dim(new_width, new_height);
@@ -589,4 +616,4 @@ namespace crnlib
         return create_compressed_texture(new_params, comp_data, pActual_quality_level, pActual_bitrate);
     }
 
-}  // namespace crnlib
+} // namespace crnlib

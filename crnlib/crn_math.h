@@ -1,5 +1,26 @@
-// File: crn_math.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #pragma once
 
 #include "crn_export.h"
@@ -21,13 +42,13 @@ namespace crnlib
 
         extern uint g_bitmasks[32];
 
-        template <typename T>
+        template<typename T>
         inline bool within_closed_range(T a, T b, T c)
         {
             return (a >= b) && (a <= c);
         }
 
-        template <typename T>
+        template<typename T>
         inline bool within_open_range(T a, T b, T c)
         {
             return (a >= b) && (a < c);
@@ -36,43 +57,43 @@ namespace crnlib
         // Yes I know these should probably be pass by ref, not val:
         // http://www.stepanovpapers.com/notes.pdf
         // Just don't use them on non-simple (non built-in) types!
-        template <typename T>
+        template<typename T>
         inline T minimum(T a, T b)
         {
             return (a < b) ? a : b;
         }
 
-        template <typename T>
+        template<typename T>
         inline T minimum(T a, T b, T c)
         {
             return minimum(minimum(a, b), c);
         }
 
-        template <typename T>
+        template<typename T>
         inline T maximum(T a, T b)
         {
             return (a > b) ? a : b;
         }
 
-        template <typename T>
+        template<typename T>
         inline T maximum(T a, T b, T c)
         {
             return maximum(maximum(a, b), c);
         }
 
-        template <typename T, typename U>
+        template<typename T, typename U>
         inline T lerp(T a, T b, U c)
         {
             return a + (b - a) * c;
         }
 
-        template <typename T>
+        template<typename T>
         inline T clamp(T value, T low, T high)
         {
             return (value < low) ? low : ((value > high) ? high : value);
         }
 
-        template <typename T>
+        template<typename T>
         inline T saturate(T value)
         {
             return (value < 0.0f) ? 0.0f : ((value > 1.0f) ? 1.0f : value);
@@ -108,13 +129,13 @@ namespace crnlib
             return static_cast<uint>((f < 0.0f) ? 0.0f : floor(f + .5f));
         }
 
-        template <typename T>
+        template<typename T>
         inline int sign(T value)
         {
             return (value < 0) ? -1 : ((value > 0) ? 1 : 0);
         }
 
-        template <typename T>
+        template<typename T>
         inline T square(T value)
         {
             return value * value;
@@ -129,7 +150,7 @@ namespace crnlib
             return x && ((x & (x - 1U)) == 0U);
         }
 
-        template <typename T>
+        template<typename T>
         inline T align_up_value(T x, uint alignment)
         {
             CRNLIB_ASSERT(is_power_of_2(alignment));
@@ -138,7 +159,7 @@ namespace crnlib
             return static_cast<T>(q);
         }
 
-        template <typename T>
+        template<typename T>
         inline T align_down_value(T x, uint alignment)
         {
             CRNLIB_ASSERT(is_power_of_2(alignment));
@@ -147,7 +168,7 @@ namespace crnlib
             return static_cast<T>(q);
         }
 
-        template <typename T>
+        template<typename T>
         inline T get_align_up_value_delta(T x, uint alignment)
         {
             return align_up_value(x, alignment) - x;
@@ -241,12 +262,12 @@ namespace crnlib
         // http://www-graphics.stanford.edu/~seander/bithacks.html
         inline uint count_trailing_zero_bits(uint v)
         {
-            uint c = 32;  // c will be the number of zero bits on the right
+            uint c = 32; // c will be the number of zero bits on the right
 
             static const unsigned int B[] = { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF, 0x0000FFFF };
-            static const unsigned int S[] = { 1, 2, 4, 8, 16 };  // Our Magic Binary Numbers
+            static const unsigned int S[] = { 1, 2, 4, 8, 16 }; // Our Magic Binary Numbers
 
-            for (int i = 4; i >= 0; --i)  // unroll for more speed
+            for (int i = 4; i >= 0; --i) // unroll for more speed
             {
                 if (v & B[i])
                 {
@@ -255,7 +276,8 @@ namespace crnlib
                 }
             }
 
-            if (v) {
+            if (v)
+            {
                 c--;
             }
 
@@ -331,4 +353,4 @@ namespace crnlib
         }
     }
 
-}  // namespace crnlib
+} // namespace crnlib

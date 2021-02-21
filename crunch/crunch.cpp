@@ -1,12 +1,28 @@
-// File: crunch.cpp - Command line tool for DDS/CRN texture compression/decompression.
-// This tool exposes all of crnlib's functionality. It also uses a bunch of internal crlib
-// classes that aren't directly exposed in the main crnlib.h header. The actual tool is
-// implemented as a single class "crunch" which in theory is reusable. Most of the heavy
-// lifting is actually done by functions in the crnlib::texture_conversion namespace,
-// which are mostly wrappers over the public crnlib.h functions.
-// See Copyright Notice and license at the end of inc/crnlib.h
-//
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ * 
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ * 
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ * 
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 // Important: If compiling with gcc, be sure strict aliasing is disabled: -fno-strict-aliasing
+
 #include "crn_core.h"
 #include "crn_console.h"
 
@@ -66,14 +82,17 @@ public:
     {
         return m_num_processed;
     }
+
     inline uint32 get_num_failed() const
     {
         return m_num_failed;
     }
+
     inline uint32 get_num_succeeded() const
     {
         return m_num_succeeded;
     }
+
     inline uint32 get_num_skipped() const
     {
         return m_num_skipped;
@@ -364,7 +383,8 @@ private:
 
         uint32 total_input_specs = 0;
 
-        for (uint32 phase = 0; phase < 2; phase++) {
+        for (uint32 phase = 0; phase < 2; phase++)
+        {
             command_line_params::param_map_const_iterator begin, end;
             m_params.find(phase ? "" : "file", begin, end);
             for (command_line_params::param_map_const_iterator it = begin; it != end; ++it)
@@ -466,7 +486,8 @@ private:
         return true;
     }
 
-    bool read_only_file_check(const char* pDst_filename) {
+    bool read_only_file_check(const char* pDst_filename)
+    {
         if (!file_utils::is_read_only(pDst_filename))
         {
             return true;
@@ -674,24 +695,20 @@ private:
 
             switch (status)
             {
-            case cCSSucceeded:
-                {
+                case cCSSucceeded: {
                     console::info("");
                     m_num_succeeded++;
                     break;
                 }
-            case cCSSkipped:
-                {
+                case cCSSkipped: {
                     console::info("Skipping file.\n");
                     m_num_skipped++;
                     break;
                 }
-            case cCSBadParam:
-                {
+                case cCSBadParam: {
                     return false;
                 }
-            default:
-                {
+                default: {
                     if (!m_params.get_value_as_bool("ignoreerrors"))
                         return false;
 
@@ -803,7 +820,8 @@ private:
     {
         dynamic_string val;
 
-        if (m_params.get_value_as_string("mipMode", 0, val)) {
+        if (m_params.get_value_as_string("mipMode", 0, val))
+        {
             uint32 i;
             for (i = 0; i < cCRNMipModeTotal; i++)
             {
@@ -1319,7 +1337,6 @@ private:
 
         params.m_no_stats = m_params.get_value_as_bool("nostats");
 
-
         params.m_dst_format = PIXEL_FMT_INVALID;
 
         for (uint32 i = 0; i < pixel_format_helpers::get_num_formats(); i++)
@@ -1471,7 +1488,8 @@ static int main_internal(int argc, char* argv[])
     return status ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-static void pause_and_wait(void) {
+static void pause_and_wait(void)
+{
     console::enable_output();
 
     console::message("\nPress a key to continue.");

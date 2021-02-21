@@ -1,11 +1,31 @@
-// File: crn_image_utils.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #pragma once
 
 #include "crn_image.h"
 #include "crn_data_stream_serializer.h"
 #include "crn_export.h"
-
 
 namespace crnlib
 {
@@ -29,7 +49,8 @@ namespace crnlib
         // *pActual_comps is set to 1, 3, or 4. req_comps must range from 1-4.
         CRN_EXPORT uint8* read_from_memory(const uint8* pImage, int nSize, int* pWidth, int* pHeight, int* pActualComps, int req_comps, const char* pFilename);
 
-        enum {
+        enum
+        {
             cWriteFlagIgnoreAlpha = 0x00000001,
             cWriteFlagGrayscale = 0x00000002,
 
@@ -58,7 +79,7 @@ namespace crnlib
 
         struct resample_params
         {
-            resample_params():
+            resample_params() :
                 m_dst_width(0),
                 m_dst_height(0),
                 m_pFilter("lanczos4"),
@@ -67,7 +88,7 @@ namespace crnlib
                 m_wrapping(false),
                 m_first_comp(0),
                 m_num_comps(4),
-                m_source_gamma(2.2f),  // 1.75f
+                m_source_gamma(2.2f), // 1.75f
                 m_multithreaded(true)
             {
             }
@@ -162,7 +183,7 @@ namespace crnlib
 
         CRN_EXPORT void convert_image(image_u8& img, conversion_type conv_type);
 
-        template <typename image_type>
+        template<typename image_type>
         inline uint8* pack_image(const image_type& img, const pixel_packer& packer, uint& n)
         {
             n = 0;
@@ -200,5 +221,5 @@ namespace crnlib
         CRN_EXPORT double compute_std_dev(uint n, const color_quad_u8* pPixels, uint first_channel, uint num_channels);
 
         CRN_EXPORT uint8* read_image_from_memory(const uint8* pImage, int nSize, int* pWidth, int* pHeight, int* pActualComps, int req_comps, const char* pFilename);
-    }  // namespace image_utils
-}  // namespace crnlib
+    } // namespace image_utils
+} // namespace crnlib

@@ -297,8 +297,7 @@ namespace crnlib
             }
 
             /*  Reject P if outside outer ellipse, or outside acceptance region */
-        }
-        while ((q > 0.27846) || (v * v > -4.0 * log(u) * u * u));
+        } while ((q > 0.27846) || (v * v > -4.0 * log(u) * u * u));
 
         /*  Return ratio of P's coordinates as the normal deviate */
         return (mean + stddev * v / u);
@@ -308,13 +307,13 @@ namespace crnlib
     {
     }
 
-    fast_random::fast_random():
+    fast_random::fast_random() :
         jsr(0xABCD917A),
         jcong(0x17F3DEAD)
     {
     }
 
-    fast_random::fast_random(const fast_random& other):
+    fast_random::fast_random(const fast_random& other) :
         jsr(other.jsr),
         jcong(other.jcong)
     {
@@ -404,5 +403,4 @@ namespace crnlib
 
         return math::clamp<float>(r, l, h);
     }
-
-}  // namespace crnlib
+} // namespace crnlib

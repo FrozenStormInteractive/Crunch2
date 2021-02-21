@@ -1,0 +1,88 @@
+---
+IndentWidth: 4
+ColumnLimit: 0
+
+---
+Language: Cpp
+
+AccessModifierOffset: -4
+
+AlignAfterOpenBracket: DontAlign
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: DontAlign
+AlignOperands: false
+AlignTrailingComments: false
+
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine : false
+AllowShortLoopsOnASingleLine: false
+
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: true
+
+BinPackArguments: true
+BinPackParameters: true
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+
+BreakBeforeInheritanceComma: false
+BreakBeforeTernaryOperators: true
+
+CompactNamespaces: false
+FixNamespaceComments: false
+NamespaceIndentation: All
+
+BreakConstructorInitializers: AfterColon
+ConstructorInitializerIndentWidth: 4
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+Cpp11BracedListStyle: false
+
+IncludeBlocks: Preserve
+
+IndentCaseLabels: true
+IndentWrappedFunctionNames: true
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+
+PointerAlignment: Left
+
+ReflowComments: true
+
+SortIncludes: false
+SortUsingDeclarations: true
+
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+# SpaceBeforeInheritanceColon: false
+# SpaceBeforeCtorInitializerColon: false
+# SpaceBeforeRangeBasedForLoopColon: true
+
+IndentCaseBlocks: false
+IndentCaseLabels: false

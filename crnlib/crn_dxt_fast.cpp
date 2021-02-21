@@ -1,5 +1,26 @@
-// File: crn_dxt_fast.cpp
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 // Parts of this module are derived from RYG's excellent public domain DXTx compressor.
 
 #include "crn_core.h"
@@ -49,7 +70,7 @@ namespace crnlib
             unpack_color(pColors[0], c0);
             unpack_color(pColors[1], c1);
 
-#if 0         
+#if 0
             lerp_color(pColors[2], pColors[0], pColors[1], 0x55);
             lerp_color(pColors[3], pColors[0], pColors[1], 0xAA);
 #else
@@ -114,7 +135,8 @@ namespace crnlib
             return status;
         }
 
-        static bool optimize_block_colors(uint n, const color_quad_u8* block, uint& max16, uint& min16, uint ave_color[3], float axis[3]) {
+        static bool optimize_block_colors(uint n, const color_quad_u8* block, uint& max16, uint& min16, uint ave_color[3], float axis[3])
+        {
             int min[3], max[3];
 
             for (uint ch = 0; ch < 3; ch++)
@@ -189,7 +211,7 @@ namespace crnlib
             double magn = math::maximum(math::maximum(fabs(vfr), fabs(vfg)), fabs(vfb));
             int v_r, v_g, v_b;
 
-            if (magn < 4.0f)  // too small, default to luminance
+            if (magn < 4.0f) // too small, default to luminance
             {
                 v_r = 148;
                 v_g = 300;
@@ -329,7 +351,8 @@ namespace crnlib
             return false;
         }
 
-        static uint64 determine_error(uint n, const color_quad_u8* block, uint min16, uint max16, uint64 early_out_error) {
+        static uint64 determine_error(uint n, const color_quad_u8* block, uint min16, uint max16, uint64 early_out_error)
+        {
             color_quad_u8 color[4];
 
             eval_colors(color, min16, max16);
@@ -523,10 +546,10 @@ namespace crnlib
                                 trial_optimized = true;
                             }
 
-                        }  // t
+                        } // t
 
-                    }  // e
-                }    // axis
+                    } // e
+                } // axis
 
                 if (!trial_optimized)
                 {
@@ -535,7 +558,7 @@ namespace crnlib
 
                 optimized = true;
 
-            }  // for ( ; ; )
+            } // for ( ; ; )
 
             return optimized;
         }
@@ -608,7 +631,10 @@ namespace crnlib
                 uint best_l = low16;
                 uint best_h = high16;
 
-                enum { cMaxHash = 4 };
+                enum
+                {
+                    cMaxHash = 4
+                };
                 uint64 hash[cMaxHash];
                 for (uint i = 0; i < cMaxHash; i++)
                 {
@@ -678,7 +704,7 @@ namespace crnlib
                     break;
                 }
 
-            }  // iter
+            } // iter
 
             //uint64 end_error = determine_error(n, pBlock, low16, high16, UINT64_MAX);
             //if (end_error > orig_error) DebugBreak();
@@ -967,5 +993,5 @@ namespace crnlib
             lo = lo_color;
             hi = hi_color;
         }
-    }  // namespace dxt_fast
-}  // namespace crnlib
+    } // namespace dxt_fast
+} // namespace crnlib

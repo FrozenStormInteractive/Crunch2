@@ -1,6 +1,28 @@
-// File: crn_dxt_hc.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #pragma once
+
 #include "crn_dxt1.h"
 #include "crn_dxt5a.h"
 #include "crn_dxt_endpoint_refiner.h"
@@ -26,8 +48,10 @@ namespace crnlib
 
         struct endpoint_indices_details
         {
-            union {
-                struct {
+            union
+            {
+                struct
+                {
                     uint16 color;
                     uint16 alpha0;
                     uint16 alpha1;
@@ -43,8 +67,10 @@ namespace crnlib
 
         struct selector_indices_details
         {
-            union {
-                struct {
+            union
+            {
+                struct
+                {
                     uint16 color;
                     uint16 alpha0;
                     uint16 alpha1;
@@ -71,7 +97,7 @@ namespace crnlib
         float m_alpha_derating[8];
         float m_uint8_to_float[256];
 
-        color_quad_u8(*m_blocks)[16];
+        color_quad_u8 (*m_blocks)[16];
         uint m_num_blocks;
         crnlib::vector<float> m_block_weights;
         crnlib::vector<uint8> m_block_encodings;
@@ -86,7 +112,7 @@ namespace crnlib
 
         struct params
         {
-            params():
+            params() :
                 m_num_blocks(0),
                 m_num_levels(0),
                 m_num_faces(0),
@@ -118,7 +144,8 @@ namespace crnlib
             uint m_num_levels;
             uint m_num_faces;
 
-            struct {
+            struct
+            {
                 uint m_first_block;
                 uint m_num_blocks;
                 uint m_block_width;
@@ -147,15 +174,14 @@ namespace crnlib
 
         void clear();
         bool compress(
-            color_quad_u8(*blocks)[16],
+            color_quad_u8 (*blocks)[16],
             crnlib::vector<endpoint_indices_details>& endpoint_indices,
             crnlib::vector<selector_indices_details>& selector_indices,
             crnlib::vector<uint32>& color_endpoints,
             crnlib::vector<uint32>& alpha_endpoints,
             crnlib::vector<uint32>& color_selectors,
             crnlib::vector<uint64>& alpha_selectors,
-            const params& p
-        );
+            const params& p);
 
     private:
         params m_params;
@@ -165,7 +191,8 @@ namespace crnlib
         bool m_has_etc_color_blocks;
         bool m_has_subblocks;
 
-        enum {
+        enum
+        {
             cColor = 0,
             cAlpha0 = 1,
             cAlpha1 = 2,
@@ -190,7 +217,7 @@ namespace crnlib
 
         struct alpha_cluster
         {
-            alpha_cluster():
+            alpha_cluster() :
                 first_endpoint(0),
                 second_endpoint(0)
             {
@@ -236,4 +263,4 @@ namespace crnlib
         bool update_progress(uint phase_index, uint subphase_index, uint subphase_total);
     };
 
-}  // namespace crnlib
+} // namespace crnlib

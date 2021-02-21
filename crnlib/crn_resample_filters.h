@@ -1,4 +1,3 @@
-// File: crn_resample_filters.h
 // RG: This is public domain code, originally derived from Graphics Gems 3, see: http://code.google.com/p/imageresampler/
 
 #pragma once
@@ -20,5 +19,4 @@ namespace crnlib
     CRN_EXPORT extern const int g_num_resample_filters;
 
     CRN_EXPORT int find_resample_filter(const char* pName);
-
-}  // namespace crnlib
+} // namespace crnlib

@@ -1,5 +1,25 @@
-// File: crn_color.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
 
 #pragma once
 
@@ -7,7 +27,7 @@
 
 namespace crnlib
 {
-    template <typename component_type>
+    template<typename component_type>
     struct color_quad_component_traits
     {
         enum
@@ -19,7 +39,7 @@ namespace crnlib
         };
     };
 
-    template <>
+    template<>
     struct color_quad_component_traits<int8>
     {
         enum
@@ -31,7 +51,7 @@ namespace crnlib
         };
     };
 
-    template <>
+    template<>
     struct color_quad_component_traits<int16>
     {
         enum
@@ -43,7 +63,7 @@ namespace crnlib
         };
     };
 
-    template <>
+    template<>
     struct color_quad_component_traits<uint16>
     {
         enum
@@ -55,7 +75,7 @@ namespace crnlib
         };
     };
 
-    template <>
+    template<>
     struct color_quad_component_traits<int32>
     {
         enum
@@ -67,7 +87,7 @@ namespace crnlib
         };
     };
 
-    template <>
+    template<>
     struct color_quad_component_traits<uint32>
     {
         enum
@@ -79,7 +99,7 @@ namespace crnlib
         };
     };
 
-    template <>
+    template<>
     struct color_quad_component_traits<float>
     {
         enum
@@ -91,7 +111,7 @@ namespace crnlib
         };
     };
 
-    template <>
+    template<>
     struct color_quad_component_traits<double>
     {
         enum
@@ -103,10 +123,10 @@ namespace crnlib
         };
     };
 
-    template <typename component_type, typename parameter_type>
+    template<typename component_type, typename parameter_type>
     class color_quad : public helpers::rel_ops<color_quad<component_type, parameter_type>>
     {
-        template <typename T>
+        template<typename T>
         static inline parameter_type clamp(T v)
         {
             parameter_type result = static_cast<parameter_type>(v);
@@ -125,7 +145,7 @@ namespace crnlib
         }
 
 #if defined(CRN_CC_MSVC)
-        template <>
+        template<>
         static inline parameter_type clamp(int v)
         {
             if (!component_traits::cFloat)
@@ -158,9 +178,13 @@ namespace crnlib
         typedef parameter_type parameter_t;
         typedef color_quad_component_traits<component_type> component_traits;
 
-        enum { cNumComps = 4 };
+        enum
+        {
+            cNumComps = 4
+        };
 
-        union {
+        union
+        {
             struct
             {
                 component_type r;
@@ -178,13 +202,14 @@ namespace crnlib
         {
         }
 
-        inline color_quad(eClear):
+        inline color_quad(eClear) :
             r(0), g(0), b(0), a(0)
         {
         }
 
-        inline color_quad(const color_quad& other):
-            r(other.r), g(other.g), b(other.b), a(other.a) {
+        inline color_quad(const color_quad& other) :
+            r(other.r), g(other.g), b(other.b), a(other.a)
+        {
         }
 
         explicit inline color_quad(parameter_type y, parameter_type alpha = component_traits::cMax)
@@ -207,8 +232,8 @@ namespace crnlib
             set_noclamp_rgba(red, green, blue, alpha);
         }
 
-        template <typename other_component_type, typename other_parameter_type>
-        inline color_quad(const color_quad<other_component_type, other_parameter_type>& other):
+        template<typename other_component_type, typename other_parameter_type>
+        inline color_quad(const color_quad<other_component_type, other_parameter_type>& other) :
             r(static_cast<component_type>(clamp(other.r))), g(static_cast<component_type>(clamp(other.g))), b(static_cast<component_type>(clamp(other.b))), a(static_cast<component_type>(clamp(other.a)))
         {
         }
@@ -238,7 +263,7 @@ namespace crnlib
             return *this;
         }
 
-        template <typename other_component_type, typename other_parameter_type>
+        template<typename other_component_type, typename other_parameter_type>
         inline color_quad& operator=(const color_quad<other_component_type, other_parameter_type>& other)
         {
             r = static_cast<component_type>(clamp(other.r));
@@ -254,7 +279,8 @@ namespace crnlib
             return *this;
         }
 
-        inline color_quad& set(parameter_type y, parameter_type alpha = component_traits::cMax) {
+        inline color_quad& set(parameter_type y, parameter_type alpha = component_traits::cMax)
+        {
             y = clamp(y);
             alpha = clamp(alpha);
             r = static_cast<component_type>(y);
@@ -427,7 +453,7 @@ namespace crnlib
                 {
                     return true;
                 }
-                else if (!(c[i] == rhs.c[i]))
+                else if (c[i] != rhs.c[i])
                 {
                     return false;
                 }
@@ -505,7 +531,8 @@ namespace crnlib
             return result;
         }
 
-        friend color_quad operator*(parameter_type v, const color_quad& rhs) {
+        friend color_quad operator*(parameter_type v, const color_quad& rhs)
+        {
             color_quad result(rhs);
             result *= v;
             return result;
@@ -594,12 +621,15 @@ namespace crnlib
         {
             return color_quad(component_traits::cMax, component_traits::cMax, component_traits::cMax, component_traits::cMax);
         }
-    };  // class color_quad
+    }; // class color_quad
 
-    template <typename c, typename q>
+    template<typename c, typename q>
     struct scalar_type<color_quad<c, q>>
     {
-        enum { cFlag = true };
+        enum
+        {
+            cFlag = true
+        };
         static inline void construct(color_quad<c, q>* p)
         {
         }
@@ -691,9 +721,9 @@ namespace crnlib
         //const uint cGWeight = 24;//73;
         //const uint cBWeight = 1;//3;
 
-        const uint cRWeight = 8;   //24;
-        const uint cGWeight = 25;  //73;
-        const uint cBWeight = 1;   //3;
+        const uint cRWeight = 8; //24;
+        const uint cGWeight = 25; //73;
+        const uint cBWeight = 1; //3;
 
         inline uint color_distance(bool perceptual, const color_quad_u8& e1, const color_quad_u8& e2, bool alpha)
         {
@@ -813,12 +843,13 @@ namespace crnlib
             rgb.a = 255;
         }
 
-    }  // namespace color
+    } // namespace color
 
     // This class purposely trades off speed for extremely flexibility. It can handle any component swizzle, any pixel type from 1-4 components and 1-32 bits/component,
     // any pixel size between 1-16 bytes/pixel, any pixel stride, any color_quad data type (signed/unsigned/float 8/16/32 bits/component), and scaled/non-scaled components.
     // On the downside, it's freaking slow.
-    class pixel_packer {
+    class pixel_packer
+    {
     public:
         pixel_packer()
         {
@@ -878,7 +909,7 @@ namespace crnlib
             return m_rgb_is_luma;
         }
 
-        template <typename color_quad_type>
+        template<typename color_quad_type>
         const void* unpack(const void* p, color_quad_type& color, bool rescale = true) const
         {
             const uint8* pSrc = static_cast<const uint8*>(p);
@@ -943,7 +974,7 @@ namespace crnlib
             return pSrc + m_pixel_stride;
         }
 
-        template <typename color_quad_type>
+        template<typename color_quad_type>
         void* pack(const color_quad_type& color, void* p, bool rescale = true) const
         {
             uint8* pDst = static_cast<uint8*>(p);
@@ -975,7 +1006,8 @@ namespace crnlib
                         n = math::minimum<uint32>(static_cast<uint32>(floor(t + .5f)), mx);
                     }
                 }
-                else if (rescale) {
+                else if (rescale)
+                {
                     if (color_quad_type::component_traits::cSigned)
                     {
                         n = math::maximum<int>(static_cast<int>(color[i]), 0);
@@ -987,7 +1019,8 @@ namespace crnlib
                     const uint32 h = static_cast<uint32>(color_quad_type::component_traits::cMax);
                     n = static_cast<uint32>((static_cast<uint64>(n) * mx + (h >> 1)) / h);
                 }
-                else {
+                else
+                {
                     if (color_quad_type::component_traits::cSigned)
                     {
                         n = math::minimum<uint32>(static_cast<uint32>(math::maximum<int>(static_cast<int>(color[i]), 0)), mx);
@@ -1175,4 +1208,4 @@ namespace crnlib
         bool m_rgb_is_luma;
     };
 
-}  // namespace crnlib
+} // namespace crnlib

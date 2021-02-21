@@ -1,5 +1,25 @@
-// File: crn_huffman_codes.cpp
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
 
 #include "crn_core.h"
 #include "crn_huffman_codes.h"
@@ -134,7 +154,10 @@ namespace crnlib
 
     struct huffman_work_tables
     {
-        enum { cMaxInternalNodes = cHuffmanMaxSupportedSyms };
+        enum
+        {
+            cMaxInternalNodes = cHuffmanMaxSupportedSyms
+        };
 
         sym_freq syms0[cHuffmanMaxSupportedSyms + 1 + cMaxInternalNodes];
         sym_freq syms1[cHuffmanMaxSupportedSyms + 1 + cMaxInternalNodes];
@@ -185,7 +208,8 @@ namespace crnlib
         for (next = 1; next < n - 1; next++)
         {
             /* select first item for a pairing */
-            if (leaf >= n || A[root] < A[leaf]) {
+            if (leaf >= n || A[root] < A[leaf])
+            {
                 A[next] = A[root];
                 A[root++] = next;
             }
@@ -361,8 +385,7 @@ namespace crnlib
 
             num_nodes_remaining--;
 
-        }
-        while (num_nodes_remaining > 1);
+        } while (num_nodes_remaining > 1);
 
         CRNLIB_ASSERT(next_lowest_sym == num_used_syms);
         CRNLIB_ASSERT((queue_end - queue_front) == 1);
@@ -428,4 +451,4 @@ namespace crnlib
 #endif
         return true;
     }
-}  // namespace crnlib
+} // namespace crnlib

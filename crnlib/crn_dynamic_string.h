@@ -1,5 +1,25 @@
-// File: crn_dynamic_string.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
 
 #pragma once
 
@@ -7,12 +27,15 @@
 
 namespace crnlib
 {
-    enum { cMaxDynamicStringLen = cUINT16_MAX - 1 };
+    enum
+    {
+        cMaxDynamicStringLen = cUINT16_MAX - 1
+    };
 
     class CRN_EXPORT dynamic_string
     {
     public:
-        inline dynamic_string():
+        inline dynamic_string() :
             m_buf_size(0),
             m_len(0),
             m_pStr(nullptr)
@@ -109,7 +132,8 @@ namespace crnlib
         {
             return compare(rhs) != 0;
         }
-        inline bool operator!=(const char* p) const {
+        inline bool operator!=(const char* p) const
+        {
             return compare(p) != 0;
         }
 
@@ -235,7 +259,10 @@ namespace crnlib
         void translate_lf_to_crlf();
 
         static inline char* create_raw_buffer(uint& buf_size_in_chars);
-        static inline void free_raw_buffer(char* p) { crnlib_delete_array(p); }
+        static inline void free_raw_buffer(char* p)
+        {
+            crnlib_delete_array(p);
+        }
         dynamic_string& set_from_raw_buf_and_assume_ownership(char* pBuf, uint buf_size_in_chars, uint len_in_chars);
 
     private:
@@ -246,7 +273,9 @@ namespace crnlib
 #ifdef CRNLIB_BUILD_DEBUG
         void check() const;
 #else
-        inline void check() const {}
+        inline void check() const
+        {
+        }
 #endif
 
         bool expand_buf(uint new_buf_size, bool preserve_contents);
@@ -284,4 +313,4 @@ namespace crnlib
         buf_size_in_chars = math::minimum<uint>(cUINT16_MAX, math::next_pow2(buf_size_in_chars));
         return crnlib_new_array<char>(buf_size_in_chars);
     }
-}  // namespace crnlib
+} // namespace crnlib
