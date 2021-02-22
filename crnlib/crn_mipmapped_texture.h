@@ -1,6 +1,28 @@
-// File: crn_mipmapped_texture.h
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ * 
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ * 
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ * 
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #pragma once
+
 #include "crn_dxt_image.h"
 #include "../inc/dds_defs.h"
 #include "crn_pixel_format.h"
@@ -56,9 +78,9 @@ class CRN_EXPORT mip_level {
 
   image_u8* get_unpacked_image(image_u8& tmp, uint unpack_flags) const;
 
-  inline bool is_packed() const { return m_pDXTImage != NULL; }
+  inline bool is_packed() const { return m_pDXTImage != nullptr; }
 
-  inline bool is_valid() const { return (m_pImage != NULL) || (m_pDXTImage != NULL); }
+  inline bool is_valid() const { return (m_pImage != nullptr) || (m_pDXTImage != nullptr); }
 
   inline pixel_format_helpers::component_flags get_comp_flags() const { return m_comp_flags; }
   inline void set_comp_flags(pixel_format_helpers::component_flags comp_flags) { m_comp_flags = comp_flags; }
@@ -163,7 +185,7 @@ class CRN_EXPORT mipmapped_texture {
 
   inline bool is_unpacked() const {
     if (get_num_faces()) {
-      return get_level(0, 0)->get_image() != NULL;
+      return get_level(0, 0)->get_image() != nullptr;
     }
     return false;
   }
@@ -200,8 +222,8 @@ class CRN_EXPORT mipmapped_texture {
   bool write_to_file(
       const char* pFilename,
       texture_file_types::format file_format = texture_file_types::cFormatInvalid,
-      crn_comp_params* pComp_params = NULL,
-      uint32* pActual_quality_level = NULL, float* pActual_bitrate = NULL,
+      crn_comp_params* pComp_params = nullptr,
+      uint32* pActual_quality_level = nullptr, float* pActual_bitrate = nullptr,
       uint32 image_write_flags = 0);
 
   // Conversion

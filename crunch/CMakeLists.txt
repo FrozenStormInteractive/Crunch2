@@ -7,6 +7,7 @@ set(CRUNCH_SRCS
 )
 
 add_executable(crunch ${CRUNCH_SRCS})
+set_property(TARGET crunch PROPERTY CXX_STANDARD 11)
 target_link_libraries(crunch crn)
 
 install(TARGETS crunch)

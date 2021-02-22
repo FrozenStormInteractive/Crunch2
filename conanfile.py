@@ -10,7 +10,7 @@ class Crunch2Conan(ConanFile):
     topics = ("conan", "crunch", "texture", "compression", "decompression", "transcoding")
     settings = "os", "compiler", "arch", "build_type"
     exports_sources = ["CMakeLists.txt", "license.txt", "crnlib/*", "crunch/*", "inc/*", "3rdparty/*"]
-    generators = "cmake"
+    generators = "cmake", "cmake_find_package"
     options = {
         "fPIC": [True, False],
         "shared": [True, False],
@@ -33,6 +33,10 @@ class Crunch2Conan(ConanFile):
     def configure(self):
         if self.options.shared:
             del self.options.fPIC
+
+    def requirements(self):
+        self.requires("miniz/2.1.0")
+        self.requires("stb/20200203")
 
     def _configure_cmake(self):
         if self._cmake:

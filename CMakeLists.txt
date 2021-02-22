@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.4)
 project(Crunch2 VERSION "1.2.0")
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake")
@@ -28,5 +28,8 @@ add_subdirectory(3rdparty/miniz)
 add_subdirectory(3rdparty/stb)
 
 if (CRN_BUILD_EXAMPLES)
+    if(NOT WIN32)
+        message(WARNING "Examples aren't supported this platform.")
+    endif()
 	add_subdirectory(examples)
 endif(CRN_BUILD_EXAMPLES)

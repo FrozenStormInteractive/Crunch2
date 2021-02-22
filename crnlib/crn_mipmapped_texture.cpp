@@ -1,5 +1,26 @@
-// File: crn_dds_texture.cpp - Actually supports both .DDS and .KTX. Probably will rename this eventually.
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ * 
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ * 
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ * 
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #include "crn_core.h"
 #include "crn_mipmapped_texture.h"
 #include "crn_cfile_stream.h"
@@ -18,8 +39,8 @@ mip_level::mip_level()
       m_height(0),
       m_comp_flags(pixel_format_helpers::cDefaultCompFlags),
       m_format(PIXEL_FMT_INVALID),
-      m_pImage(NULL),
-      m_pDXTImage(NULL),
+      m_pImage(nullptr),
+      m_pDXTImage(nullptr),
       m_orient_flags(cDefaultOrientationFlags) {
 }
 
@@ -28,8 +49,8 @@ mip_level::mip_level(const mip_level& other)
       m_height(0),
       m_comp_flags(pixel_format_helpers::cDefaultCompFlags),
       m_format(PIXEL_FMT_INVALID),
-      m_pImage(NULL),
-      m_pDXTImage(NULL),
+      m_pImage(nullptr),
+      m_pDXTImage(nullptr),
       m_orient_flags(cDefaultOrientationFlags) {
   *this = other;
 }
@@ -66,12 +87,12 @@ void mip_level::clear() {
 
   if (m_pImage) {
     crnlib_delete(m_pImage);
-    m_pImage = NULL;
+    m_pImage = nullptr;
   }
 
   if (m_pDXTImage) {
     crnlib_delete(m_pDXTImage);
-    m_pDXTImage = NULL;
+    m_pDXTImage = nullptr;
   }
 }
 
@@ -336,7 +357,7 @@ void mip_level::uncook_image(image_u8& img) const {
 
 image_u8* mip_level::get_unpacked_image(image_u8& tmp, uint unpack_flags) const {
   if (!is_valid())
-    return NULL;
+    return nullptr;
 
   if (m_pDXTImage) {
     m_pDXTImage->unpack(tmp);
@@ -1748,7 +1769,7 @@ void mipmapped_texture::set(texture_file_types::format source_file_type, const m
 
 image_u8* mipmapped_texture::get_level_image(uint face, uint level, image_u8& img, uint unpack_flags) const {
   if (!is_valid())
-    return NULL;
+    return nullptr;
 
   const mip_level* pLevel = get_level(face, level);
 
@@ -1756,13 +1777,13 @@ image_u8* mipmapped_texture::get_level_image(uint face, uint level, image_u8& im
 }
 
 void mipmapped_texture::swap(mipmapped_texture& img) {
-  utils::swap(m_width, img.m_width);
-  utils::swap(m_height, img.m_height);
-  utils::swap(m_comp_flags, img.m_comp_flags);
-  utils::swap(m_format, img.m_format);
+    std::swap(m_width, img.m_width);
+    std::swap(m_height, img.m_height);
+    std::swap(m_comp_flags, img.m_comp_flags);
+    std::swap(m_format, img.m_format);
   m_faces.swap(img.m_faces);
   m_last_error.swap(img.m_last_error);
-  utils::swap(m_source_file_type, img.m_source_file_type);
+  std::swap(m_source_file_type, img.m_source_file_type);
 
   CRNLIB_ASSERT(check());
 }
@@ -2726,7 +2747,7 @@ bool mipmapped_texture::read_crn_from_memory(const void* pData, uint data_size, 
 
   void* pFaces[cCRNMaxFaces];
   for (uint f = tex_info.m_faces; f < cCRNMaxFaces; f++)
-    pFaces[f] = NULL;
+    pFaces[f] = nullptr;
 
   for (uint l = 0; l < tex_info.m_levels; l++) {
     const uint level_width = math::maximum<uint>(1U, tex_info.m_width >> l);

@@ -159,6 +159,7 @@ else()
 endif()
 
 add_library(crn ${CRNLIB_SRCS})
+set_property(TARGET crn PROPERTY CXX_STANDARD 11)
 target_include_directories(crn
     PUBLIC
         ${CMAKE_CURRENT_BINARY_DIR}
@@ -172,8 +173,8 @@ include(GenerateExportHeader)
 generate_export_header(crn)
 
 if(NOT WIN32)
-  find_package(Threads)
-  target_link_libraries(crn PUBLIC Threads::Threads)
+    find_package(Threads)
+    target_link_libraries(crn PUBLIC Threads::Threads)
 endif()
 
 install(TARGETS crn)

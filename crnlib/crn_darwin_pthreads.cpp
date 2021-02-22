@@ -1,3 +1,26 @@
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ * 
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ * 
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ * 
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #include "crn_core.h"
 
 #include <signal.h>
@@ -73,7 +96,7 @@ int sem_timedwait(sem_t* sem, const struct timespec* abs_timeout)
 
             struct timeval currentTime;                              /* Time now */
             long secsToWait, nsecsToWait;            /* Seconds and nsec to delay */
-            gettimeofday(&currentTime, NULL);
+            gettimeofday(&currentTime, nullptr);
             secsToWait = abs_timeout->tv_sec - currentTime.tv_sec;
             nsecsToWait = (abs_timeout->tv_nsec - (currentTime.tv_usec * 1000));
             while (nsecsToWait < 0)
@@ -138,13 +161,13 @@ int sem_timedwait(sem_t* sem, const struct timespec* abs_timeout)
                 details.callingThread = pthread_self();
                 details.timedOutShort = &timedOut;
                 timedOut = CRNLIB_FALSE;
-                sigaction(SIGUSR2, NULL, &oldSignalAction);
+                sigaction(SIGUSR2, nullptr, &oldSignalAction);
 
                 /*  Start up the timeout thread. Once we've done that, we can
                  *  restore the previous cancellation state.
                  */
 
-                createStatus = pthread_create(&timeoutThread, NULL, timeoutThreadMain, (void*)&details);
+                createStatus = pthread_create(&timeoutThread, nullptr, timeoutThreadMain, (void*)&details);
                 pthread_setcancelstate(oldCancelState, &ignoreCancelState);
 
                 if (createStatus < 0)
@@ -221,7 +244,7 @@ void timeoutThreadCleanup(void* passedPtr)
     {
         pthread_cancel(timeoutThread);
     }
-    pthread_join(timeoutThread, NULL);
+    pthread_join(timeoutThread, nullptr);
 
     /*  The code originally restored the old action handler, which generally
      *  was the default handler that caused the task to exit. Just occasionally,
@@ -233,7 +256,7 @@ void timeoutThreadCleanup(void* passedPtr)
      *  to crash is not a good idea, and so the line below has been commented
      *  out.
      *
-     *  sigaction (SIGUSR2,detailsPtr->sigHandlerAddr,NULL);
+     *  sigaction (SIGUSR2,detailsPtr->sigHandlerAddr,nullptr);
      */
 }
 
@@ -305,7 +328,7 @@ static int triggerSignal(int Signal, pthread_t Thread)
     SignalDetails.sa_handler = ignoreSignal;
     SignalDetails.sa_flags = 0;
     (void)sigemptyset(&SignalDetails.sa_mask);
-    if ((Result = sigaction(Signal, &SignalDetails, NULL)) == 0)
+    if ((Result = sigaction(Signal, &SignalDetails, nullptr)) == 0)
     {
         Result = pthread_kill(Thread, Signal);
     }

@@ -1,5 +1,26 @@
-// File: crn_win32_find_files.cpp
-// See Copyright Notice and license at the end of inc/crnlib.h
+/*
+ * Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC
+ * Copyright (c) 2020 FrozenStorm Interactive, Yoann Potinet
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation or credits
+ *    is required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ */
+
 #include "crn_core.h"
 #include "crn_find_files.h"
 #include "crn_file_utils.h"
@@ -13,241 +34,333 @@
 #include <dirent.h>
 #endif
 
-namespace crnlib {
+namespace crnlib
+{
 #ifdef CRNLIB_USE_WIN32_API
-bool find_files::find(const char* pBasepath, const char* pFilespec, uint flags) {
-  m_last_error = S_OK;
-  m_files.resize(0);
+    bool find_files::find(const char* pBasepath, const char* pFilespec, uint flags)
+    {
+        m_last_error = S_OK;
+        m_files.resize(0);
 
-  return find_internal(pBasepath, "", pFilespec, flags, 0);
-}
+        return find_internal(pBasepath, "", pFilespec, flags, 0);
+    }
 
-bool find_files::find(const char* pSpec, uint flags) {
-  dynamic_string find_name(pSpec);
+    bool find_files::find(const char* pSpec, uint flags)
+    {
+        dynamic_string find_name(pSpec);
 
-  if (!file_utils::full_path(find_name))
-    return false;
-
-  dynamic_string find_pathname, find_filename;
-  if (!file_utils::split_path(find_name.get_ptr(), find_pathname, find_filename))
-    return false;
-
-  return find(find_pathname.get_ptr(), find_filename.get_ptr(), flags);
-}
-
-bool find_files::find_internal(const char* pBasepath, const char* pRelpath, const char* pFilespec, uint flags, int level) {
-  WIN32_FIND_DATAA find_data;
-
-  dynamic_string filename;
-
-  dynamic_string_array child_paths;
-  if (flags & cFlagRecursive) {
-    if (strlen(pRelpath))
-      file_utils::combine_path(filename, pBasepath, pRelpath, "*");
-    else
-      file_utils::combine_path(filename, pBasepath, "*");
-
-    HANDLE handle = FindFirstFileA(filename.get_ptr(), &find_data);
-    if (handle == INVALID_HANDLE_VALUE) {
-      HRESULT hres = GetLastError();
-      if ((level == 0) && (hres != NO_ERROR) && (hres != ERROR_FILE_NOT_FOUND)) {
-        m_last_error = hres;
-        return false;
-      }
-    } else {
-      do {
-        const bool is_dir = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-
-        bool skip = !is_dir;
-        if (is_dir)
-          skip = (strcmp(find_data.cFileName, ".") == 0) || (strcmp(find_data.cFileName, "..") == 0);
-
-        if (find_data.dwFileAttributes & (FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_TEMPORARY))
-          skip = true;
-
-        if (find_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) {
-          if ((flags & cFlagAllowHidden) == 0)
-            skip = true;
+        if (!file_utils::full_path(find_name))
+        {
+            return false;
         }
 
-        if (!skip) {
-          dynamic_string child_path(find_data.cFileName);
-          if ((!child_path.count_char('?')) && (!child_path.count_char('*')))
-            child_paths.push_back(child_path);
+        dynamic_string find_pathname, find_filename;
+        if (!file_utils::split_path(find_name.get_ptr(), find_pathname, find_filename))
+        {
+            return false;
         }
 
-      } while (FindNextFileA(handle, &find_data) != 0);
-
-      HRESULT hres = GetLastError();
-
-      FindClose(handle);
-      handle = INVALID_HANDLE_VALUE;
-
-      if (hres != ERROR_NO_MORE_FILES) {
-        m_last_error = hres;
-        return false;
-      }
+        return find(find_pathname.get_ptr(), find_filename.get_ptr(), flags);
     }
-  }
 
-  if (strlen(pRelpath))
-    file_utils::combine_path(filename, pBasepath, pRelpath, pFilespec);
-  else
-    file_utils::combine_path(filename, pBasepath, pFilespec);
+    bool find_files::find_internal(const char* pBasepath, const char* pRelpath, const char* pFilespec, uint flags, int level)
+    {
+        WIN32_FIND_DATAA find_data;
 
-  HANDLE handle = FindFirstFileA(filename.get_ptr(), &find_data);
-  if (handle == INVALID_HANDLE_VALUE) {
-    HRESULT hres = GetLastError();
-    if ((level == 0) && (hres != NO_ERROR) && (hres != ERROR_FILE_NOT_FOUND)) {
-      m_last_error = hres;
-      return false;
-    }
-  } else {
-    do {
-      const bool is_dir = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        dynamic_string filename;
 
-      bool skip = false;
-      if (is_dir)
-        skip = (strcmp(find_data.cFileName, ".") == 0) || (strcmp(find_data.cFileName, "..") == 0);
+        dynamic_string_array child_paths;
+        if (flags & cFlagRecursive)
+        {
+            if (strlen(pRelpath))
+            {
+                file_utils::combine_path(filename, pBasepath, pRelpath, "*");
+            }
+            else
+            {
+                file_utils::combine_path(filename, pBasepath, "*");
+            }
 
-      if (find_data.dwFileAttributes & (FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_TEMPORARY))
-        skip = true;
+            HANDLE handle = FindFirstFileA(filename.get_ptr(), &find_data);
+            if (handle == INVALID_HANDLE_VALUE)
+            {
+                HRESULT hres = GetLastError();
+                if ((level == 0) && (hres != NO_ERROR) && (hres != ERROR_FILE_NOT_FOUND))
+                {
+                    m_last_error = hres;
+                    return false;
+                }
+            }
+            else
+            {
+                do
+                {
+                    const bool is_dir = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
-      if (find_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) {
-        if ((flags & cFlagAllowHidden) == 0)
-          skip = true;
-      }
+                    bool skip = !is_dir;
+                    if (is_dir)
+                    {
+                        skip = (strcmp(find_data.cFileName, ".") == 0) || (strcmp(find_data.cFileName, "..") == 0);
+                    }
 
-      if (!skip) {
-        if (((is_dir) && (flags & cFlagAllowDirs)) || ((!is_dir) && (flags & cFlagAllowFiles))) {
-          m_files.resize(m_files.size() + 1);
-          file_desc& file = m_files.back();
-          file.m_is_dir = is_dir;
-          file.m_base = pBasepath;
-          file.m_name = find_data.cFileName;
-          file.m_rel = pRelpath;
-          if (strlen(pRelpath))
-            file_utils::combine_path(file.m_fullname, pBasepath, pRelpath, find_data.cFileName);
-          else
-            file_utils::combine_path(file.m_fullname, pBasepath, find_data.cFileName);
+                    if (find_data.dwFileAttributes & (FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_TEMPORARY))
+                    {
+                        skip = true;
+                    }
+
+                    if (find_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
+                    {
+                        if ((flags & cFlagAllowHidden) == 0)
+                        {
+                            skip = true;
+                        }
+                    }
+
+                    if (!skip)
+                    {
+                        dynamic_string child_path(find_data.cFileName);
+                        if ((!child_path.count_char('?')) && (!child_path.count_char('*')))
+                        {
+                            child_paths.push_back(child_path);
+                        }
+                    }
+
+                } while (FindNextFileA(handle, &find_data) != 0);
+
+                HRESULT hres = GetLastError();
+
+                FindClose(handle);
+                handle = INVALID_HANDLE_VALUE;
+
+                if (hres != ERROR_NO_MORE_FILES)
+                {
+                    m_last_error = hres;
+                    return false;
+                }
+            }
         }
-      }
 
-    } while (FindNextFileA(handle, &find_data) != 0);
+        if (strlen(pRelpath))
+        {
+            file_utils::combine_path(filename, pBasepath, pRelpath, pFilespec);
+        }
+        else
+        {
+            file_utils::combine_path(filename, pBasepath, pFilespec);
+        }
 
-    HRESULT hres = GetLastError();
+        HANDLE handle = FindFirstFileA(filename.get_ptr(), &find_data);
+        if (handle == INVALID_HANDLE_VALUE)
+        {
+            HRESULT hres = GetLastError();
+            if ((level == 0) && (hres != NO_ERROR) && (hres != ERROR_FILE_NOT_FOUND))
+            {
+                m_last_error = hres;
+                return false;
+            }
+        }
+        else
+        {
+            do
+            {
+                const bool is_dir = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
-    FindClose(handle);
+                bool skip = false;
+                if (is_dir)
+                {
+                    skip = (strcmp(find_data.cFileName, ".") == 0) || (strcmp(find_data.cFileName, "..") == 0);
+                }
 
-    if (hres != ERROR_NO_MORE_FILES) {
-      m_last_error = hres;
-      return false;
+                if (find_data.dwFileAttributes & (FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_TEMPORARY))
+                {
+                    skip = true;
+                }
+
+                if (find_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
+                {
+                    if ((flags & cFlagAllowHidden) == 0)
+                    {
+                        skip = true;
+                    }
+                }
+
+                if (!skip)
+                {
+                    if (((is_dir) && (flags & cFlagAllowDirs)) || ((!is_dir) && (flags & cFlagAllowFiles)))
+                    {
+                        m_files.resize(m_files.size() + 1);
+                        file_desc& file = m_files.back();
+                        file.m_is_dir = is_dir;
+                        file.m_base = pBasepath;
+                        file.m_name = find_data.cFileName;
+                        file.m_rel = pRelpath;
+                        if (strlen(pRelpath))
+                        {
+                            file_utils::combine_path(file.m_fullname, pBasepath, pRelpath, find_data.cFileName);
+                        }
+                        else
+                        {
+                            file_utils::combine_path(file.m_fullname, pBasepath, find_data.cFileName);
+                        }
+                    }
+                }
+
+            } while (FindNextFileA(handle, &find_data) != 0);
+
+            HRESULT hres = GetLastError();
+
+            FindClose(handle);
+
+            if (hres != ERROR_NO_MORE_FILES)
+            {
+                m_last_error = hres;
+                return false;
+            }
+        }
+
+        for (uint i = 0; i < child_paths.size(); i++)
+        {
+            dynamic_string child_path;
+            if (strlen(pRelpath))
+            {
+                file_utils::combine_path(child_path, pRelpath, child_paths[i].get_ptr());
+            }
+            else
+            {
+                child_path = child_paths[i];
+            }
+
+            if (!find_internal(pBasepath, child_path.get_ptr(), pFilespec, flags, level + 1))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
-  }
-
-  for (uint i = 0; i < child_paths.size(); i++) {
-    dynamic_string child_path;
-    if (strlen(pRelpath))
-      file_utils::combine_path(child_path, pRelpath, child_paths[i].get_ptr());
-    else
-      child_path = child_paths[i];
-
-    if (!find_internal(pBasepath, child_path.get_ptr(), pFilespec, flags, level + 1))
-      return false;
-  }
-
-  return true;
-}
-#elif defined(__GNUC__)
-bool find_files::find(const char* pBasepath, const char* pFilespec, uint flags) {
-  m_files.resize(0);
-  return find_internal(pBasepath, "", pFilespec, flags, 0);
-}
-
-bool find_files::find(const char* pSpec, uint flags) {
-  dynamic_string find_name(pSpec);
-
-  if (!file_utils::full_path(find_name))
-    return false;
-
-  dynamic_string find_pathname, find_filename;
-  if (!file_utils::split_path(find_name.get_ptr(), find_pathname, find_filename))
-    return false;
-
-  return find(find_pathname.get_ptr(), find_filename.get_ptr(), flags);
-}
-
-bool find_files::find_internal(const char* pBasepath, const char* pRelpath, const char* pFilespec, uint flags, int level) {
-  dynamic_string pathname;
-  if (strlen(pRelpath))
-    file_utils::combine_path(pathname, pBasepath, pRelpath);
-  else
-    pathname = pBasepath;
-
-  if (!pathname.is_empty()) {
-    char c = pathname.back();
-    if (c != '/')
-      pathname += "/";
-  }
-
-  DIR* dp = opendir(pathname.get_ptr());
-
-  if (!dp)
-    return level ? true : false;
-
-  dynamic_string_array paths;
-
-  for (;;) {
-    struct dirent* ep = readdir(dp);
-    if (!ep)
-      break;
-    if ((strcmp(ep->d_name, ".") == 0) || (strcmp(ep->d_name, "..") == 0))
-      continue;
-
-    const bool is_directory = (ep->d_type & DT_DIR) != 0;
-    const bool is_file = (ep->d_type & DT_REG) != 0;
-
-    dynamic_string filename(ep->d_name);
-
-    if (is_directory) {
-      if (flags & cFlagRecursive) {
-        paths.push_back(filename);
-      }
+#elif defined(CRN_CC_GNU)
+    bool find_files::find(const char* pBasepath, const char* pFilespec, uint flags)
+    {
+        m_files.resize(0);
+        return find_internal(pBasepath, "", pFilespec, flags, 0);
     }
 
-    if (((is_file) && (flags & cFlagAllowFiles)) || ((is_directory) && (flags & cFlagAllowDirs))) {
-      if (0 == fnmatch(pFilespec, filename.get_ptr(), 0)) {
-        m_files.resize(m_files.size() + 1);
-        file_desc& file = m_files.back();
-        file.m_is_dir = is_directory;
-        file.m_base = pBasepath;
-        file.m_rel = pRelpath;
-        file.m_name = filename;
-        file.m_fullname = pathname + filename;
-      }
+    bool find_files::find(const char* pSpec, uint flags)
+    {
+        dynamic_string find_name(pSpec);
+
+        if (!file_utils::full_path(find_name))
+        {
+            return false;
+        }
+
+        dynamic_string find_pathname, find_filename;
+        if (!file_utils::split_path(find_name.get_ptr(), find_pathname, find_filename))
+        {
+            return false;
+        }
+
+        return find(find_pathname.get_ptr(), find_filename.get_ptr(), flags);
     }
-  }
 
-  closedir(dp);
-  dp = NULL;
+    bool find_files::find_internal(const char* pBasepath, const char* pRelpath, const char* pFilespec, uint flags, int level)
+    {
+        dynamic_string pathname;
+        if (strlen(pRelpath))
+        {
+            file_utils::combine_path(pathname, pBasepath, pRelpath);
+        }
+        else
+        {
+            pathname = pBasepath;
+        }
 
-  if (flags & cFlagRecursive) {
-    for (uint i = 0; i < paths.size(); i++) {
-      dynamic_string childpath;
-      if (strlen(pRelpath))
-        file_utils::combine_path(childpath, pRelpath, paths[i].get_ptr());
-      else
-        childpath = paths[i];
+        if (!pathname.is_empty())
+        {
+            char c = pathname.back();
+            if (c != '/')
+            {
+                pathname += "/";
+            }
+        }
 
-      if (!find_internal(pBasepath, childpath.get_ptr(), pFilespec, flags, level + 1))
-        return false;
+        DIR* dp = opendir(pathname.get_ptr());
+
+        if (!dp)
+        {
+            return level ? true : false;
+        }
+
+        dynamic_string_array paths;
+
+        for (;;)
+        {
+            struct dirent* ep = readdir(dp);
+            if (!ep)
+            {
+                break;
+            }
+            if ((strcmp(ep->d_name, ".") == 0) || (strcmp(ep->d_name, "..") == 0))
+            {
+                continue;
+            }
+
+            const bool is_directory = (ep->d_type & DT_DIR) != 0;
+            const bool is_file = (ep->d_type & DT_REG) != 0;
+
+            dynamic_string filename(ep->d_name);
+
+            if (is_directory)
+            {
+                if (flags & cFlagRecursive)
+                {
+                    paths.push_back(filename);
+                }
+            }
+
+            if (((is_file) && (flags & cFlagAllowFiles)) || ((is_directory) && (flags & cFlagAllowDirs)))
+            {
+                if (0 == fnmatch(pFilespec, filename.get_ptr(), 0))
+                {
+                    m_files.resize(m_files.size() + 1);
+                    file_desc& file = m_files.back();
+                    file.m_is_dir = is_directory;
+                    file.m_base = pBasepath;
+                    file.m_rel = pRelpath;
+                    file.m_name = filename;
+                    file.m_fullname = pathname + filename;
+                }
+            }
+        }
+
+        closedir(dp);
+        dp = nullptr;
+
+        if (flags & cFlagRecursive)
+        {
+            for (uint i = 0; i < paths.size(); i++)
+            {
+                dynamic_string childpath;
+                if (strlen(pRelpath))
+                {
+                    file_utils::combine_path(childpath, pRelpath, paths[i].get_ptr());
+                }
+                else
+                {
+                    childpath = paths[i];
+                }
+
+                if (!find_internal(pBasepath, childpath.get_ptr(), pFilespec, flags, level + 1))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
-  }
-
-  return true;
-}
 #else
 #error Unimplemented
 #endif
 
-}  // namespace crnlib
+} // namespace crnlib

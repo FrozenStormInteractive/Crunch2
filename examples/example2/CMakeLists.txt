@@ -6,5 +6,4 @@ set(EXAMPLE2_SRCS
 
 add_executable(example2 ${EXAMPLE2_SRCS})
 target_link_libraries(example2 crn)
-
-set_target_properties(example2 PROPERTIES FOLDER "examples")
+set_target_properties(example2 PROPERTIES CXX_STANDARD 11 FOLDER "examples")

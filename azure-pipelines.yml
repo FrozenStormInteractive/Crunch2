@@ -54,7 +54,7 @@ stages:
             displayName: Configure
             inputs:
               cmakeArgs: -G "$(GENERATOR)" -A $(GENERATOR_ARCH) -S $(Build.SourcesDirectory) -B . -DCMAKE_BUILD_TYPE=$(BUILD_CONFIG)
-                -DCRN_BUILD_EXAMPLES=OFF -DCRN_BUILD_SHARED_LIBS=$(BUILD_SHARED) -DCMAKE_INSTALL_PREFIX=$(Build.ArtifactStagingDirectory)
+                -DCRN_BUILD_EXAMPLES=ON -DCRN_BUILD_SHARED_LIBS=$(BUILD_SHARED) -DCMAKE_INSTALL_PREFIX=$(Build.ArtifactStagingDirectory)
 
           - task: CMake@1
             displayName: Build
