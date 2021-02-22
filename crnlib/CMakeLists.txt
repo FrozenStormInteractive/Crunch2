@@ -162,12 +162,20 @@ add_library(crn ${CRNLIB_SRCS})
 set_property(TARGET crn PROPERTY CXX_STANDARD 11)
 target_include_directories(crn
     PUBLIC
-        ${CMAKE_CURRENT_BINARY_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/../inc
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../inc>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     # PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
-target_link_libraries(crn PRIVATE lzma jpge jpgd miniz stb)
+target_link_libraries(crn
+    PRIVATE
+        $<BUILD_INTERFACE:lzma>
+        $<BUILD_INTERFACE:jpge>
+        $<BUILD_INTERFACE:jpgd>
+        $<BUILD_INTERFACE:miniz>
+        $<BUILD_INTERFACE:stb>
+)
 
 include(GenerateExportHeader)
 generate_export_header(crn)
@@ -177,7 +185,12 @@ if(NOT WIN32)
     target_link_libraries(crn PUBLIC Threads::Threads)
 endif()
 
-install(TARGETS crn)
+install(TARGETS crn EXPORT crnTargets)
+install(EXPORT crnTargets
+    FILE crunchTargets.cmake
+    NAMESPACE crunch::
+    DESTINATION lib/cmake/crunch
+)
 file(GLOB CRN_INC_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../inc/*.h)
 list(APPEND CRN_INC_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/crn_export.h)
 install(FILES ${CRN_INC_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
