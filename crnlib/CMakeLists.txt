@@ -171,8 +171,7 @@ target_include_directories(crn
 target_link_libraries(crn
     PRIVATE
         $<BUILD_INTERFACE:lzma>
-        $<BUILD_INTERFACE:jpge>
-        $<BUILD_INTERFACE:jpgd>
+        $<BUILD_INTERFACE:jpeg-compressor>
         $<BUILD_INTERFACE:miniz>
         $<BUILD_INTERFACE:stb>
 )
