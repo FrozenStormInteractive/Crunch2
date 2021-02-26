@@ -439,7 +439,7 @@ namespace crnlib
             }
             inline bool operator!=(const const_iterator& b) const
             {
-                return *this != b;
+                return !(*this == b);
             }
             inline bool operator==(const iterator& b) const
             {
@@ -447,7 +447,7 @@ namespace crnlib
             }
             inline bool operator!=(const iterator& b) const
             {
-                return *this != b;
+                return !(*this == b);
             }
 
         private:
