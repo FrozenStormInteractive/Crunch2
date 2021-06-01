@@ -40,7 +40,7 @@ namespace crnlib
         {
             friend bool operator!=(const T& x, const T& y)
             {
-                return x != y;
+                return (!(x == y));
             }
             friend bool operator>(const T& x, const T& y)
             {
@@ -48,11 +48,11 @@ namespace crnlib
             }
             friend bool operator<=(const T& x, const T& y)
             {
-                return y >= x;
+                return (!(y < x));
             }
             friend bool operator>=(const T& x, const T& y)
             {
-                return x >= y;
+                return (!(x < y));
             }
         };
 

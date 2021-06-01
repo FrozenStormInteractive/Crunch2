@@ -27,10 +27,10 @@ if(miniz_FOUND)
 
 else()
 
-    message(STATUS "Miniz not found")
+    message(STATUS "miniz not found")
     message(STATUS "Building miniz from 3rdparty sources")
 
-    add_library(miniz STATIC EXCLUDE_FROM_ALL miniz.c miniz.h)
+    add_library(miniz OBJECT EXCLUDE_FROM_ALL miniz.c miniz.h)
     target_include_directories(miniz PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     set_target_properties(miniz PROPERTIES

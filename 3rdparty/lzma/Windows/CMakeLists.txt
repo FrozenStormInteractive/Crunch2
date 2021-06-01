@@ -7,7 +7,7 @@ if(MSVC)
     list(APPEND lzma_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/7zVersion.rc)
 endif()
 
-add_library(lzma EXCLUDE_FROM_ALL STATIC ${lzma_SOURCES} ${lzma_HEADERS})
+add_library(lzma OBJECT EXCLUDE_FROM_ALL ${lzma_SOURCES} ${lzma_HEADERS})
 target_include_directories(lzma PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 set_target_properties(lzma PROPERTIES FOLDER "3rdparty")

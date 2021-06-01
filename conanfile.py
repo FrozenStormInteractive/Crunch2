@@ -19,7 +19,7 @@ class Crunch2Conan(ConanFile):
         "fPIC": True,
         "shared": False,
     }
-    
+
     _cmake = None
 
     @property
@@ -37,6 +37,7 @@ class Crunch2Conan(ConanFile):
     def requirements(self):
         self.requires("miniz/2.1.0")
         self.requires("stb/20200203")
+        self.requires("jpeg-compressor/cci.20200507")
 
     def _configure_cmake(self):
         if self._cmake:

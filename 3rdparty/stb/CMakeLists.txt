@@ -23,10 +23,10 @@ if(stb_FOUND)
 
 else()
 
-    message(STATUS "Stb not found")
+    message(STATUS "stb not found")
     message(STATUS "Building stb from 3rdparty sources")
 
     add_library(stb INTERFACE)
-    target_include_directories(stb INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}) 
+    target_include_directories(stb INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 endif()
